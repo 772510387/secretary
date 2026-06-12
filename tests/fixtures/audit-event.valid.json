@@ -1,0 +1,23 @@
+{
+  "eventId": "audit-20260612-0001",
+  "occurredAt": "2026-06-12T01:30:01.000Z",
+  "actor": {
+    "type": "system",
+    "id": "paper-broker"
+  },
+  "action": "write",
+  "subject": {
+    "type": "trade",
+    "id": "trade-20260612-0001"
+  },
+  "severity": "info",
+  "result": "success",
+  "message": "Paper trade record persisted",
+  "correlationId": "intent-20260612-0001",
+  "metadata": {
+    "symbol": "000636",
+    "quantity": 100,
+    "liveTrading": false
+  }
+}
+

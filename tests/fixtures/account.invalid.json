@@ -1,0 +1,14 @@
+{
+  "accountId": "paper-main",
+  "type": "paper",
+  "baseCurrency": "CNY",
+  "initialCash": 20000,
+  "cash": {
+    "available": -1,
+    "frozen": 0
+  },
+  "status": "active",
+  "createdAt": "2026-06-12T00:00:00.000Z",
+  "updatedAt": "2026-06-11T00:00:00.000Z"
+}
+

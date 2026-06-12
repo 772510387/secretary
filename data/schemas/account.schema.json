@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://secretary.local/schemas/account.schema.json",
+  "title": "Account",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "accountId",
+    "type",
+    "baseCurrency",
+    "initialCash",
+    "cash",
+    "status",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "accountId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["paper", "manual", "live"]
+    },
+    "baseCurrency": {
+      "type": "string",
+      "enum": ["CNY", "HKD", "USD"]
+    },
+    "initialCash": {
+      "type": "number",
+      "minimum": 0
+    },
+    "cash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "frozen"],
+      "properties": {
+        "available": {
+          "type": "number",
+          "minimum": 0
+        },
+        "frozen": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "suspended", "closed"]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
+

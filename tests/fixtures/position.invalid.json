@@ -1,0 +1,16 @@
+{
+  "accountId": "paper-main",
+  "symbol": "000636",
+  "market": "SZSE",
+  "name": "风华高科",
+  "quantity": 100,
+  "availableQuantity": 100,
+  "todayBuyQuantity": 0,
+  "frozenQuantity": 1,
+  "costPrice": 56.68,
+  "latestPrice": 64.3,
+  "currency": "CNY",
+  "openedAt": "2026-06-12T01:30:00.000Z",
+  "updatedAt": "2026-06-12T07:00:00.000Z"
+}
+

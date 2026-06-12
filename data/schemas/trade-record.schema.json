@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://secretary.local/schemas/trade-record.schema.json",
+  "title": "TradeRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tradeId",
+    "accountId",
+    "symbol",
+    "market",
+    "side",
+    "quantity",
+    "price",
+    "grossAmount",
+    "fees",
+    "tax",
+    "netAmount",
+    "currency",
+    "tradeDate",
+    "tradedAt",
+    "source"
+  ],
+  "properties": {
+    "tradeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "accountId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "intentId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "orderId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^\\d{6}$"
+    },
+    "market": {
+      "type": "string",
+      "enum": ["SSE", "SZSE"]
+    },
+    "side": {
+      "type": "string",
+      "enum": ["BUY", "SELL"]
+    },
+    "quantity": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "price": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "grossAmount": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "fees": {
+      "type": "number",
+      "minimum": 0
+    },
+    "tax": {
+      "type": "number",
+      "minimum": 0
+    },
+    "netAmount": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["CNY", "HKD", "USD"]
+    },
+    "tradeDate": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "tradedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["paper", "manual", "broker"]
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 500
+    }
+  }
+}
+

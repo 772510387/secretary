@@ -1,0 +1,21 @@
+{
+  "tradeId": "trade-20260612-0001",
+  "accountId": "paper-main",
+  "intentId": "intent-20260612-0001",
+  "orderId": "order-20260612-0001",
+  "symbol": "000636",
+  "market": "SZSE",
+  "side": "BUY",
+  "quantity": 100,
+  "price": 56.68,
+  "grossAmount": 5668,
+  "fees": 5,
+  "tax": 0,
+  "netAmount": 5673,
+  "currency": "CNY",
+  "tradeDate": "2026-06-12",
+  "tradedAt": "2026-06-12T01:30:00.000Z",
+  "source": "paper",
+  "note": "initial paper buy"
+}
+

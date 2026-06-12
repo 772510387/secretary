@@ -1,0 +1,16 @@
+{
+  "eventId": "audit-20260612-0001",
+  "occurredAt": "2026-06-12T01:30:01.000Z",
+  "actor": {
+    "type": "model"
+  },
+  "action": "delete",
+  "subject": {
+    "type": "trade",
+    "id": "trade-20260612-0001"
+  },
+  "severity": "info",
+  "result": "success",
+  "message": ""
+}
+

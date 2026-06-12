@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://secretary.local/schemas/position.schema.json",
+  "title": "Position",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "accountId",
+    "symbol",
+    "market",
+    "name",
+    "quantity",
+    "availableQuantity",
+    "todayBuyQuantity",
+    "frozenQuantity",
+    "costPrice",
+    "currency",
+    "openedAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "accountId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^\\d{6}$"
+    },
+    "market": {
+      "type": "string",
+      "enum": ["SSE", "SZSE"]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "quantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "availableQuantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "todayBuyQuantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "frozenQuantity": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "costPrice": {
+      "type": "number",
+      "minimum": 0
+    },
+    "latestPrice": {
+      "type": "number",
+      "minimum": 0
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["CNY", "HKD", "USD"]
+    },
+    "openedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
+

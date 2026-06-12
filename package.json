@@ -1,0 +1,26 @@
+{
+  "name": "secretary",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A-share trading assistant architecture with deterministic risk control and pluggable AI research brains.",
+  "scripts": {
+    "doctor": "tsx scripts/dev/doctor.ts",
+    "check:docs": "node -e \"console.log('docs scaffold present; implement validation later')\"",
+    "seed:paper": "tsx scripts/dev/seed-paper-account.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

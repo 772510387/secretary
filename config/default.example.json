@@ -1,0 +1,46 @@
+{
+  "runtime": {
+    "nodeEnv": "development",
+    "timezone": "Asia/Shanghai",
+    "liveTrading": false
+  },
+  "storage": {
+    "dataDir": "./data",
+    "memoryDir": "./memory"
+  },
+  "market": {
+    "provider": "tencent",
+    "sentinelIntervalMs": 3000,
+    "quoteTimeoutMs": 5000
+  },
+  "trading": {
+    "mode": "paper",
+    "initialCash": 20000,
+    "mainBoardOnly": true,
+    "lotSize": 100,
+    "t1Enabled": true
+  },
+  "broker": {
+    "provider": "paper"
+  },
+  "risk": {
+    "maxSinglePositionRatio": 0.4,
+    "hardStopLossRatio": 0.08,
+    "dailyLossLimitRatio": 0.03,
+    "maxDailyOrderCount": 20
+  },
+  "brain": {
+    "provider": "mock",
+    "temperature": 0.2,
+    "structuredOutput": true,
+    "openai": {},
+    "gemini": {},
+    "dashscope": {
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    }
+  },
+  "notification": {
+    "defaultCooldownSeconds": 600,
+    "criticalCooldownSeconds": 60
+  }
+}
