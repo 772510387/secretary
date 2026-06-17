@@ -16,10 +16,13 @@ import {
 import {
   BrainProviderError,
   MockBrainProvider,
+  SearchProviderError,
+  TavilySearchProvider,
+  TencentQuoteProvider,
   createBrainProvider,
 } from "../../src/infrastructure/providers/index.js";
-import { TencentQuoteProvider } from "../../src/infrastructure/providers/index.js";
 import { createPortfolioMemoryPaths } from "../../src/infrastructure/storage/index.js";
+import type { AskWebSearchContext } from "../../src/app/index.js";
 
 const NETWORK_FLAG = "ASK_NETWORK";
 const positionsSchema = z.array(positionSchema);
@@ -27,6 +30,7 @@ const positionsSchema = z.array(positionSchema);
 interface AskCliOptions {
   help: boolean;
   offline: boolean;
+  web: boolean;
   memoryDir?: string;
   question: string;
 }
@@ -66,6 +70,11 @@ export async function main(argv: string[]): Promise<void> {
 
   const brainProvider = wantOnline ? createBrainProvider(config.brain) : new MockBrainProvider();
   const prices = wantOnline ? await fetchPrices(positions) : {};
+  const webSearch = cli.web && wantOnline ? await runWebSearch(config, cli.question) : undefined;
+
+  if (cli.web && !wantOnline) {
+    console.error("--web 需要联网（真实大脑 + 搜索）；离线/mock 模式下忽略。");
+  }
 
   const result = await runAskOnce(
     {
@@ -73,6 +82,7 @@ export async function main(argv: string[]): Promise<void> {
       account,
       positions,
       prices,
+      webSearch,
       metadata: { source: "ask-cli" },
     },
     { brainProvider },
@@ -101,6 +111,48 @@ export async function main(argv: string[]): Promise<void> {
   console.log(result.answer);
   console.log("");
   console.log(`（行情已${result.pricesAvailable ? "" : "未"}盯市；本回答不可直接下单，任何买卖建议须人工复核。）`);
+}
+
+async function runWebSearch(
+  config: ReturnType<typeof loadConfig>,
+  query: string,
+): Promise<AskWebSearchContext | undefined> {
+  if (config.search.provider !== "tavily") {
+    console.error("--web 已开启，但 SEARCH_PROVIDER 不是 tavily，跳过搜索。");
+    return undefined;
+  }
+
+  if (!config.search.tavilyApiKey) {
+    console.error("--web 已开启，但未配置 TAVILY_API_KEY，跳过搜索。");
+    return undefined;
+  }
+
+  try {
+    const provider = new TavilySearchProvider({ apiKey: config.search.tavilyApiKey });
+    const result = await provider.search(query, { maxResults: config.search.maxResults });
+
+    console.log(`—— 联网检索（Tavily，命中 ${result.results.length} 条）——`);
+    for (const item of result.results) {
+      console.log(`  • ${item.title || item.url}　${item.url}`);
+    }
+
+    return {
+      query: result.query,
+      answer: result.answer,
+      results: result.results.map((item) => ({
+        title: item.title,
+        url: item.url,
+        snippet: item.snippet,
+      })),
+    };
+  } catch (error) {
+    if (error instanceof SearchProviderError) {
+      console.error(`（联网检索失败，改为仅用账户上下文：${error.message}）`);
+      return undefined;
+    }
+
+    throw error;
+  }
 }
 
 async function fetchPrices(
@@ -143,7 +195,7 @@ function readPositions(positionsPath: string): ReturnType<typeof positionsSchema
 }
 
 function parseArgs(argv: string[]): AskCliOptions {
-  const options: AskCliOptions = { help: false, offline: false, question: "" };
+  const options: AskCliOptions = { help: false, offline: false, web: false, question: "" };
   const questionParts: string[] = [];
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -156,6 +208,9 @@ function parseArgs(argv: string[]): AskCliOptions {
         break;
       case "--offline":
         options.offline = true;
+        break;
+      case "--web":
+        options.web = true;
         break;
       case "--memory-dir":
         options.memoryDir = argv[index + 1];
@@ -178,12 +233,14 @@ function printHelp(): void {
 
 用法:
   ASK_NETWORK=1 npm run ask -- "我现在仓位重不重？有什么风险？"
+  ASK_NETWORK=1 npm run ask -- --web "查一下最近有什么影响我持仓的政策或新闻？"
   npm run ask -- --offline "离线预览（用 mock 模型，不联网）"
 
 说明:
   读取 memory/portfolio 的真实模拟盘 DB，可选用腾讯实时行情盯市，
   再交给配置的大模型回答。真实 provider 必须 ASK_NETWORK=1 显式放行。
-  本工具只读、不下单、不写账户。
+  --web：后端先用 Tavily 联网检索，把结果作为上下文喂给模型（需 SEARCH_PROVIDER=tavily
+  和 TAVILY_API_KEY）。模型仍不能执行任何工具、不下单、不写账户。
 `);
 }
 

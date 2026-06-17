@@ -40,3 +40,10 @@ export class ResearchProviderError extends ProviderError {
     this.name = "ResearchProviderError";
   }
 }
+
+export class SearchProviderError extends ProviderError {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "SearchProviderError";
+  }
+}

@@ -88,6 +88,32 @@ describe("runAskOnce", () => {
     expect(result.valuation.positions[0]?.unrealizedPnl).toBe(0);
   });
 
+  it("includes web search results in the model context when provided", async () => {
+    const brain = new CapturingBrainProvider();
+    const result = await runAskOnce(
+      {
+        question: "最近有什么政策影响我的持仓？",
+        account: makeAccount(),
+        positions: [makePosition()],
+        webSearch: {
+          query: "风华高科 政策",
+          answer: "无重大政策。",
+          results: [
+            { title: "新闻A", url: "https://example.com/a", snippet: "正文A" },
+          ],
+        },
+        now,
+      },
+      { brainProvider: brain },
+    );
+
+    const context = brain.lastInput?.context as Record<string, unknown>;
+    const webSearch = context.webSearch as Record<string, unknown>;
+    expect(webSearch).toMatchObject({ query: "风华高科 政策" });
+    expect((webSearch.results as unknown[])).toHaveLength(1);
+    expect(result.metadata.webSearchUsed).toBe(true);
+  });
+
   it("rejects an empty question", async () => {
     await expect(
       runAskOnce(

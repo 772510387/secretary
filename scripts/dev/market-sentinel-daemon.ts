@@ -24,9 +24,18 @@ import {
   createLivePaperSentinelTask,
 } from "../../src/app/index.js";
 import { positionSchema, type Position } from "../../src/domain/portfolio/index.js";
-import { TencentQuoteProvider } from "../../src/infrastructure/providers/index.js";
+import type { NotificationEvent } from "../../src/domain/notification/index.js";
+import type {
+  WatchlistCategory,
+  WatchlistEntry,
+} from "../../src/domain/market/index.js";
+import {
+  TencentIndexProvider,
+  TencentQuoteProvider,
+} from "../../src/infrastructure/providers/index.js";
 import {
   JsonStore,
+  WatchlistMemoryStore,
   createPortfolioMemoryPaths,
 } from "../../src/infrastructure/storage/index.js";
 import { formatNotificationForConsole } from "../../src/domain/notification/index.js";
@@ -358,23 +367,34 @@ function buildLivePaperSentinelTask(
   config: ReturnType<typeof loadConfig>,
 ): SchedulerTask {
   const quoteProvider = new TencentQuoteProvider({ timeoutMs: config.market.quoteTimeoutMs });
+  const indexProvider = new TencentIndexProvider({ timeoutMs: config.market.quoteTimeoutMs });
+  const watchlistStore = new WatchlistMemoryStore({ memoryDir });
+  const pushNotification = async (notification: NotificationEvent): Promise<void> => {
+    console.log(formatNotificationForConsole(notification));
+
+    if (wecomNotifier) {
+      try {
+        await wecomNotifier.notify(notification);
+      } catch {
+        // A notification problem must never take down the daemon.
+      }
+    }
+  };
   const innerTask = createLivePaperSentinelTask({
     getPositions: () => readPositionsSafe(memoryDir),
+    getWatchlistEntries: () => readWatchlistEntriesSafe(watchlistStore),
     getQuotes: (symbols) => quoteProvider.getQuotes(symbols),
     persistPositions: (positions) => writePositions(memoryDir, positions),
     options: { positionStopLossRatio: config.risk.hardStopLossRatio },
+    getIndexSnapshots: () => indexProvider.getIndexes(),
     onEvents: async (events) => {
       for (const event of events) {
-        const notification = cerebellumEventToNotificationEvent(event);
-        console.log(formatNotificationForConsole(notification));
-
-        if (wecomNotifier) {
-          try {
-            await wecomNotifier.notify(notification);
-          } catch {
-            // A notification problem must never take down the daemon.
-          }
-        }
+        await pushNotification(cerebellumEventToNotificationEvent(event));
+      }
+    },
+    onIndexNotifications: async (notifications) => {
+      for (const notification of notifications) {
+        await pushNotification(notification);
       }
     },
   });
@@ -405,6 +425,20 @@ function readPositionsSafe(memoryDir: string): Position[] {
 function writePositions(memoryDir: string, positions: Position[]): void {
   const positionsPath = createPortfolioMemoryPaths(memoryDir).positionsPath;
   new JsonStore<Position[]>({ filePath: positionsPath, schema: positionsSchema }).write(positions);
+}
+
+const WATCHLIST_CATEGORIES: readonly WatchlistCategory[] = [
+  "watchlist_today",
+  "watchlist_long_term",
+  "potential_stocks",
+];
+
+function readWatchlistEntriesSafe(store: WatchlistMemoryStore): WatchlistEntry[] {
+  try {
+    return WATCHLIST_CATEGORIES.flatMap((category) => store.readCategory(category).entries);
+  } catch {
+    return [];
+  }
 }
 
 function fixedClock(iso: string): Clock {

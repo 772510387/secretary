@@ -90,6 +90,14 @@ export const brainConfigSchema = z
   })
   .strict();
 
+export const searchConfigSchema = z
+  .object({
+    provider: z.enum(["none", "tavily"]).default("none"),
+    tavilyApiKey: optionalSecret,
+    maxResults: z.number().int().positive().max(20).default(5),
+  })
+  .strict();
+
 export const notificationConfigSchema = z
   .object({
     defaultCooldownSeconds: z.number().int().nonnegative().default(600),
@@ -110,6 +118,7 @@ export const appConfigSchema = z
     risk: riskConfigSchema.default({}),
     brain: brainConfigSchema.default({}),
     notification: notificationConfigSchema.default({}),
+    search: searchConfigSchema.default({}),
   })
   .strict();
 

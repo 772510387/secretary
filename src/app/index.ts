@@ -4,6 +4,7 @@ export {
   type AskPortfolioDependencies,
   type AskPortfolioInput,
   type AskPortfolioResult,
+  type AskWebSearchContext,
 } from "./ask-portfolio.js";
 export {
   buildCerebellumAlarmTasks,

@@ -1,0 +1,25 @@
+{
+  "category": "watchlist_today",
+  "updatedAt": "2026-06-17T13:56:22.503Z",
+  "entries": [
+    {
+      "symbol": "600519",
+      "market": "SSE",
+      "name": "贵州茅台",
+      "priority": "high",
+      "reason": "白马龙头盯盘",
+      "source": "watchlist-cli",
+      "updatedAt": "2026-06-17T13:56:22.503Z",
+      "observePrice": 1500,
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "lastImportAt": "2026-06-17T13:56:22.503Z",
+    "manualSeedOrImport": true,
+    "webSearchUsed": false,
+    "brainProviderCalled": false,
+    "brokerConnected": false,
+    "liveTrading": false
+  }
+}

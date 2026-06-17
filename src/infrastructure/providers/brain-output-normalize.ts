@@ -7,6 +7,8 @@
  * answer, the provider adapters normalize these into valid citation objects.
  * Shapes we cannot safely coerce are left untouched so validation still rejects them.
  */
+const CITATION_SOURCE_TYPES = new Set(["user", "memory", "market", "research", "news", "system"]);
+
 export function normalizeBrainCitations(value: unknown): unknown {
   if (value === undefined || value === null) {
     return [];
@@ -24,10 +26,30 @@ export function normalizeBrainCitations(value: unknown): unknown {
 
     if (entry !== null && typeof entry === "object" && !Array.isArray(entry)) {
       const record = entry as Record<string, unknown>;
+      const url =
+        typeof record.url === "string" && /^https?:\/\//i.test(record.url.trim())
+          ? record.url.trim()
+          : undefined;
+      const rawTitle = typeof record.title === "string" ? record.title.trim() : "";
+      const title = (rawTitle || url || "untitled").slice(0, 300);
+      const sourceType =
+        typeof record.sourceType === "string" && CITATION_SOURCE_TYPES.has(record.sourceType)
+          ? record.sourceType
+          : url
+            ? "news"
+            : "system";
+      // Rebuild a strict-schema-clean object, dropping unknown keys (content, score, ...).
+      const clean: Record<string, unknown> = { title, sourceType };
 
-      if (typeof record.sourceType !== "string") {
-        return { ...record, sourceType: "system" };
+      if (url) {
+        clean.url = url;
       }
+
+      if (typeof record.note === "string" && record.note.trim() !== "") {
+        clean.note = record.note.trim().slice(0, 1000);
+      }
+
+      return clean;
     }
 
     return entry;

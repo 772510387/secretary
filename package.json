@@ -12,6 +12,7 @@
     "brain:smoke": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/brain-smoke.ts",
     "ask": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/ask.ts",
     "trade": "tsx scripts/dev/trade.ts",
+    "watchlist": "tsx scripts/dev/watchlist.ts",
     "wechat:test": "tsx scripts/dev/wechat-test.ts",
     "sentinel:dev": "tsx scripts/dev/market-sentinel-daemon.ts",
     "manual-confirm:dev": "tsx scripts/dev/manual-confirm.ts",

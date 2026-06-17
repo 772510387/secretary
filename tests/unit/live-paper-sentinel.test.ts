@@ -4,7 +4,9 @@ import {
   createLivePaperSentinelTask,
 } from "../../src/app/index.js";
 import {
+  indexSnapshotSchema,
   quoteSnapshotSchema,
+  type IndexSnapshot,
   type QuoteSnapshot,
 } from "../../src/domain/market/index.js";
 import {
@@ -12,6 +14,7 @@ import {
   type Position,
 } from "../../src/domain/portfolio/index.js";
 import type { CerebellumEvent } from "../../src/domain/cerebellum/index.js";
+import type { NotificationEvent } from "../../src/domain/notification/index.js";
 
 const now = "2026-06-17T02:00:00.000Z";
 
@@ -67,6 +70,61 @@ describe("createLivePaperSentinelTask", () => {
 
     expect(quoteCalls).toBe(0);
     expect(infos[0]?.positionCount).toBe(0);
+  });
+
+  it("alerts on a market index rapid drop via the systemic-risk radar", async () => {
+    const notifications: NotificationEvent[][] = [];
+    let call = 0;
+    const task = createLivePaperSentinelTask({
+      getPositions: () => [],
+      getQuotes: async () => [],
+      now: () => new Date(now),
+      getIndexSnapshots: async () => {
+        call += 1;
+        return call === 1
+          ? [makeIndex({ latestPrice: 4000, receivedAt: "2026-06-17T02:00:00.000Z" })]
+          : [makeIndex({ latestPrice: 3900, receivedAt: "2026-06-17T02:00:30.000Z" })];
+      },
+      onIndexNotifications: (events) => {
+        notifications.push(events);
+      },
+    });
+
+    await task(); // primes the previous index snapshot
+    await task(); // detects the -2.5% drop
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]![0]).toMatchObject({ severity: "critical" });
+    expect(notifications[0]![0]!.summary).toMatch(/dropped/i);
+  });
+
+  it("scans a high-priority watchlist name and alerts on an intraday surge", async () => {
+    const captured: CerebellumEvent[] = [];
+    const task = createLivePaperSentinelTask({
+      getPositions: () => [],
+      getWatchlistEntries: () => [
+        {
+          symbol: "600519",
+          market: "SSE",
+          name: "贵州茅台",
+          priority: "high",
+          reason: "test",
+          source: "test",
+        },
+      ],
+      getQuotes: async () => [makeWatchQuote({ changePct: 0.05 })],
+      now: () => new Date(now),
+      onEvents: (events) => {
+        captured.push(...events);
+      },
+    });
+
+    await task();
+
+    const surge = captured.find((event) => event.eventType === "watchlist_price_surge");
+    expect(surge).toBeDefined();
+    expect(surge?.symbol).toBe("600519");
+    expect(surge?.severity).toBe("warning");
   });
 
   it("respects cooldown across consecutive ticks", async () => {
@@ -128,6 +186,33 @@ function makePosition(overrides: { costPrice?: number; latestPrice?: number } = 
     currency: "CNY",
     openedAt: now,
     updatedAt: now,
+  });
+}
+
+function makeIndex(overrides: { latestPrice: number; receivedAt: string }): IndexSnapshot {
+  return indexSnapshotSchema.parse({
+    indexId: "sse_composite",
+    code: "000001",
+    market: "SSE",
+    name: "上证综指",
+    provider: "tencent",
+    latestPrice: overrides.latestPrice,
+    changePct: 0,
+    receivedAt: overrides.receivedAt,
+    rawSymbol: "sh000001",
+  });
+}
+
+function makeWatchQuote(overrides: { changePct: number }): QuoteSnapshot {
+  return quoteSnapshotSchema.parse({
+    symbol: "600519",
+    market: "SSE",
+    name: "贵州茅台",
+    provider: "tencent",
+    latestPrice: 1800,
+    changePct: overrides.changePct,
+    receivedAt: now,
+    rawSymbol: "sh600519",
   });
 }
 

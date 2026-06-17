@@ -1,17 +1,17 @@
 {
   "runtimeId": "market-sentinel-daemon",
   "status": "stopped",
-  "updatedAt": "2026-06-17T13:20:10.686Z",
-  "startedAt": "2026-06-17T13:20:05.907Z",
-  "stoppedAt": "2026-06-17T13:20:10.686Z",
-  "heartbeatAt": "2026-06-17T13:20:10.686Z",
+  "updatedAt": "2026-06-17T13:56:40.340Z",
+  "startedAt": "2026-06-17T13:56:34.083Z",
+  "stoppedAt": "2026-06-17T13:56:40.340Z",
+  "heartbeatAt": "2026-06-17T13:56:40.340Z",
   "tasks": [
     {
       "taskId": "market-sentinel-dev",
       "status": "stopped",
-      "lastStartedAt": "2026-06-17T13:20:05.907Z",
-      "lastHeartbeatAt": "2026-06-17T13:20:10.686Z",
-      "lastStoppedAt": "2026-06-17T13:20:10.686Z"
+      "lastStartedAt": "2026-06-17T13:56:34.083Z",
+      "lastHeartbeatAt": "2026-06-17T13:56:40.340Z",
+      "lastStoppedAt": "2026-06-17T13:56:40.340Z"
     }
   ],
   "metadata": {

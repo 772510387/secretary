@@ -5,7 +5,18 @@ export {
   ProviderError,
   QuoteProviderError,
   ResearchProviderError,
+  SearchProviderError,
 } from "./errors.js";
+export {
+  TavilySearchProvider,
+  type TavilyFetchInit,
+  type TavilyFetchLike,
+  type TavilyFetchResponse,
+  type TavilySearchOptions,
+  type TavilySearchProviderOptions,
+  type WebSearchResult,
+  type WebSearchResultItem,
+} from "./tavily-search-provider.js";
 export { requireBrainProviderApiKey } from "./brain-provider-credentials.js";
 export {
   buildSingleProvider,

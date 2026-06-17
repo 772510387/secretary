@@ -1,7 +1,9 @@
 import {
   checkMarketSentinel,
+  detectIndexSystemicRisk,
   type CerebellumEvent,
   type CerebellumEventType,
+  type IndexRiskRadarOptions,
   type MarketSentinelOptions,
 } from "../domain/cerebellum/index.js";
 import {
@@ -9,8 +11,10 @@ import {
   type NotificationEvent,
 } from "../domain/notification/index.js";
 import type {
+  IndexSnapshot,
   QuoteSnapshot,
   StockSymbolInfo,
+  WatchlistEntryInput,
 } from "../domain/market/index.js";
 import type { Position } from "../domain/portfolio/index.js";
 
@@ -23,7 +27,9 @@ export interface LivePaperSentinelInfo {
 export interface LivePaperSentinelTaskDeps {
   /** Reads the current paper positions from the DB. */
   getPositions: () => Position[];
-  /** Fetches live quotes for the held symbols. */
+  /** Optional: reads watchlist entries to also scan high-priority names intraday. */
+  getWatchlistEntries?: () => readonly WatchlistEntryInput[];
+  /** Fetches live quotes for the held + watchlist symbols. */
   getQuotes: (symbols: Array<string | StockSymbolInfo>) => Promise<QuoteSnapshot[]>;
   now?: () => Date;
   options?: MarketSentinelOptions;
@@ -31,6 +37,11 @@ export interface LivePaperSentinelTaskDeps {
   onEvents?: (events: CerebellumEvent[], info: LivePaperSentinelInfo) => void | Promise<void>;
   /** Optional mark-to-market: persist updated latest prices back to the DB. */
   persistPositions?: (positions: Position[]) => void;
+  /** Optional: fetch market index snapshots to run the systemic-risk radar. */
+  getIndexSnapshots?: () => Promise<IndexSnapshot[]>;
+  indexOptions?: IndexRiskRadarOptions;
+  /** Called with index/systemic-risk notifications (大盘急跌/系统性风险). */
+  onIndexNotifications?: (notifications: NotificationEvent[]) => void | Promise<void>;
 }
 
 export type LivePaperSentinelTask = () => Promise<void>;
@@ -48,48 +59,92 @@ export type LivePaperSentinelTask = () => Promise<void>;
 export function createLivePaperSentinelTask(deps: LivePaperSentinelTaskDeps): LivePaperSentinelTask {
   let previousQuotes: QuoteSnapshot[] = [];
   let cooldownState: Record<string, string> = {};
+  let previousIndexSnapshots: IndexSnapshot[] = [];
 
   return async () => {
     const positions = deps.getPositions();
+    const watchlistEntries = deps.getWatchlistEntries?.() ?? [];
 
-    if (positions.length === 0) {
+    if (positions.length === 0 && watchlistEntries.length === 0) {
       previousQuotes = [];
       await deps.onEvents?.([], {
         checkedAt: (deps.now?.() ?? new Date()).toISOString(),
         positionCount: 0,
         quoteCount: 0,
       });
-      return;
+    } else {
+      const symbols = dedupeSymbols([
+        ...positions.map((position) => ({
+          symbol: position.symbol,
+          market: position.market,
+          name: position.name,
+        })),
+        ...watchlistEntries.map((entry) =>
+          entry.market
+            ? { symbol: entry.symbol, market: entry.market, name: entry.name }
+            : entry.symbol,
+        ),
+      ]);
+      const quotes = await deps.getQuotes(symbols);
+      const result = checkMarketSentinel({
+        quotes,
+        positions,
+        watchlistEntries,
+        previousQuotes,
+        cooldownState,
+        now: deps.now?.(),
+        options: deps.options,
+      });
+
+      cooldownState = result.nextCooldownState;
+      previousQuotes = quotes;
+
+      if (deps.persistPositions && positions.length > 0) {
+        maybePersistMarkToMarket(positions, quotes, result.checkedAt, deps.persistPositions);
+      }
+
+      await deps.onEvents?.(result.events, {
+        checkedAt: result.checkedAt,
+        positionCount: positions.length,
+        quoteCount: quotes.length,
+      });
     }
 
-    const symbols: StockSymbolInfo[] = positions.map((position) => ({
-      symbol: position.symbol,
-      market: position.market,
-      name: position.name,
-    }));
-    const quotes = await deps.getQuotes(symbols);
-    const result = checkMarketSentinel({
-      quotes,
-      positions,
-      previousQuotes,
-      cooldownState,
-      now: deps.now?.(),
-      options: deps.options,
-    });
+    // Market index / systemic-risk radar runs independently of holdings.
+    if (deps.getIndexSnapshots) {
+      const current = await deps.getIndexSnapshots();
+      const radar = detectIndexSystemicRisk({
+        snapshots: [...previousIndexSnapshots, ...current],
+        now: deps.now?.(),
+        options: deps.indexOptions,
+      });
+      previousIndexSnapshots = current;
 
-    cooldownState = result.nextCooldownState;
-    previousQuotes = quotes;
-
-    if (deps.persistPositions) {
-      maybePersistMarkToMarket(positions, quotes, result.checkedAt, deps.persistPositions);
+      if (radar.notifications.length > 0) {
+        await deps.onIndexNotifications?.(radar.notifications);
+      }
     }
-
-    await deps.onEvents?.(result.events, {
-      checkedAt: result.checkedAt,
-      positionCount: positions.length,
-      quoteCount: quotes.length,
-    });
   };
+}
+
+function dedupeSymbols(
+  items: Array<string | StockSymbolInfo>,
+): Array<string | StockSymbolInfo> {
+  const seen = new Set<string>();
+  const result: Array<string | StockSymbolInfo> = [];
+
+  for (const item of items) {
+    const key = typeof item === "string" ? item : item.symbol;
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(item);
+  }
+
+  return result;
 }
 
 function maybePersistMarkToMarket(

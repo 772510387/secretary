@@ -15,6 +15,12 @@ import {
 } from "../domain/portfolio/index.js";
 import type { JsonValue } from "../domain/shared/index.js";
 
+export interface AskWebSearchContext {
+  query: string;
+  answer?: string;
+  results: Array<{ title: string; url: string; snippet: string }>;
+}
+
 export interface AskPortfolioInput {
   question: string;
   account: Account;
@@ -22,6 +28,8 @@ export interface AskPortfolioInput {
   /** Latest prices by symbol for mark-to-market; omit to value at cost. */
   prices?: Record<string, number>;
   t1Enabled?: boolean;
+  /** Optional backend-executed web search results fed to the model as context. */
+  webSearch?: AskWebSearchContext;
   requestId?: string;
   now?: string;
   metadata?: Record<string, JsonValue>;
@@ -74,7 +82,8 @@ export async function runAskOnce(
     prices: input.prices,
     t1Enabled: input.t1Enabled ?? true,
   });
-  const context = buildAskContext(valuation, pricesAvailable, generatedAt);
+  const context = buildAskContext(valuation, pricesAvailable, generatedAt, input.webSearch);
+  const webSearchUsed = Boolean(input.webSearch && input.webSearch.results.length > 0);
 
   const brainInput = brainInputSchema.parse({
     requestId,
@@ -82,7 +91,9 @@ export async function runAskOnce(
     prompt: [
       question,
       "",
-      "请只根据提供的账户上下文用简体中文回答。",
+      webSearchUsed
+        ? "请结合提供的账户上下文和联网检索结果，用简体中文回答；引用结论时注明来源。"
+        : "请只根据提供的账户上下文用简体中文回答。",
       "不要执行任何交易、不要写账户、不要改规则；任何买卖想法只能作为待人工复核的建议输出。",
     ].join("\n"),
     context,
@@ -124,6 +135,7 @@ export async function runAskOnce(
       model: output.model,
       pricesAvailable,
       positionCount: input.positions.length,
+      webSearchUsed,
       brokerConnected: false,
       directExecutionAllowed: false,
       liveTrading: false,
@@ -135,10 +147,24 @@ function buildAskContext(
   valuation: PortfolioValuation,
   pricesAvailable: boolean,
   asOf: string,
+  webSearch?: AskWebSearchContext,
 ): Record<string, JsonValue> {
   return {
     asOf,
     pricesAvailable,
+    ...(webSearch && webSearch.results.length > 0
+      ? {
+          webSearch: {
+            query: webSearch.query,
+            answer: webSearch.answer ?? null,
+            results: webSearch.results.slice(0, 8).map((result) => ({
+              title: result.title,
+              url: result.url,
+              snippet: result.snippet.slice(0, 1200),
+            })),
+          },
+        }
+      : {}),
     account: {
       accountId: valuation.accountId,
       availableCash: valuation.cash.available,

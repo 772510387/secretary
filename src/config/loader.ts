@@ -100,6 +100,10 @@ export function redactConfig(config: AppConfig): AppConfig {
       ...config.notification,
       wecomBotWebhookUrl: redactSecret(config.notification.wecomBotWebhookUrl),
     },
+    search: {
+      ...config.search,
+      tavilyApiKey: redactSecret(config.search.tavilyApiKey),
+    },
   };
 }
 
@@ -111,6 +115,7 @@ export function getConfiguredSecrets(config: AppConfig): Record<string, boolean>
     tushareToken: Boolean(config.market.tushareToken),
     brokerAccountId: Boolean(config.broker.accountId),
     wecomBotWebhookUrl: Boolean(config.notification.wecomBotWebhookUrl),
+    tavilyApiKey: Boolean(config.search.tavilyApiKey),
   };
 }
 
@@ -193,6 +198,11 @@ function buildEnvOverrides(env: EnvMap): DeepPartial<AppConfig> {
       wecomBotWebhookUrl: readStringEnv(env, "WECOM_BOT_WEBHOOK_URL"),
       wecomNotify: readBooleanEnv(env, "WECOM_NOTIFY"),
       wecomHeartbeatMs: readNumberEnv(env, "WECOM_HEARTBEAT_MS"),
+    },
+    search: {
+      provider: readStringEnv(env, "SEARCH_PROVIDER"),
+      tavilyApiKey: readStringEnv(env, "TAVILY_API_KEY"),
+      maxResults: readNumberEnv(env, "SEARCH_MAX_RESULTS"),
     },
   }) as DeepPartial<AppConfig>;
 }

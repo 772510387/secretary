@@ -27,6 +27,20 @@ describe("normalizeBrainCitations", () => {
     const valid = [{ title: "x", sourceType: "memory" }];
     expect(normalizeBrainCitations(valid)).toEqual(valid);
   });
+
+  it("cleans web-style citations: fallback title, drop unknown keys, fix source/url", () => {
+    expect(
+      normalizeBrainCitations([
+        { url: "https://example.com/a", content: "正文", score: 0.9, sourceType: "web" },
+      ]),
+    ).toEqual([{ title: "https://example.com/a", sourceType: "news", url: "https://example.com/a" }]);
+  });
+
+  it("drops a non-http url and defaults sourceType to system", () => {
+    expect(normalizeBrainCitations([{ title: "t", url: "not-a-url" }])).toEqual([
+      { title: "t", sourceType: "system" },
+    ]);
+  });
 });
 
 describe("normalizeBrainProposals", () => {
