@@ -12,6 +12,7 @@
 - `DailyLossLimitRule`：已实现单日最大亏损。
 - `NoBuyState`：已实现禁买状态。
 - `CircuitBreaker`：已实现系统级熔断。
+- `KillSwitchState`：已实现全局、账户、标的三级应急停机状态，支持 `readOnly`、`cancelOnly`、`disabled`。
 
 ## 输入
 
@@ -74,6 +75,29 @@ const result = checkRisk({
 });
 ```
 
+应急停机状态：
+
+```ts
+import {
+  resolveKillSwitch,
+} from "./src/domain/risk/index.js";
+
+const resolution = resolveKillSwitch({
+  state: killSwitchState,
+  accountId: "local-test-account",
+  symbol: "000001",
+  market: "SZSE",
+  action: "submit_order",
+  now: new Date(),
+});
+```
+
+语义：
+
+- `readOnly`：只允许只读查询，阻止新增 broker delegate。
+- `cancelOnly`：只允许撤单类动作，阻止新增买入或卖出委托提交。
+- `disabled`：阻止除只读查询外的全部 broker delegate。
+
 ## PolicyEngine 当前规则
 
 - 默认只允许 A 股主板：
@@ -91,6 +115,7 @@ const result = checkRisk({
 - 单股超过上限时拒绝买入。
 - 跌破硬止损时产生强提醒。
 - 熔断后禁止新增买入。
+- 应急停机触发后阻止新增买入或全部 broker delegate，具体取决于 `readOnly`、`cancelOnly`、`disabled`。
 - 任一规则拒绝时不能继续发单。
 
 当前 T007 已覆盖：

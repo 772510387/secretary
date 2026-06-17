@@ -25,3 +25,19 @@ export {
   type RiskViolation,
   type RiskViolationCode,
 } from "./risk-engine.js";
+export {
+  killSwitchActionSchema,
+  killSwitchModeSchema,
+  killSwitchRuleSchema,
+  killSwitchScopeSchema,
+  killSwitchStateSchema,
+  modeBlocksAction,
+  resolveKillSwitch,
+  type KillSwitchAction,
+  type KillSwitchMode,
+  type KillSwitchResolution,
+  type KillSwitchRule,
+  type KillSwitchScope,
+  type KillSwitchState,
+  type ResolveKillSwitchInput,
+} from "./kill-switch.js";

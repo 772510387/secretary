@@ -37,3 +37,30 @@ memory/research/YYYY-MM-DD/{reportId}.json
 - `degraded`：外部研究失败或超时时的降级标记。
 
 研究报告可以由 `TradingAgentsCnAdapter` 产生，但适配器本身只返回报告，不自动写入、不下单。
+
+## 审计
+
+T014.1 已补充研究报告写入审计。
+
+`ResearchMemoryStore.writeReport()` 成功写入研究报告后，会追加：
+
+```text
+memory/logs/audit-YYYY-MM-DD.jsonl
+```
+
+审计事件只保存元数据：
+
+- `reportId`
+- `taskId`
+- `provider`
+- `symbol`
+- `market`
+- `tradingDate`
+- `degraded`
+- `tradeIntentDraftCount`
+- `requiresHumanReview`
+- `filePath`
+- `backupPath`
+- `liveTrading=false`
+
+审计日志不保存完整研究正文、发现列表、多空观点、风险正文或交易草案理由。研究建议仍然只是非执行草案，不能直接进入 broker。

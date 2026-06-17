@@ -31,6 +31,7 @@ import {
   type OrderRejectReason,
   type TradeIntent,
 } from "../../domain/trading/index.js";
+import { appendAuditEvent } from "../logging/index.js";
 import { AtomicFileWriter } from "../storage/atomic-file-writer.js";
 import { JsonStore } from "../storage/json-store.js";
 import { createPortfolioMemoryPaths, type PortfolioMemoryPaths } from "../storage/index.js";
@@ -283,7 +284,7 @@ export class PaperBroker {
     const rejectedOrder = markOrderRejected(order, reason, this.now());
 
     appendJsonLine(this.paths().ordersPath, rejectedOrder, this.writer);
-    appendJsonLine(this.paths().auditLogPath, auditEventForOrder(rejectedOrder), this.writer);
+    appendAuditEvent(this.paths().auditLogPath, auditEventForOrder(rejectedOrder), this.writer);
 
     return {
       idempotent: false,
@@ -302,7 +303,7 @@ export class PaperBroker {
     this.positionsStore().write(positions);
     appendJsonLine(this.paths().ordersPath, order, this.writer);
     appendJsonLine(this.paths().tradesPath, trade, this.writer);
-    appendJsonLine(this.paths().auditLogPath, auditEventForOrder(order, execution), this.writer);
+    appendAuditEvent(this.paths().auditLogPath, auditEventForOrder(order, execution), this.writer);
   }
 
   private findExistingIntent(intentId: string): { order: Order; trade?: TradeRecord } | undefined {

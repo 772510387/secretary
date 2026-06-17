@@ -96,6 +96,10 @@ export function redactConfig(config: AppConfig): AppConfig {
       ...config.broker,
       accountId: redactSecret(config.broker.accountId),
     },
+    notification: {
+      ...config.notification,
+      wecomBotWebhookUrl: redactSecret(config.notification.wecomBotWebhookUrl),
+    },
   };
 }
 
@@ -106,6 +110,7 @@ export function getConfiguredSecrets(config: AppConfig): Record<string, boolean>
     dashscopeApiKey: Boolean(config.brain.dashscope.apiKey),
     tushareToken: Boolean(config.market.tushareToken),
     brokerAccountId: Boolean(config.broker.accountId),
+    wecomBotWebhookUrl: Boolean(config.notification.wecomBotWebhookUrl),
   };
 }
 
@@ -165,6 +170,7 @@ function buildEnvOverrides(env: EnvMap): DeepPartial<AppConfig> {
     },
     brain: {
       provider: readStringEnv(env, "BRAIN_PROVIDER"),
+      fallbackProvider: readStringEnv(env, "BRAIN_FALLBACK_PROVIDER"),
       temperature: readNumberEnv(env, "BRAIN_TEMPERATURE"),
       structuredOutput: readBooleanEnv(env, "BRAIN_STRUCTURED_OUTPUT"),
       openai: {
@@ -184,6 +190,9 @@ function buildEnvOverrides(env: EnvMap): DeepPartial<AppConfig> {
     notification: {
       defaultCooldownSeconds: readNumberEnv(env, "DEFAULT_COOLDOWN_SECONDS"),
       criticalCooldownSeconds: readNumberEnv(env, "CRITICAL_COOLDOWN_SECONDS"),
+      wecomBotWebhookUrl: readStringEnv(env, "WECOM_BOT_WEBHOOK_URL"),
+      wecomNotify: readBooleanEnv(env, "WECOM_NOTIFY"),
+      wecomHeartbeatMs: readNumberEnv(env, "WECOM_HEARTBEAT_MS"),
     },
   }) as DeepPartial<AppConfig>;
 }

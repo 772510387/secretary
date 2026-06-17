@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   researchReportSchema,
   researchTaskSchema,
+  type ResearchReport,
 } from "../../src/domain/research/index.js";
 import {
   ResearchProviderError,
@@ -142,7 +143,11 @@ describe("TradingAgentsCnAdapter", () => {
 
   it("writes ResearchReport into memory/research with backup on overwrite", async () => {
     const memoryDir = createTempMemoryDir();
-    const store = new ResearchMemoryStore({ memoryDir });
+    const store = new ResearchMemoryStore({
+      memoryDir,
+      now: () => new Date(generatedAt),
+      idGenerator: createIdGenerator(),
+    });
     const adapter = new TradingAgentsCnAdapter({
       now: () => new Date(generatedAt),
       idGenerator: createIdGenerator(),
@@ -156,14 +161,91 @@ describe("TradingAgentsCnAdapter", () => {
 
     const first = store.writeReport(report);
     const second = store.writeReport(report);
-    const paths = createResearchMemoryPaths(memoryDir, report.tradingDate, report.reportId);
+    const paths = createResearchMemoryPaths(
+      memoryDir,
+      report.tradingDate,
+      report.reportId,
+      generatedAt,
+    );
     const stored = researchReportSchema.parse(JSON.parse(readFileSync(paths.reportPath, "utf8")));
+    const auditEvents = readJsonLines(paths.auditLogPath);
 
     expect(first.filePath).toBe(paths.reportPath);
+    expect(first.auditLogPath).toBe(paths.auditLogPath);
     expect(second.backupPath).toBeDefined();
     expect(existsSync(second.backupPath!)).toBe(true);
+    expect(second.auditBackupPath).toBeDefined();
+    expect(existsSync(second.auditBackupPath!)).toBe(true);
     expect(stored.reportId).toBe(report.reportId);
     expect(stored.provider).toBe("trading_agents_cn");
+    expect(auditEvents).toHaveLength(2);
+    expect(auditEvents[0]).toMatchObject({
+      actor: {
+        type: "system",
+        id: "research-memory-store",
+      },
+      action: "write",
+      subject: {
+        type: "report",
+        id: report.reportId,
+      },
+      severity: "info",
+      result: "success",
+      correlationId: report.taskId,
+      metadata: {
+        reportId: report.reportId,
+        taskId: report.taskId,
+        provider: "trading_agents_cn",
+        symbol: report.symbol,
+        market: report.market,
+        tradingDate: report.tradingDate,
+        degraded: false,
+        tradeIntentDraftCount: 0,
+        requiresHumanReview: true,
+        filePath: paths.reportPath,
+        backupPath: null,
+        liveTrading: false,
+      },
+    });
+    expect(auditEvents[1].metadata).toMatchObject({
+      reportId: report.reportId,
+      backupPath: second.backupPath,
+    });
+    expect(JSON.stringify(auditEvents)).not.toContain("Neutral research output.");
+    expect(JSON.stringify(auditEvents)).not.toContain("No decisive signal.");
+  });
+
+  it("does not write a report or success audit when report schema validation fails", async () => {
+    const memoryDir = createTempMemoryDir();
+    const store = new ResearchMemoryStore({
+      memoryDir,
+      now: () => new Date(generatedAt),
+      idGenerator: createIdGenerator(),
+    });
+    const adapter = new TradingAgentsCnAdapter({
+      now: () => new Date(generatedAt),
+      idGenerator: createIdGenerator(),
+      runner: async () => ({
+        summary: "Neutral research output.",
+        conclusion: "neutral",
+        findings: ["No decisive signal."],
+      }),
+    });
+    const report = await adapter.runResearch(makeTask());
+    const invalidReport = {
+      ...report,
+      summary: "",
+    } as ResearchReport;
+    const paths = createResearchMemoryPaths(
+      memoryDir,
+      report.tradingDate,
+      report.reportId,
+      generatedAt,
+    );
+
+    expect(() => store.writeReport(invalidReport)).toThrow();
+    expect(existsSync(paths.reportPath)).toBe(false);
+    expect(existsSync(paths.auditLogPath)).toBe(false);
   });
 });
 
@@ -195,4 +277,11 @@ function createIdGenerator(): () => string {
     id += 1;
     return String(id).padStart(4, "0");
   };
+}
+
+function readJsonLines(filePath: string): Array<Record<string, unknown>> {
+  return readFileSync(filePath, "utf8")
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
 }

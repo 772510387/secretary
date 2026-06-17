@@ -152,6 +152,110 @@ describe("MarketSentinel single check", () => {
     ]);
   });
 
+  it("scans high-priority watchlist entries for daily move and observe-price events", () => {
+    const result = checkMarketSentinel({
+      now,
+      quotes: [
+        makeQuote({
+          latestPrice: 10.05,
+          changePct: 0.035,
+          receivedAt: now,
+        }),
+      ],
+      positions: [],
+      watchlistEntries: [
+        {
+          symbol: "000636",
+          market: "SZSE",
+          name: "Mock Watch",
+          priority: "high",
+          reason: "Manual seed for today's focus.",
+          source: "manual_seed",
+          updatedAt: now,
+          observePrice: 10,
+        },
+      ],
+    });
+
+    expect(result.events.map((event) => event.eventType)).toEqual([
+      "watchlist_price_surge",
+      "watchlist_observe_price_near",
+    ]);
+    expect(result.events[0]).toMatchObject({
+      severity: "warning",
+      currentPrice: 10.05,
+      changePct: 0.035,
+      threshold: 0.03,
+      wakeBrain: true,
+      cooldownKey: "watchlist_price_surge:SZSE:000636",
+    });
+    expect(result.events[1]).toMatchObject({
+      severity: "watch",
+      currentPrice: 10.05,
+      previousPrice: 10,
+      changePct: 0.005,
+      threshold: 0.01,
+      cooldownKey: "watchlist_observe_price_near:SZSE:000636",
+    });
+    expect(result.auditEvents).toHaveLength(2);
+    expect(result.auditEvents[0]).toMatchObject({
+      action: "validate",
+      result: "success",
+      metadata: {
+        eventType: "watchlist_price_surge",
+        symbol: "000636",
+        brokerConnected: false,
+        directExecutionAllowed: false,
+        liveTrading: false,
+      },
+    });
+    expect(JSON.stringify(result.auditEvents)).not.toContain("Manual seed for today's focus.");
+  });
+
+  it("ignores non-high watchlist entries by default and honors watchlist cooldown", () => {
+    const nonHigh = checkMarketSentinel({
+      now,
+      quotes: [makeQuote({ latestPrice: 9.6, changePct: -0.04, receivedAt: now })],
+      positions: [],
+      watchlistEntries: [
+        {
+          symbol: "000636",
+          market: "SZSE",
+          name: "Mock Watch",
+          priority: "medium",
+          reason: "Manual import.",
+          source: "manual_import",
+          updatedAt: now,
+        },
+      ],
+    });
+
+    expect(nonHigh.events).toEqual([]);
+
+    const cooling = checkMarketSentinel({
+      now,
+      quotes: [makeQuote({ latestPrice: 9.6, changePct: -0.04, receivedAt: now })],
+      positions: [],
+      watchlistEntries: [
+        {
+          symbol: "000636",
+          market: "SZSE",
+          name: "Mock Watch",
+          priority: "high",
+          reason: "Manual import.",
+          source: "manual_import",
+          updatedAt: now,
+        },
+      ],
+      cooldownState: {
+        "watchlist_price_drop:SZSE:000636": "2026-06-12T01:30:30.000Z",
+      },
+    });
+
+    expect(cooling.events).toEqual([]);
+    expect(cooling.auditEvents).toEqual([]);
+  });
+
   it("throws for invalid threshold configuration", () => {
     expect(() =>
       checkMarketSentinel({

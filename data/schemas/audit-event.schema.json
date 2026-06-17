@@ -64,7 +64,8 @@
             "risk",
             "brain",
             "provider",
-            "storage"
+            "storage",
+            "scheduler"
           ]
         },
         "id": {
@@ -105,4 +106,3 @@
     }
   }
 }
-

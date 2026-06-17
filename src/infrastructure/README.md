@@ -9,6 +9,7 @@
 - `scheduler`：已实现定时器、北京时间、交易时段任务、任务锁和优雅停止。
 - `broker`：模拟盘、人工确认、未来实盘券商。
 - `logging`：日志和审计落盘。
+- `notification`：console/file/webhook 通知适配器，默认测试使用本地或 mock 通道。
 
 ## 实现原则
 

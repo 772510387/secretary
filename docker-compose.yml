@@ -1,0 +1,24 @@
+# Secretary container orchestration.
+#
+# Default `docker compose up` runs the OFFLINE mock sentinel daemon (long-running).
+# One-shot dev scripts (doctor / seed / research / manual-confirm) are run with
+# `docker compose run --rm secretary <command>` — see docs/ops/docker-usage.md.
+
+services:
+  secretary:
+    build: .
+    image: secretary:local
+    container_name: secretary
+    # Loads every KEY=value from .env into the container environment.
+    # loadConfig() reads process.env, so API keys never need to be baked into the image.
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Shanghai
+    # Persist audit logs, paper account state, reports and research across restarts.
+    volumes:
+      - ./memory:/app/memory
+      - ./data:/app/data
+    # Restart the daemon if it crashes, but not when you stop it manually.
+    restart: unless-stopped
+    # Default command (offline mock sentinel daemon) comes from the Dockerfile CMD.

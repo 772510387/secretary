@@ -1,8 +1,9 @@
 # Secretary 下一步操作清单
 
 生成日期：2026-06-12
+状态更新：2026-06-13
 
-这份清单给项目推进使用。你不需要一次理解整个架构，只需要按阶段把任务交给 AI 实现。
+这份清单记录从项目骨架推进到 T014 的任务拆分和验收口径。T001-T014 已经完成，后续推进请优先使用 `docs/requirement/post-t014-interaction-checklist.md`。
 
 ## 0. 当前状态
 
@@ -14,33 +15,42 @@
 - AI 协作规则。
 - TypeScript 基础配置。
 - 配置模板。
+- T001 ConfigLoader。
+- T002 JsonStore 和 AtomicFileWriter。
+- T003 基础数据 schema。
+- T004 初始化模拟账户。
+- T005 Portfolio 计算。
+- T006 PaperBroker。
+- T007 PolicyEngine。
+- T008 RiskEngine。
+- T009 TencentQuoteProvider。
+- T010 MarketSentinel 单次检查。
+- T011 Scheduler。
+- T012 BrainProvider 抽象和 MockBrainProvider。
+- T013 报告生成。
+- T014 TradingAgents-CN Research Adapter 最小版本。
 
-还没有完成：
+当前仍未完成或不应急着做：
 
-- 真实代码实现。
-- 依赖安装。
-- 模拟账户初始化。
-- 行情接入。
-- 风控和交易引擎。
-- 小脑哨兵。
-- 大脑 provider。
+- 研究报告写入审计补强。
+- 手动研究入口和开发脚本。
+- 哨兵、研究、报告和审计的端到端模拟闭环。
+- 人工确认提案模型。
+- T015 `ManualConfirmBroker` 及之后的实盘预备任务。
+- 真实 BrainProvider 和真实 TradingAgents-CN runner 接入评估。
+- 真实 broker 接入。模拟盘稳定前不要实现自动实盘买入。
 
-## 1. 你的第一步
+## 1. 当前基线检查
 
-在 `D:\Project\main\secretary` 运行：
+继续开发前，建议在 `D:\Project\main\secretary` 运行：
 
 ```powershell
-npm install
 npm run doctor
+npm run typecheck
+npm test
 ```
 
-然后复制环境变量模板：
-
-```powershell
-Copy-Item .env.example .env
-```
-
-第一阶段建议 `.env` 先保持：
+当前默认配置仍应保持：
 
 ```env
 LIVE_TRADING=false
@@ -50,7 +60,13 @@ MARKET_PROVIDER=tencent
 TIMEZONE=Asia/Shanghai
 ```
 
-Gemini、DashScope Qwen、OpenAI key 可以先不填，等模拟盘闭环跑通后再接。
+Gemini、DashScope Qwen、OpenAI key 可以继续不填，等模拟盘闭环稳定后再评估真实 provider 接入。
+
+后续交互入口：
+
+```text
+请按 docs/requirement/post-t014-interaction-checklist.md 执行 <任务编号>。
+```
 
 ## 2. 推进原则
 
@@ -743,17 +759,26 @@ MVP 完成时，系统应该可以：
 
 ## 12. 你现在应该做什么
 
-按顺序做：
+T001-T014 已完成，不要再从 T001 重新开始。P0-1 文档状态校准已完成，后续按 `docs/requirement/post-t014-interaction-checklist.md` 推进。
 
-1. 运行 `npm install`。
-2. 运行 `npm run doctor`。
-3. 复制 `.env.example` 到 `.env`。
-4. 让我实现 T001。
-5. T001 完成后让我实现 T002。
-6. 按清单一路推进到 T013。
+推荐顺序：
 
-第一句可以直接发：
+1. P0-2 Git 发布前检查。
+2. P1-1 ResearchMemoryStore 写入审计日志。
+3. P2-1 `runResearchOnce` 应用用例。
+4. P2-2 `research:once` 开发脚本。
+5. P3-1 单次闭环集成测试。
+6. P3-2 盘中 runner 组合验证。
+7. P4-1 TradeIntentDraft 到人工确认提案。
+8. P4-2 ManualConfirmBroker 设计文档。
+9. P5 外部能力评估。
+
+下一句可以直接发：
 
 ```text
-开始实现 T001 ConfigLoader，按 docs/requirement/next-action-checklist.md 的要求执行。
+请执行 docs/requirement/post-t014-interaction-checklist.md 的 P0-2。
+只运行 Git 发布前检查命令，不修改文件。
+把发现的问题按风险排序说明。
 ```
+
+做到 P3-2 之后，再判断是否进入 T015。不要在 P3-2 之前实现真实 broker。

@@ -9,6 +9,11 @@
 - `BackupManager`：已实现，覆盖前备份到同级 `.backups`。
 - `ReportsMemoryStore`：已实现，负责报告写入 `memory/reports`。
 - `ResearchMemoryStore`：已实现，负责研究报告写入 `memory/research`。
+- `ProposalMemoryStore`：已实现，负责人工确认提案写入 `memory/proposals`。
+- `MemoryRegistry`：已实现，负责按类别列出记忆文档、关键词搜索和最近研究/报告元数据读取。
+- `RuntimeHealthStore`：已实现，负责写入 runtime health snapshot 和 heartbeat metadata。
+- `WatchlistMemoryStore`：已实现，负责写入 `memory/market/watchlists` 的今日关注、长期自选和潜力股池。
+- `LiveTradingSafetyStore`：已实现，负责写入未来 live gate 的账户 allowlist 和 kill switch 状态，并追加 metadata-only 审计。
 - `SchemaRegistry`：加载 `data/schemas`。
 - `MigrationRunner`：未来 schema 升级。
 
@@ -74,6 +79,56 @@ const account = store.read();
 - 写入前使用 `researchReportSchema` 校验。
 - 重复写入同一研究报告时会通过 `AtomicFileWriter` 创建备份。
 - 研究报告里的交易建议只能是 `TradeIntentDraft`，不能直接执行。
+- 成功写入后追加 `memory/logs/audit-YYYY-MM-DD.jsonl`。
+- 审计日志只记录 reportId、taskId、provider、symbol、degraded、交易草案数量、人工复核标记和文件路径等元数据。
+- 审计日志不记录完整 `summary`、`findings`、`bullBearViews`、`riskFactors` 或交易草案 `rationale`。
+- 如果研究报告 schema 校验失败，不会写入研究报告，也不会追加成功审计事件。
+
+`ProposalMemoryStore.writeProposal()` 已用于 P4-1 人工确认提案落盘：
+
+- 写入 `memory/proposals/YYYY-MM-DD/{proposalId}.json`。
+- 写入前使用 `reviewProposalSchema` 校验。
+- 重复写入同一提案时会通过 `AtomicFileWriter` 创建备份。
+- 成功写入后追加 `memory/logs/audit-YYYY-MM-DD.jsonl`。
+- 审计日志只记录 proposalId、来源报告、来源 draft、标的、方向、状态、执行保护标记和文件路径等元数据。
+- 审计日志不记录完整 `rationale` 或 `reviewReason`。
+- `memory_write_review` 审计只记录 requestId、writeType、operation、targetCategory、targetPath、策略决策和执行保护标记，不记录完整写入正文。
+- 如果提案 schema 校验失败，不会写入提案，也不会追加成功审计事件。
+
+`MemoryRegistry` 已用于 U3 记忆检索：
+
+- `listDocuments()` 按 `rules`、`research`、`reports`、`proposals`、`logs` 列出 Markdown、JSON、JSONL 和文本文件，支持 `category`/`categories`、`from`、`to` 和 `limit`。
+- `search()` 做轻量关键词检索，支持时间范围过滤，返回 `path`、`summary`、`updatedAt`、metadata、文件元数据、命中次数和脱敏短片段。
+- `recent()` 返回最近 `research` 或 `reports` 的元数据，支持 `from`、`to` 和 `limit`，不返回完整研究正文或报告正文。
+- `reports` 最近读取会抽取标准化复盘 metadata：`period`、`symbols`、`marketSummary`、`decisionSummary`、`riskNotes`、`linkedAuditIds`。
+- 不索引 `portfolio/`、`config/`、`secrets/`、`broker/`、`orders/` 等高风险目录。
+- 不引入向量数据库，不调用 LLM，不联网。
+
+`RuntimeHealthStore` 已用于 R1-2 运行态健康状态：
+
+- 写入 `memory/logs/runtime-health.json`。
+- 追加 `memory/logs/heartbeat-YYYY-MM-DD.jsonl`。
+- 写入前使用 Zod schema 校验。
+- metadata 会脱敏 `apiKey`、`token`、`password`、`secret`、`account` 等字段，并截断长文本。
+- 错误只记录 `errorType`、脱敏 `message` 和 `occurredAt`，不记录 stack、密钥、账号或完整研究正文。
+- 当前由 `MarketSentinelDaemon` 在启动、重复启动、task 成功、task 失败和停止时调用。
+
+`WatchlistMemoryStore` 已用于 R5-1 自选池：
+
+- 写入 `memory/market/watchlists/{category}.json`，category 为 `watchlist_today`、`watchlist_long_term` 或 `potential_stocks`。
+- 支持人工 seed/import，按 `market:symbol` 合并同一标的，后导入覆盖旧条目。
+- 成功写入后追加 `memory/logs/audit-YYYY-MM-DD.jsonl`，审计只记录 category、entryCount、symbols、优先级统计和文件路径等元数据。
+- 不使用 web search，不调用 LLM，不接 broker，不写账户。
+
+`LiveTradingSafetyStore` 已用于 R9 非交易性实盘安全底座：
+
+- 写入 `memory/broker/live-account-allowlist.json`。
+- 写入 `memory/risk/kill-switch.json`。
+- 成功写入后追加 `memory/logs/audit-YYYY-MM-DD.jsonl`。
+- allowlist 审计只记录 entry 数量、enabled 数量、brokerProvider 和脱敏账户标识。
+- kill switch 审计只记录 ruleId、scope、mode、脱敏账户、标的和文件路径，不记录完整 reason 或真实账号。
+- 缺 allowlist 时 `LiveTradingGate` 默认拒绝。
+- 不接真实 broker，不下单，不写 portfolio 订单或交易流水。
 
 ## 首批存储对象
 
@@ -84,6 +139,8 @@ const account = store.read();
 - 研究报告。
 - 记忆提案。
 - 审计日志。
+- runtime health 和 heartbeat。
+- live account allowlist 和 kill switch。
 
 ## 后续
 

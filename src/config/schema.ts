@@ -81,6 +81,7 @@ const dashScopeProviderConfigSchema = z
 export const brainConfigSchema = z
   .object({
     provider: z.enum(["mock", "openai", "gemini", "dashscope"]).default("mock"),
+    fallbackProvider: z.enum(["mock", "openai", "gemini", "dashscope"]).optional(),
     temperature: z.number().min(0).max(2).default(0.2),
     structuredOutput: z.boolean().default(true),
     openai: openAiProviderConfigSchema.default({}),
@@ -93,6 +94,9 @@ export const notificationConfigSchema = z
   .object({
     defaultCooldownSeconds: z.number().int().nonnegative().default(600),
     criticalCooldownSeconds: z.number().int().nonnegative().default(60),
+    wecomBotWebhookUrl: optionalSecret,
+    wecomNotify: z.boolean().default(false),
+    wecomHeartbeatMs: z.number().int().positive().optional(),
   })
   .strict();
 

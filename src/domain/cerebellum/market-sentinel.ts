@@ -1,4 +1,12 @@
-import { quoteSnapshotSchema, type QuoteSnapshot } from "../market/index.js";
+import { auditEventSchema, type AuditEvent } from "../audit/index.js";
+import {
+  normalizeWatchlistEntry,
+  quoteSnapshotSchema,
+  selectHighPriorityWatchlistEntries,
+  type QuoteSnapshot,
+  type WatchlistEntryInput,
+  type WatchlistPriority,
+} from "../market/index.js";
 import { type Position, positionSchema, roundRatio } from "../portfolio/index.js";
 import {
   cerebellumEventSchema,
@@ -11,6 +19,9 @@ export interface MarketSentinelOptions {
   rapidMoveThreshold?: number;
   rapidMoveWindowMs?: number;
   positionStopLossRatio?: number;
+  watchlistMoveThreshold?: number;
+  watchlistObservePriceNearRatio?: number;
+  watchlistPriorities?: readonly WatchlistPriority[];
   cooldownMs?: number;
 }
 
@@ -18,6 +29,7 @@ export interface MarketSentinelCheckInput {
   quotes: QuoteSnapshot[];
   positions: Position[];
   previousQuotes?: QuoteSnapshot[];
+  watchlistEntries?: readonly WatchlistEntryInput[];
   cooldownState?: Record<string, string>;
   now?: Date | string;
   options?: MarketSentinelOptions;
@@ -27,12 +39,16 @@ export interface MarketSentinelCheckResult {
   checkedAt: string;
   events: CerebellumEvent[];
   nextCooldownState: Record<string, string>;
+  auditEvents: AuditEvent[];
 }
 
 interface NormalizedMarketSentinelOptions {
   rapidMoveThreshold: number;
   rapidMoveWindowMs: number;
   positionStopLossRatio: number;
+  watchlistMoveThreshold: number;
+  watchlistObservePriceNearRatio: number;
+  watchlistPriorities: readonly WatchlistPriority[];
   cooldownMs: number;
 }
 
@@ -41,6 +57,9 @@ export function checkMarketSentinel(input: MarketSentinelCheckInput): MarketSent
   const checkedAt = normalizeDate(input.now).toISOString();
   const quotes = input.quotes.map((quote) => quoteSnapshotSchema.parse(quote));
   const positions = input.positions.map((position) => positionSchema.parse(position));
+  const watchlistEntries = (input.watchlistEntries ?? []).map((entry) =>
+    normalizeWatchlistEntry(entry, checkedAt),
+  );
   const previousQuoteMap = new Map(
     (input.previousQuotes ?? [])
       .map((quote) => quoteSnapshotSchema.parse(quote))
@@ -51,6 +70,7 @@ export function checkMarketSentinel(input: MarketSentinelCheckInput): MarketSent
   const candidates: CerebellumEvent[] = [
     ...detectRapidMoveEvents(quotes, previousQuoteMap, checkedAt, options),
     ...detectStopLossEvents(positions, currentQuoteMap, checkedAt, options),
+    ...detectWatchlistEvents(watchlistEntries, currentQuoteMap, checkedAt, options),
   ];
   const events: CerebellumEvent[] = [];
 
@@ -67,6 +87,7 @@ export function checkMarketSentinel(input: MarketSentinelCheckInput): MarketSent
     checkedAt,
     events,
     nextCooldownState,
+    auditEvents: events.map((event) => auditEventForSentinelEvent(event)),
   };
 }
 
@@ -160,6 +181,78 @@ function detectStopLossEvents(
   });
 }
 
+function detectWatchlistEvents(
+  watchlistEntries: ReturnType<typeof normalizeWatchlistEntry>[],
+  currentQuoteMap: Map<string, QuoteSnapshot>,
+  checkedAt: string,
+  options: NormalizedMarketSentinelOptions,
+): CerebellumEvent[] {
+  return selectHighPriorityWatchlistEntries(
+    watchlistEntries,
+    options.watchlistPriorities,
+  ).flatMap((entry) => {
+    const quote = currentQuoteMap.get(watchlistEntryQuoteKey(entry));
+
+    if (!quote) {
+      return [];
+    }
+
+    const events: CerebellumEvent[] = [];
+
+    if (quote.changePct >= options.watchlistMoveThreshold) {
+      events.push(
+        createEvent({
+          eventType: "watchlist_price_surge",
+          severity: "warning",
+          quote,
+          checkedAt,
+          currentPrice: quote.latestPrice,
+          changePct: roundRatio(quote.changePct),
+          threshold: options.watchlistMoveThreshold,
+          message: `${quote.name} high-priority watchlist is up ${formatPct(quote.changePct)} today`,
+        }),
+      );
+    }
+
+    if (quote.changePct <= -options.watchlistMoveThreshold) {
+      events.push(
+        createEvent({
+          eventType: "watchlist_price_drop",
+          severity: "warning",
+          quote,
+          checkedAt,
+          currentPrice: quote.latestPrice,
+          changePct: roundRatio(quote.changePct),
+          threshold: options.watchlistMoveThreshold,
+          message: `${quote.name} high-priority watchlist is down ${formatPct(quote.changePct)} today`,
+        }),
+      );
+    }
+
+    if (entry.observePrice !== undefined && entry.observePrice > 0) {
+      const distanceRatio = roundRatio((quote.latestPrice - entry.observePrice) / entry.observePrice);
+
+      if (Math.abs(distanceRatio) <= options.watchlistObservePriceNearRatio) {
+        events.push(
+          createEvent({
+            eventType: "watchlist_observe_price_near",
+            severity: "watch",
+            quote,
+            checkedAt,
+            currentPrice: quote.latestPrice,
+            previousPrice: entry.observePrice,
+            changePct: distanceRatio,
+            threshold: options.watchlistObservePriceNearRatio,
+            message: `${quote.name} is near watchlist observe price ${entry.observePrice}`,
+          }),
+        );
+      }
+    }
+
+    return events;
+  });
+}
+
 function createEvent(input: {
   eventType: CerebellumEventType;
   severity: SignalSeverity;
@@ -213,11 +306,20 @@ function normalizeOptions(options: MarketSentinelOptions = {}): NormalizedMarket
     rapidMoveThreshold: options.rapidMoveThreshold ?? 0.02,
     rapidMoveWindowMs: options.rapidMoveWindowMs ?? 60_000,
     positionStopLossRatio: options.positionStopLossRatio ?? 0.08,
+    watchlistMoveThreshold: options.watchlistMoveThreshold ?? 0.03,
+    watchlistObservePriceNearRatio: options.watchlistObservePriceNearRatio ?? 0.01,
+    watchlistPriorities: options.watchlistPriorities ?? ["high"],
     cooldownMs: options.cooldownMs ?? 600_000,
   };
 
   assertRatio(normalized.rapidMoveThreshold, "rapidMoveThreshold");
   assertRatio(normalized.positionStopLossRatio, "positionStopLossRatio");
+  assertRatio(normalized.watchlistMoveThreshold, "watchlistMoveThreshold");
+  assertRatio(normalized.watchlistObservePriceNearRatio, "watchlistObservePriceNearRatio");
+
+  if (normalized.watchlistPriorities.length === 0) {
+    throw new MarketSentinelError("watchlistPriorities must not be empty");
+  }
 
   if (!Number.isFinite(normalized.rapidMoveWindowMs) || normalized.rapidMoveWindowMs <= 0) {
     throw new MarketSentinelError("rapidMoveWindowMs must be a positive number");
@@ -228,6 +330,44 @@ function normalizeOptions(options: MarketSentinelOptions = {}): NormalizedMarket
   }
 
   return normalized;
+}
+
+function auditEventForSentinelEvent(event: CerebellumEvent): AuditEvent {
+  return auditEventSchema.parse({
+    eventId: safeIdentifier(`audit-${event.eventId}`),
+    occurredAt: event.occurredAt,
+    actor: {
+      type: "scheduler",
+      id: "market-sentinel",
+    },
+    action: "validate",
+    subject: {
+      type: "scheduler",
+      id: "market-sentinel",
+    },
+    severity: event.severity === "watch" ? "info" : event.severity,
+    result: "success",
+    message: `MarketSentinel generated ${event.eventType}`,
+    correlationId: safeIdentifier(event.eventId),
+    metadata: {
+      eventId: event.eventId,
+      eventType: event.eventType,
+      severity: event.severity,
+      symbol: event.symbol,
+      market: event.market,
+      cooldownKey: event.cooldownKey,
+      wakeBrain: event.wakeBrain,
+      currentPrice: event.currentPrice,
+      previousPrice: event.previousPrice ?? null,
+      changePct: event.changePct ?? null,
+      threshold: event.threshold,
+      source: event.source,
+      brainProviderCalled: false,
+      brokerConnected: false,
+      directExecutionAllowed: false,
+      liveTrading: false,
+    },
+  });
 }
 
 function assertRatio(value: number, name: string): void {
@@ -275,12 +415,21 @@ function quoteKey(quote: QuoteSnapshot): string {
   return `${quote.market}:${quote.symbol}`;
 }
 
+function watchlistEntryQuoteKey(entry: { market: string; symbol: string }): string {
+  return `${entry.market}:${entry.symbol}`;
+}
+
 function positionKey(position: Position): string {
   return `${position.market}:${position.symbol}`;
 }
 
 function formatPct(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
+}
+
+function safeIdentifier(value: string): string {
+  const safe = value.replace(/[^A-Za-z0-9_.:-]/g, "-").slice(0, 128);
+  return safe && /^[A-Za-z0-9]/.test(safe) ? safe : "market-sentinel";
 }
 
 export class MarketSentinelError extends Error {

@@ -1,0 +1,25 @@
+# Build context hygiene: keep the image small and keep secrets / local state out.
+node_modules
+dist
+
+# Secrets are injected at runtime via compose env_file, never baked into the image.
+.env
+.env.*
+!.env.example
+
+# Local runtime state is mounted as a volume, not copied into the image.
+memory/logs/*.jsonl
+memory/logs/*.log
+memory/portfolio/*.json
+memory/portfolio/*.jsonl
+memory/reports/**/*.json
+memory/research/**/*.json
+data/cache/*
+
+# VCS / tooling noise
+.git
+.gitignore
+.codex
+*.bak
+*.local.json
+npm-debug.log*

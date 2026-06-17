@@ -58,6 +58,9 @@ describe("report generation", () => {
       writer,
       now: fixedNow,
       tradingDate,
+      metadata: {
+        linkedAuditIds: ["audit-report-001"],
+      },
     });
 
     expect(results.map((result) => result.report.reportType)).toEqual(reportTypes);
@@ -84,10 +87,17 @@ describe("report generation", () => {
           taskType: reportType,
         },
         metadata: {
+          period: "daily",
+          symbols: ["000636"],
+          marketSummary: "1 quote snapshots; average change 5.00%; 1 positions in context.",
+          decisionSummary: "1 non-executable recommendations; manual review is required before any trade intent or memory proposal.",
+          linkedAuditIds: ["audit-report-001"],
           liveTrading: false,
           directExecutionAllowed: false,
         },
       });
+      expect(report.metadata).toHaveProperty("riskNotes");
+      expect(JSON.stringify(report.metadata)).not.toContain(report.contentMarkdown);
       expect(report.positionSummary).toMatchObject({
         positionCount: 1,
         totalMarketValue: 1050,

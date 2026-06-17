@@ -33,6 +33,19 @@ export const reportTypeSchema = z.enum([
   "daily_reflection",
 ]);
 
+export const reportPeriodSchema = z.enum(["daily", "weekly", "monthly", "yearly"]);
+
+export const reportReviewMetadataSchema = z
+  .object({
+    period: reportPeriodSchema,
+    symbols: z.array(z.string().regex(/^\d{6}$/)).default([]),
+    marketSummary: z.string().trim().min(1).max(1000),
+    decisionSummary: z.string().trim().min(1).max(1000),
+    riskNotes: z.array(z.string().trim().min(1).max(1000)).default([]),
+    linkedAuditIds: z.array(identifierSchema).default([]),
+  })
+  .strict();
+
 export const reportAccountSummarySchema = z
   .object({
     accountId: identifierSchema,
@@ -155,6 +168,8 @@ export interface GenerateDailyReportsInput extends Omit<GenerateReportInput, "re
 }
 
 export type ReportType = z.infer<typeof reportTypeSchema>;
+export type ReportPeriod = z.infer<typeof reportPeriodSchema>;
+export type ReportReviewMetadata = z.infer<typeof reportReviewMetadataSchema>;
 export type ReportAccountSummary = z.infer<typeof reportAccountSummarySchema>;
 export type ReportPositionSummary = z.infer<typeof reportPositionSummarySchema>;
 export type ReportMarketSummary = z.infer<typeof reportMarketSummarySchema>;
@@ -285,6 +300,14 @@ function buildGeneratedReport(input: {
   const recommendations = buildRecommendations(structured.nextActions ?? []);
   const facts = buildFacts(input.accountSummary, input.positionSummary, input.marketSummary);
   const inferences = uniqueStrings([input.brainOutput.summary, ...structured.keyPoints]);
+  const reviewMetadata = buildReportReviewMetadata({
+    reportType: input.reportType,
+    positionSummary: input.positionSummary,
+    marketSummary: input.marketSummary,
+    riskSummary,
+    recommendations,
+    inputMetadata: input.metadata,
+  });
 
   return generatedReportSchema.parse({
     reportId: input.reportId,
@@ -310,9 +333,44 @@ function buildGeneratedReport(input: {
     }),
     metadata: {
       ...input.metadata,
+      ...reviewMetadata,
       liveTrading: false,
       directExecutionAllowed: false,
     },
+  });
+}
+
+function buildReportReviewMetadata(input: {
+  reportType: ReportType;
+  positionSummary: ReportPositionSummary;
+  marketSummary: ReportMarketSummary;
+  riskSummary: string[];
+  recommendations: ReportRecommendation[];
+  inputMetadata: Record<string, unknown>;
+}): ReportReviewMetadata {
+  const quoteSymbols = input.marketSummary.quotes.map((quote) => quote.symbol);
+  const positionSymbols = input.positionSummary.items.map((position) => position.symbol);
+  const symbols = uniqueStrings([...positionSymbols, ...quoteSymbols]);
+  const averageChangePct =
+    input.marketSummary.quotes.length > 0
+      ? roundRatio(
+          input.marketSummary.quotes.reduce((sum, quote) => sum + quote.changePct, 0) /
+            input.marketSummary.quotes.length,
+        )
+      : undefined;
+  const marketSummary =
+    averageChangePct === undefined
+      ? `No quote snapshots; ${input.positionSummary.positionCount} positions in context.`
+      : `${input.marketSummary.quoteCount} quote snapshots; average change ${formatPct(averageChangePct)}; ${input.positionSummary.positionCount} positions in context.`;
+  const decisionSummary = `${input.recommendations.length} non-executable recommendations; manual review is required before any trade intent or memory proposal.`;
+
+  return reportReviewMetadataSchema.parse({
+    period: reportPeriodForType(input.reportType),
+    symbols,
+    marketSummary,
+    decisionSummary,
+    riskNotes: input.riskSummary,
+    linkedAuditIds: extractLinkedAuditIds(input.inputMetadata),
   });
 }
 
@@ -464,6 +522,30 @@ function reportTitle(reportType: ReportType, tradingDate: string): string {
     case "daily_reflection":
       return `${tradingDate} Daily Reflection`;
   }
+}
+
+function reportPeriodForType(reportType: ReportType): ReportPeriod {
+  switch (reportType) {
+    case "pre_market_plan":
+    case "midday_review":
+    case "closing_review":
+    case "daily_reflection":
+      return "daily";
+  }
+}
+
+function extractLinkedAuditIds(metadata: Record<string, unknown>): string[] {
+  const candidate = metadata.linkedAuditIds;
+
+  if (!Array.isArray(candidate)) {
+    return [];
+  }
+
+  return candidate.filter((item): item is string => identifierSchema.safeParse(item).success);
+}
+
+function formatPct(value: number): string {
+  return `${(value * 100).toFixed(2)}%`;
 }
 
 function normalizeDate(value: Date | string | undefined): Date {

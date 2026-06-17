@@ -1,4 +1,5 @@
 import {
+  type BeijingDateTime,
   formatBeijingMinute,
   parseBeijingTimeOfDay,
   toBeijingDateTime,
@@ -17,6 +18,7 @@ export interface AlarmJob {
   beijingTime: string;
   task: SchedulerTask;
   weekdaysOnly?: boolean;
+  shouldRun?: (beijingTime: BeijingDateTime) => boolean;
   description?: string;
 }
 
@@ -73,6 +75,10 @@ export class AlarmJobRegistry {
       }
 
       if ((job.weekdaysOnly ?? false) && beijingTime.dayOfWeek > 5) {
+        continue;
+      }
+
+      if (job.shouldRun && !job.shouldRun(beijingTime)) {
         continue;
       }
 

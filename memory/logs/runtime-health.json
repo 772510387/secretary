@@ -1,0 +1,31 @@
+{
+  "runtimeId": "market-sentinel-daemon",
+  "status": "stopped",
+  "updatedAt": "2026-06-17T13:20:10.686Z",
+  "startedAt": "2026-06-17T13:20:05.907Z",
+  "stoppedAt": "2026-06-17T13:20:10.686Z",
+  "heartbeatAt": "2026-06-17T13:20:10.686Z",
+  "tasks": [
+    {
+      "taskId": "market-sentinel-dev",
+      "status": "stopped",
+      "lastStartedAt": "2026-06-17T13:20:05.907Z",
+      "lastHeartbeatAt": "2026-06-17T13:20:10.686Z",
+      "lastStoppedAt": "2026-06-17T13:20:10.686Z"
+    }
+  ],
+  "metadata": {
+    "jobId": "market-sentinel-dev",
+    "mode": "development",
+    "taskMode": "mock",
+    "liveTrading": false,
+    "brokerConnected": false,
+    "brainProvider": "mock",
+    "networkAllowed": false,
+    "directExecutionAllowed": false,
+    "event": "stopped",
+    "pendingRunCount": 0,
+    "shutdownHookCount": 1,
+    "failedShutdownHookCount": 0
+  }
+}

@@ -1,4 +1,23 @@
 export {
+  AskPortfolioError,
+  runAskOnce,
+  type AskPortfolioDependencies,
+  type AskPortfolioInput,
+  type AskPortfolioResult,
+} from "./ask-portfolio.js";
+export {
+  buildCerebellumAlarmTasks,
+  type BuildCerebellumAlarmTasksInput,
+  type BuildCerebellumAlarmTasksResult,
+} from "./cerebellum-alarms.js";
+export {
+  cerebellumEventToNotificationEvent,
+  createLivePaperSentinelTask,
+  type LivePaperSentinelInfo,
+  type LivePaperSentinelTask,
+  type LivePaperSentinelTaskDeps,
+} from "./live-paper-sentinel.js";
+export {
   PaperAccountInitializationError,
   assertCanInitializePaperAccount,
   buildInitialPaperAccountSeed,
@@ -10,14 +29,28 @@ export {
   runMarketSentinelOnce,
 } from "./run-market-sentinel-once.js";
 export {
+  RunResearchOnceError,
+  createMockResearchRunner,
+  runResearchOnce,
+  type MockResearchRunnerOptions,
+  type ResearchOnceWriteResult,
+  type ResearchReportWriter,
+  type ResearchRunner,
+  type ResearchTaskInput,
+  type RunResearchOnceInput,
+  type RunResearchOnceResult,
+} from "./run-research-once.js";
+export {
   ReportGenerationError,
   generateDailyReports,
   generateReport,
   generatedReportSchema,
   reportAccountSummarySchema,
   reportMarketSummarySchema,
+  reportPeriodSchema,
   reportPositionSummarySchema,
   reportRecommendationSchema,
+  reportReviewMetadataSchema,
   reportTypeSchema,
   type GenerateDailyReportsInput,
   type GenerateReportInput,
@@ -25,9 +58,45 @@ export {
   type GeneratedReport,
   type ReportAccountSummary,
   type ReportMarketSummary,
+  type ReportPeriod,
   type ReportPositionSummary,
   type ReportRecommendation,
+  type ReportReviewMetadata,
   type ReportType,
   type ReportWriteResult,
   type ReportWriter,
 } from "./report-generation.js";
+export {
+  planToolRuntimeRequests,
+  type PlanToolRuntimeRequestsInput,
+  type PlanToolRuntimeRequestsResult,
+} from "./tool-runtime.js";
+export {
+  WatchMarketError,
+  createMockWatchMarketHistoryProvider,
+  createMockWatchMarketMemoryRegistry,
+  createMockWatchMarketQuoteProvider,
+  runWatchMarketOnce,
+  watchMarketIndicatorSummarySchema,
+  watchMarketInputSchema,
+  watchMarketMemoryContextSchema,
+  watchMarketQueryTypeSchema,
+  watchMarketQuoteSummarySchema,
+  watchMarketReportDraftSchema,
+  watchMarketResultSchema,
+  watchMarketStructuredSummarySchema,
+  watchMarketSymbolTargetSchema,
+  type WatchMarketDependencies,
+  type WatchMarketHistoryProvider,
+  type WatchMarketIndicatorSummary,
+  type WatchMarketInput,
+  type WatchMarketMemoryContext,
+  type WatchMarketMemoryRegistry,
+  type WatchMarketQueryType,
+  type WatchMarketQuoteProvider,
+  type WatchMarketQuoteSummary,
+  type WatchMarketReportDraft,
+  type WatchMarketResult,
+  type WatchMarketStructuredSummary,
+  type WatchMarketSymbolTarget,
+} from "./watch-market.js";

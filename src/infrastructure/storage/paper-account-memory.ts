@@ -1,17 +1,21 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import {
   assertCanInitializePaperAccount,
   type PaperAccountSeed,
 } from "../../app/index.js";
-import { auditEventSchema } from "../../domain/audit/index.js";
+import {
+  auditEventSchema,
+  type AuditEvent,
+} from "../../domain/audit/index.js";
 import {
   accountSchema,
   positionSchema,
   type Account,
   type Position,
 } from "../../domain/portfolio/index.js";
+import { appendAuditEvent } from "../logging/index.js";
 import { AtomicFileWriter } from "./atomic-file-writer.js";
 import { JsonStore } from "./json-store.js";
 
@@ -116,9 +120,10 @@ export function initializePaperAccountMemory(
   const accountWrite = accountStore.write(options.seed.account);
   const positionsWrite = positionsStore.write(options.seed.positions);
   const tradesWrite = writer.write(paths.tradesPath, options.seed.tradesJsonl);
-  const auditWrite = writer.write(
+  const auditWrite = appendAuditEvent(
     paths.auditLogPath,
-    buildAuditLogContent(paths, options.seed, reset),
+    buildAuditEvent(paths, options.seed, reset),
+    writer,
   );
 
   return {
@@ -142,16 +147,12 @@ export function initializePaperAccountMemory(
   };
 }
 
-function buildAuditLogContent(
+function buildAuditEvent(
   paths: PortfolioMemoryPaths,
   seed: PaperAccountSeed,
   reset: boolean,
-): string {
-  const currentContent = existsSync(paths.auditLogPath)
-    ? readFileSync(paths.auditLogPath, "utf8")
-    : "";
-  const separator = currentContent.length > 0 && !currentContent.endsWith("\n") ? "\n" : "";
-  const event = auditEventSchema.parse({
+): AuditEvent {
+  return auditEventSchema.parse({
     ...seed.auditEvent,
     metadata: {
       ...seed.auditEvent.metadata,
@@ -162,8 +163,6 @@ function buildAuditLogContent(
       ordersPath: path.normalize(paths.ordersPath),
     },
   });
-
-  return `${currentContent}${separator}${JSON.stringify(event)}\n`;
 }
 
 function existingFileNames(

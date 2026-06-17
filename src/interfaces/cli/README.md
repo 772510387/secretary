@@ -11,6 +11,7 @@
 - `secretary sell --paper`：模拟卖出。
 - `secretary report daily`：生成日报。
 - `secretary memory search`：检索记忆。
+- `npm run sentinel:dev`：开发态启动 MarketSentinel mock daemon，默认不联网、不调用真实 LLM、不接 broker。
 
 ## 用途
 
@@ -24,4 +25,4 @@
 - 命令输出清晰。
 - 失败时返回非零退出码。
 - 真实交易命令必须有显式确认。
-
+- daemon 类命令必须支持受控停止，不允许默认连接真实 broker。

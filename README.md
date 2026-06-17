@@ -14,7 +14,7 @@
 
 ## 当前状态
 
-当前项目处于架构骨架阶段：
+当前项目已经从 T001-T014 架构骨架推进到 U1-U10 基础能力完成或评估阶段：
 
 - 已沉淀需求源：`docs/requirements`
 - 已沉淀实现方案：`docs/requirement/stock-agent-implementation-plan.md`
@@ -33,6 +33,16 @@
 - 已实现 T012 BrainProvider 抽象和 MockBrainProvider，覆盖结构化输出校验和真实 provider 缺 key 错误
 - 已实现 T013 报告生成，使用 MockBrainProvider 生成盘前、午间、收盘和每日自省报告并写入 `memory/reports`
 - 已实现 T014 TradingAgents-CN Research Adapter 最小版本，输出 `ResearchReport`，支持超时降级和 `memory/research` 写入
+- 已完成 U1 历史行情和技术指标、U2 记忆写入策略、U3 记忆检索和索引、U4 ToolRuntime 工具请求校验、U5 小脑固定闹钟上下文包、U6 本地通知通道
+- 已完成 U7 DashScope Qwen provider、R8-1 OpenAIProvider、U8 TradingAgents-CN 子进程 runner fake subprocess 版、U9 ManualConfirmBroker paper-only 门禁
+- 已完成 U10 实盘预备评估和 R9 非交易性实盘安全底座，包含 LiveTradingGate、账户 allowlist 和 kill switch；仍没有实现真实 broker，也不允许自动实盘
+
+当前仍未完成的重点能力：
+
+- 自选股雷达、指数雷达和放量雷达。
+- Webhook/API 入口、真实微信或外部 webhook 通知。
+- 只读 broker、fake live broker contract、对账系统和人工审批持久化。
+- 真实 broker 和自动实盘买入仍明确禁止。
 
 ## 目录地图
 
@@ -57,10 +67,11 @@
 
 1. `PolicyEngine`
 2. `RiskEngine`
-3. `OrderManager`
-4. `BrokerAdapter`
-5. `AuditLog`
-6. 必要时的人工确认
+3. `LiveTradingGate`
+4. `OrderManager`
+5. `BrokerAdapter`
+6. `AuditLog`
+7. 必要时的人工确认
 
 ## 推荐阅读顺序
 

@@ -8,6 +8,13 @@
     "doctor": "tsx scripts/dev/doctor.ts",
     "check:docs": "node -e \"console.log('docs scaffold present; implement validation later')\"",
     "seed:paper": "tsx scripts/dev/seed-paper-account.ts",
+    "research:once": "tsx scripts/dev/research-once.ts",
+    "brain:smoke": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/brain-smoke.ts",
+    "ask": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/ask.ts",
+    "trade": "tsx scripts/dev/trade.ts",
+    "wechat:test": "tsx scripts/dev/wechat-test.ts",
+    "sentinel:dev": "tsx scripts/dev/market-sentinel-daemon.ts",
+    "manual-confirm:dev": "tsx scripts/dev/manual-confirm.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -19,6 +26,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "cross-env": "^10.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"

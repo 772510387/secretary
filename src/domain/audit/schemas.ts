@@ -38,6 +38,7 @@ export const auditSubjectTypeSchema = z.enum([
   "brain",
   "provider",
   "storage",
+  "scheduler",
 ]);
 
 export const auditSeveritySchema = z.enum(["debug", "info", "warning", "critical"]);
@@ -81,4 +82,3 @@ export type AuditResult = z.infer<typeof auditResultSchema>;
 export type AuditActor = z.infer<typeof auditActorSchema>;
 export type AuditSubject = z.infer<typeof auditSubjectSchema>;
 export type AuditEvent = z.infer<typeof auditEventSchema>;
-
