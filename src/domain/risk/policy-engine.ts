@@ -4,6 +4,7 @@ import {
   type Account,
   type Position,
 } from "../portfolio/index.js";
+import { inferAshareBoard } from "../market/symbols.js";
 import type { Order, OrderRejectReason } from "../trading/index.js";
 
 export type PolicyDecision = "passed" | "rejected";
@@ -108,14 +109,16 @@ export function checkOrderPolicy(input: PolicyCheckInput): PolicyCheckResult {
 }
 
 export function isMainBoardSymbol(symbol: string, market: Position["market"]): boolean {
-  if (market === "SSE") {
-    return /^(600|601|603|605)\d{3}$/.test(symbol);
+  // Single source of truth for board classification (inferAshareBoard); this layer
+  // additionally cross-checks that the declared market matches the code's board, so a
+  // mislabelled (symbol, market) pair is rejected rather than silently passed.
+  const board = inferAshareBoard(symbol);
+  if (board === "sse_main") {
+    return market === "SSE";
   }
-
-  if (market === "SZSE") {
-    return /^(000|001|002|003)\d{3}$/.test(symbol);
+  if (board === "szse_main") {
+    return market === "SZSE";
   }
-
   return false;
 }
 
