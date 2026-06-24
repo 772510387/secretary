@@ -156,6 +156,11 @@ export {
   type SettleDailyPositionsResult,
 } from "./settle-daily-positions.js";
 export {
+  runDataWarmupSelfCheck,
+  type DataWarmupCheck,
+  type DataWarmupCheckInput,
+} from "./data-warmup-check.js";
+export {
   PersistPeriodReviewError,
   createPeriodReviewPath,
   persistPeriodReview,

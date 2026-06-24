@@ -1,5 +1,6 @@
 import {
   buildWatchlistSnapshot,
+  classifyLimitState,
   screenCriteriaSchema,
   screenUniverse,
   type ScreenCriteria,
@@ -135,9 +136,18 @@ export async function buildWatchlistFromScreen(
   };
 }
 
+const LIMIT_STATE_LABEL: Record<string, string> = {
+  limit_up: "涨停",
+  limit_down: "跌停",
+};
+
 function buildReason(stock: UniverseStock, index: number): string {
   const parts = [`筛选第 ${index + 1} 名`];
 
+  const limitLabel = LIMIT_STATE_LABEL[classifyLimitState(stock.symbol, stock.changePct)];
+  if (limitLabel !== undefined) {
+    parts.push(limitLabel);
+  }
   if (stock.changePct !== undefined) {
     parts.push(`日涨跌 ${stock.changePct.toFixed(2)}%`);
   }
@@ -163,6 +173,8 @@ function screeningMetadata(
     turnoverRate: stock.turnoverRate ?? null,
     amount: stock.amount ?? null,
     marketCap: stock.marketCap ?? null,
+    // PRE-04: deterministic 涨停/跌停 signal carried per pool entry (from changePct).
+    limitState: classifyLimitState(stock.symbol, stock.changePct),
     screenedAt: now,
     screener: true,
   };

@@ -12,6 +12,7 @@ import {
   persistPeriodReview,
   pruneOldArtifacts,
   runAlarmNodeAnalysis,
+  runDataWarmupSelfCheck,
   runResearchOnce,
   settleDailyPositions,
   type ExecutePendingOrderResult,
@@ -226,6 +227,21 @@ export function createAlarmRunNode(
         forceWebSearch: NEWS_HEAVY.has(alarmType),
         includeWatchlist: true,
       });
+
+      // PRE-01: deterministic 08:00 体检 — confirm the ledger is present and the pool is
+      // populated before the brain wakes (local self-check, logged; not pushed as noise).
+      if (alarmType === "data_warmup") {
+        const check = runDataWarmupSelfCheck({
+          account: context.account ?? null,
+          positions: context.positions ?? [],
+          watchlistCount: context.watchlist?.length ?? 0,
+        });
+        console.log(
+          `(data_warmup 体检：账户${check.accountPresent ? "在" : "缺失"}、持仓 ${check.positionsCount} 只、100池 ${check.watchlistCount} 支、可用现金 ${check.cashAvailable ?? "?"}${
+            check.ok ? "；自检通过" : `；告警：${check.notes.join("；")}`
+          })`,
+        );
+      }
 
       if (!context.account) {
         console.error(`(${alarmType} 跳过：尚无模拟盘账户，请先建账户。)`);

@@ -34,10 +34,33 @@ export {
 } from "./indicators.js";
 export {
   MarketSymbolError,
+  inferAshareBoard,
   inferAshareMarket,
+  isMainBoardSymbol,
   normalizeStockSymbol,
   toTencentQuoteSymbol,
+  type AshareBoard,
 } from "./symbols.js";
+export {
+  ScreenerError,
+  isLikelySTName,
+  screenCriteriaSchema,
+  screenSortFieldSchema,
+  screenUniverse,
+  universeStockSchema,
+  type ScreenCriteria,
+  type ScreenSortField,
+  type UniverseQuery,
+  type UniverseStock,
+} from "./screener.js";
+export {
+  ThemeHeatError,
+  classifyLimitState,
+  computeThemeHeat,
+  type ComputeThemeHeatOptions,
+  type LimitState,
+  type ThemeHeatSummary,
+} from "./theme-heat.js";
 export {
   VolumePriceSignalError,
   calculateKlineVolumePriceSignal,
