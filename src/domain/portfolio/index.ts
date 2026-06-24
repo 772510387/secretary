@@ -17,6 +17,22 @@ export {
   type TradeSource,
 } from "./schemas.js";
 export {
+  pointInTimeSnapshotSchema,
+  snapshotIndexSchema,
+  snapshotMarketSchema,
+  snapshotMetadataSchema,
+  snapshotPriceSourceSchema,
+  snapshotTechnicalSchema,
+  snapshotValuationSchema,
+  type PointInTimeSnapshot,
+  type SnapshotIndex,
+  type SnapshotMarket,
+  type SnapshotMetadata,
+  type SnapshotPriceSource,
+  type SnapshotTechnical,
+  type SnapshotValuation,
+} from "./snapshot-schema.js";
+export {
   MONEY_DECIMALS,
   PRICE_DECIMALS,
   RATIO_DECIMALS,
@@ -32,6 +48,8 @@ export {
   calculateT1AvailableQuantity,
   calculateUnrealizedPnl,
   calculateUnrealizedPnlRatio,
+  rollForwardPositionForTradingDate,
+  rollForwardPositionsForTradingDate,
   roundMoney,
   roundPrice,
   roundRatio,

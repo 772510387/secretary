@@ -13,6 +13,7 @@ import {
   pruneOldArtifacts,
   runAlarmNodeAnalysis,
   runResearchOnce,
+  settleDailyPositions,
   type ExecutePendingOrderResult,
   type RunAlarmNodeInput,
   type ResearchRunner,
@@ -38,7 +39,7 @@ import {
   ProposalMemoryStore,
   ResearchMemoryStore,
 } from "../../src/infrastructure/storage/index.js";
-import type { JsonValue } from "../../src/domain/shared/index.js";
+import { toBeijingDate, type JsonValue } from "../../src/domain/shared/index.js";
 import {
   formatNotificationForConsole,
   notificationEventSchema,
@@ -188,6 +189,17 @@ export function createAlarmRunNode(
 ): (alarmType: CerebellumAlarmType, now: string) => Promise<void> {
   return async (alarmType, now) => {
     try {
+      // HAND-02: T+1 cross-day settlement before anything reads positions this node, so the
+      // funnel/context see correct sellable shares (prior-day buys are no longer stuck).
+      const settled = settleDailyPositions({
+        config: deps.config,
+        memoryDir: deps.memoryDir,
+        tradingDate: toBeijingDate(now).date,
+      });
+      if (settled.changed > 0) {
+        console.log(`(${alarmType} T+1 结算：${settled.changed} 只持仓的昨日买入已转为可卖)`);
+      }
+
       if (deps.researchRunner && DEEP_RESEARCH_NODES.has(alarmType)) {
         await runDeepResearchNode(deps, alarmType, now);
         return;
@@ -880,6 +892,12 @@ export async function runReplayDay(
   if (!initialState.account) {
     console.error("未找到模拟盘账户，请先建账户。");
     return { date, nodeCount: 0, nodes: [] };
+  }
+
+  // HAND-02: settle T+1 to the replay date so a sell the day after a buy can fill in the replay.
+  const settled = settleDailyPositions({ config: deps.config, memoryDir: deps.memoryDir, tradingDate: date });
+  if (settled.changed > 0) {
+    console.log(`(重演 T+1 结算：${settled.changed} 只持仓的昨日买入已转为可卖)`);
   }
 
   const clock = new SimulatedClock();

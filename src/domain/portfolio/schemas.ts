@@ -59,6 +59,13 @@ export const positionSchema = z
     currency: currencySchema,
     openedAt: isoDateTimeSchema,
     updatedAt: isoDateTimeSchema,
+    /**
+     * Trade date (Beijing, YYYY-MM-DD) of the most recent BUY that contributed to
+     * todayBuyQuantity. Used by the T+1 cross-day rollover: once the trading date has
+     * advanced past this, todayBuyQuantity settles into availableQuantity. Optional for
+     * backward compatibility with positions persisted before this field existed.
+     */
+    lastBuyTradeDate: tradeDateSchema.optional(),
   })
   .strict()
   .superRefine((position, context) => {

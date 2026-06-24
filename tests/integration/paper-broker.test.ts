@@ -251,6 +251,54 @@ describe("PaperBroker", () => {
       costPrice: 11.025,
     });
   });
+
+  it("settles T+1 across days so a prior-day buy becomes sellable (HAND-02/03)", () => {
+    const memoryDir = createInitializedMemory();
+    seedPositions(memoryDir, [
+      makePosition({
+        symbol: "000636",
+        quantity: 100,
+        availableQuantity: 0,
+        todayBuyQuantity: 100,
+        lastBuyTradeDate: "2026-06-12",
+      }),
+    ]);
+
+    const laterDay = new Date("2026-06-15T01:30:00.000Z");
+    let id = 0;
+    const broker = new PaperBroker({
+      memoryDir,
+      now: () => laterDay,
+      idGenerator: () => String((id += 1)).padStart(4, "0"),
+    });
+
+    const result = broker.submitOrder(
+      makeIntent({
+        intentId: "intent-sell-cross-day",
+        side: "SELL",
+        quantity: 100,
+        limitPrice: 12,
+        createdAt: laterDay.toISOString(),
+      }),
+    );
+
+    expect(result.order.status).toBe("filled");
+    expect(broker.getPositions()).toHaveLength(0); // fully sold after T+1 settlement
+    expect(broker.getAccount().cash.available).toBe(21200); // 20000 + 100*12 proceeds
+  });
+
+  it("still blocks a same-day sell of freshly bought shares (T+1 intact)", () => {
+    const memoryDir = createInitializedMemory();
+    const broker = createBroker(memoryDir); // now == baseNow (2026-06-12)
+    broker.submitOrder(makeIntent({ intentId: "intent-buy-same-day", side: "BUY", quantity: 100, limitPrice: 10 }));
+
+    const sell = broker.submitOrder(
+      makeIntent({ intentId: "intent-sell-same-day", side: "SELL", quantity: 100, limitPrice: 11 }),
+    );
+
+    expect(sell.order.status).toBe("rejected");
+    expect(sell.order.rejectReason?.code).toBe("insufficient_sellable_quantity");
+  });
 });
 
 function createInitializedMemory(): string {

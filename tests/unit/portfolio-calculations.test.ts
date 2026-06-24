@@ -14,6 +14,8 @@ import {
   calculateUnrealizedPnl,
   calculateUnrealizedPnlRatio,
   positionSchema,
+  rollForwardPositionForTradingDate,
+  rollForwardPositionsForTradingDate,
   roundMoney,
   roundPrice,
   roundRatio,
@@ -234,6 +236,71 @@ describe("portfolio valuation", () => {
     expect(valuation.positions[0]?.latestPrice).toBe(12);
     expect(valuation.totalPositionMarketValue).toBe(1200);
     expect(valuation.totalAssets).toBe(2200);
+  });
+});
+
+describe("T+1 cross-day rollover (HAND-02)", () => {
+  it("settles a prior-day buy into available shares once the trading date advances", () => {
+    const bought = makePosition({
+      quantity: 100,
+      availableQuantity: 0,
+      todayBuyQuantity: 100,
+      lastBuyTradeDate: "2026-06-23",
+    });
+    // Same day: still locked.
+    expect(rollForwardPositionForTradingDate(bought, "2026-06-23")).toBe(bought);
+    expect(calculateSellableQuantity(bought)).toBe(0);
+
+    // Next trading day: settles to available.
+    const settled = rollForwardPositionForTradingDate(bought, "2026-06-24");
+    expect(settled.todayBuyQuantity).toBe(0);
+    expect(settled.availableQuantity).toBe(100);
+    expect(settled.lastBuyTradeDate).toBeUndefined();
+    expect(calculateSellableQuantity(settled)).toBe(100);
+  });
+
+  it("keeps frozen shares out of the settled available amount", () => {
+    const position = makePosition({
+      quantity: 100,
+      availableQuantity: 0,
+      todayBuyQuantity: 100,
+      frozenQuantity: 30,
+      lastBuyTradeDate: "2026-06-23",
+    });
+    const settled = rollForwardPositionForTradingDate(position, "2026-06-24");
+    expect(settled.availableQuantity).toBe(70);
+  });
+
+  it("leaves an undateable today-buy lot locked (never auto-unlocks what it can't date)", () => {
+    const undateable = makePosition({
+      quantity: 100,
+      availableQuantity: 0,
+      todayBuyQuantity: 100,
+    });
+    expect(rollForwardPositionForTradingDate(undateable, "2026-06-24")).toBe(undateable);
+  });
+
+  it("counts only the positions that changed", () => {
+    const stale = makePosition({
+      symbol: "000636",
+      market: "SZSE",
+      quantity: 100,
+      availableQuantity: 0,
+      todayBuyQuantity: 100,
+      lastBuyTradeDate: "2026-06-23",
+    });
+    const fresh = makePosition({
+      symbol: "600000",
+      market: "SSE",
+      quantity: 200,
+      availableQuantity: 0,
+      todayBuyQuantity: 200,
+      lastBuyTradeDate: "2026-06-24",
+    });
+    const result = rollForwardPositionsForTradingDate([stale, fresh], "2026-06-24");
+    expect(result.changed).toBe(1);
+    expect(result.positions[0]!.availableQuantity).toBe(100);
+    expect(result.positions[1]).toBe(fresh);
   });
 });
 

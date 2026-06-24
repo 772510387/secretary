@@ -134,6 +134,48 @@ export function calculateSellableQuantity(
   );
 }
 
+/**
+ * T+1 cross-day rollover (the missing settlement step): once the trading date has
+ * advanced PAST the buy date, the shares locked as todayBuyQuantity settle and become
+ * available to sell. Pure and idempotent — returns the SAME object when nothing changes.
+ *
+ * - A position with no todayBuyQuantity is returned untouched.
+ * - lastBuyTradeDate absent: the lot is undateable, so we conservatively leave it locked
+ *   (never auto-unlock something we can't prove is from a prior day). New buys always stamp
+ *   the date, so going forward every lot settles correctly.
+ * - lastBuyTradeDate >= tradingDate means the lock still applies today → untouched.
+ * - lastBuyTradeDate < tradingDate → the T+1 lock has expired, shares settle to available.
+ */
+export function rollForwardPositionForTradingDate(position: Position, tradingDate: string): Position {
+  if (position.todayBuyQuantity <= 0) {
+    return position;
+  }
+  if (position.lastBuyTradeDate === undefined || position.lastBuyTradeDate >= tradingDate) {
+    return position;
+  }
+  const { lastBuyTradeDate: _settled, ...rest } = position;
+  return {
+    ...rest,
+    availableQuantity: Math.max(0, position.quantity - position.frozenQuantity),
+    todayBuyQuantity: 0,
+  };
+}
+
+export function rollForwardPositionsForTradingDate(
+  positions: readonly Position[],
+  tradingDate: string,
+): { positions: Position[]; changed: number } {
+  let changed = 0;
+  const rolled = positions.map((position) => {
+    const next = rollForwardPositionForTradingDate(position, tradingDate);
+    if (next !== position) {
+      changed += 1;
+    }
+    return next;
+  });
+  return { positions: rolled, changed };
+}
+
 export function calculateAverageCostAfterBuy(input: AverageCostInput): number {
   assertNonNegativeInteger(input.existingQuantity, "existingQuantity");
   assertNonNegativeNumber(input.existingCostPrice, "existingCostPrice");

@@ -10,6 +10,7 @@ import {
   calculateSellableQuantity,
   positionSchema,
   roundMoney,
+  rollForwardPositionsForTradingDate,
   type Account,
   type Position,
   type TradeRecord,
@@ -104,6 +105,20 @@ export class PaperBroker {
     return this.positionsStore().read();
   }
 
+  /**
+   * T+1 cross-day rollover: settle prior-day buys into available shares for `tradingDate`
+   * (Beijing YYYY-MM-DD; defaults to now). Persists only when something changed, and returns
+   * the settled positions. Idempotent — safe to call at the start of every node / before a sell.
+   */
+  settleDailyT1(tradingDate?: string): { positions: Position[]; changed: number } {
+    const date = tradingDate ?? formatTradeDate(this.now());
+    const result = rollForwardPositionsForTradingDate(this.getPositions(), date);
+    if (result.changed > 0) {
+      this.positionsStore().write(result.positions);
+    }
+    return result;
+  }
+
   getOrders(): Order[] {
     return readJsonLines(this.paths().ordersPath, ordersSchema);
   }
@@ -132,7 +147,9 @@ export class PaperBroker {
       now,
     });
     const account = this.getAccount();
-    const positions = this.getPositions();
+    // T+1 cross-day settlement: roll any prior-day todayBuyQuantity into availableQuantity
+    // BEFORE evaluating this order, so a sell the day after a buy is no longer wrongly blocked.
+    const positions = this.settleDailyT1(formatTradeDate(now)).positions;
 
     const policyCheck = this.policyEngine.checkOrder({
       order,
@@ -387,6 +404,7 @@ function upsertBuyPosition(
         currency: order.currency,
         openedAt: now.toISOString(),
         updatedAt: now.toISOString(),
+        lastBuyTradeDate: formatTradeDate(now),
       }),
     ];
   }
@@ -405,6 +423,7 @@ function upsertBuyPosition(
     }),
     latestPrice: order.limitPrice,
     updatedAt: now.toISOString(),
+    lastBuyTradeDate: formatTradeDate(now),
   });
 
   return positions.map((position, candidateIndex) => (candidateIndex === index ? updated : position));
