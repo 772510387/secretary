@@ -11,6 +11,7 @@ import {
   maintainDailyFunnel,
   persistPeriodReview,
   pruneOldArtifacts,
+  readDailyFillsLedger,
   runAlarmNodeAnalysis,
   runDataWarmupSelfCheck,
   runResearchOnce,
@@ -105,6 +106,14 @@ const MORNING_REBACK_NODES: ReadonlySet<CerebellumAlarmType> = new Set([
 /** Evening node that distills the day into long-term memory + review-required rule proposals. */
 const DISTILL_NODES: ReadonlySet<CerebellumAlarmType> = new Set([
   "next_day_watchlist", // 21:00 内省/沉淀
+]);
+
+/** Evening review nodes that get the day's actual 成交账单 injected (MEM-03). */
+const FILLS_LEDGER_NODES: ReadonlySet<CerebellumAlarmType> = new Set([
+  "closing_review", // 15:00 收盘结算
+  "post_close_review", // 15:30 盘后复盘
+  "daily_reflection", // 自省
+  "next_day_watchlist", // 21:00 沉淀
 ]);
 
 /** Period reviews are persisted as markdown review artifacts after push. */
@@ -276,6 +285,15 @@ export function createAlarmRunNode(
         ? loadKnowledgeForWake({ memoryDir: deps.memoryDir, asOfDate: now.slice(0, 10) }).asText()
         : undefined;
 
+      // MEM-03: evening review nodes get the day's real 成交账单 (no guessing what was traded).
+      const todayFills = FILLS_LEDGER_NODES.has(alarmType)
+        ? readDailyFillsLedger({
+            config: deps.config,
+            memoryDir: deps.memoryDir,
+            tradingDate: toBeijingDate(now).date,
+          })?.rendered
+        : undefined;
+
       const input: RunAlarmNodeInput = {
         alarmType,
         account: context.account,
@@ -288,6 +306,7 @@ export function createAlarmRunNode(
         dataHealth: context.dataHealth,
         webSearch: context.webSearch,
         priorKnowledge,
+        todayFills,
         now,
       };
       const result = await runAlarmNodeAnalysis(input, { brainProvider: deps.brainProvider });
@@ -985,6 +1004,9 @@ export async function runReplayDay(
     }
 
     try {
+      const todayFills = FILLS_LEDGER_NODES.has(rule.alarmType)
+        ? readDailyFillsLedger({ config: deps.config, memoryDir: deps.memoryDir, tradingDate: date })?.rendered
+        : undefined;
       const input: RunAlarmNodeInput = {
         alarmType: rule.alarmType,
         account: currentState.account,
@@ -995,6 +1017,7 @@ export async function runReplayDay(
         watchlist: context.watchlist,
         dataHealth: context.dataHealth,
         webSearch: context.webSearch,
+        todayFills,
         now: instant.toISOString(),
       };
       const result = await runAlarmNodeAnalysis(input, { brainProvider: deps.brainProvider });

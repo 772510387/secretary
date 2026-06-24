@@ -33,6 +33,8 @@ export interface RunAlarmNodeInput {
   webSearch?: AskWebSearchContext;
   /** 反哺: past lessons from long-term memory, prepended to the wake prompt (morning nodes). */
   priorKnowledge?: string;
+  /** MEM-03: the day's actual trade bill (rendered), injected into evening review prompts. */
+  todayFills?: string;
   now?: string;
 }
 
@@ -116,6 +118,7 @@ export async function runAlarmNodeAnalysis(
     "安全边界：",
     ...sop.forbiddenActions.map((action) => `- ${action}`),
     "基于提供的账户、行情、技术指标、指数、100支高关注池和（若有）联网检索，用简体中文产出该 SOP 要求的结论。",
+    ...(input.todayFills && input.todayFills.trim() ? [input.todayFills.trim()] : []),
     ...(holdingImpact ? [holdingImpact] : []),
     ...(swordShield ? [SWORD_SHIELD_FRAMEWORK] : ["控制在 6 句以内。"]),
     OPERATION_REPORT_FRAMEWORK,
