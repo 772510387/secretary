@@ -166,6 +166,17 @@ export {
   type DailyFillsLedger,
 } from "./daily-fills-ledger.js";
 export {
+  searchModelMemory,
+  rememberModelNote,
+  rememberModelNoteArgsSchema,
+  type SearchModelMemoryInput,
+  type SearchModelMemoryResult,
+  type ModelMemoryHit,
+  type RememberModelNoteInput,
+  type RememberModelNoteResult,
+  type RememberModelNoteArgs,
+} from "./model-memory.js";
+export {
   PersistPeriodReviewError,
   createPeriodReviewPath,
   persistPeriodReview,

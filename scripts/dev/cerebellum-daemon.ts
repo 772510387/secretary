@@ -281,8 +281,13 @@ export function createAlarmRunNode(
       );
 
       // 反哺: morning nodes prepend past lessons (read-only, best-effort) to the wake prompt.
+      // MEM-07: bias retrieval toward today's holdings + top theme via the registry search.
       const priorKnowledge = MORNING_REBACK_NODES.has(alarmType)
-        ? loadKnowledgeForWake({ memoryDir: deps.memoryDir, asOfDate: now.slice(0, 10) }).asText()
+        ? loadKnowledgeForWake({
+            memoryDir: deps.memoryDir,
+            asOfDate: toBeijingDate(now).date,
+            relevanceQuery: buildRebackRelevanceQuery(context, themeHeat),
+          }).asText()
         : undefined;
 
       // MEM-03: evening review nodes get the day's real 成交账单 (no guessing what was traded).
@@ -554,6 +559,26 @@ async function runFunnelNode(
     autoPaper,
     degraded,
   };
+}
+
+/** MEM-07: short relevance query for the morning reback — today's holdings + top theme names. */
+function buildRebackRelevanceQuery(
+  context: WeChatBridgeContext,
+  themeHeat?: ThemeHeatSummary,
+): string | undefined {
+  const names = new Set<string>();
+  for (const position of context.positions ?? []) {
+    if (position.name) {
+      names.add(position.name);
+    }
+  }
+  for (const gainer of themeHeat?.topGainers?.slice(0, 2) ?? []) {
+    if (gainer.name) {
+      names.add(gainer.name);
+    }
+  }
+  const query = [...names].join(" ").trim();
+  return query.length > 0 ? query : undefined;
 }
 
 function skippedFunnel(alarmType: CerebellumAlarmType, reason: string): FunnelNodeRunResult {
