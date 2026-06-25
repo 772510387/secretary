@@ -156,7 +156,9 @@ export const cerebellumSopRequiredInputSchema = z
 
 export const cerebellumAlarmSopSchema = z
   .object({
+    wakeRule: z.string().trim().min(1).max(1000),
     objective: z.string().trim().min(1).max(800),
+    operationInstructions: z.array(z.string().trim().min(1).max(260)).min(1).max(12),
     requiredInputs: z.array(cerebellumSopRequiredInputSchema).min(1).max(16),
     allowedActions: z.array(z.string().trim().min(1).max(240)).min(1).max(24),
     forbiddenActions: z.array(z.string().trim().min(1).max(240)).min(1).max(24),

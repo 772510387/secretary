@@ -24,6 +24,12 @@ export interface MemoryRegistryOptions {
 
 const DEFAULT_MAX_FILE_BYTES = 256 * 1024;
 const DEFAULT_CATEGORIES: MemoryRegistryCategory[] = [
+  "daily_logs",
+  "weekly_reviews",
+  "monthly_reviews",
+  "yearly_reviews",
+  "long_term",
+  "history",
   "rules",
   "research",
   "reports",

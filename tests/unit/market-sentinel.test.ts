@@ -66,6 +66,28 @@ describe("MarketSentinel single check", () => {
     expect(result.events).toEqual([]);
   });
 
+  it("emits the ±5% absolute-move redline only when opted in", () => {
+    // +6% on the day (latestPrice 10.6 vs previousClose 10), no previousQuotes → no rapid-move.
+    const quote = makeQuote({ latestPrice: 10.6, receivedAt: now });
+
+    // Default (no option): the absolute redline is OFF → no event.
+    expect(checkMarketSentinel({ now, quotes: [quote], positions: [] }).events).toEqual([]);
+
+    // Opt-in (production daemon sets this): fires a single price_surge at the ±5% threshold.
+    const result = checkMarketSentinel({
+      now,
+      quotes: [quote],
+      positions: [],
+      options: { absoluteMoveThreshold: 0.05 },
+    });
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]).toMatchObject({
+      eventType: "price_surge",
+      threshold: 0.05,
+      cooldownKey: "price_surge:SZSE:000636",
+    });
+  });
+
   it("emits a critical stop-loss event for positions down 8% from cost", () => {
     const result = checkMarketSentinel({
       now,

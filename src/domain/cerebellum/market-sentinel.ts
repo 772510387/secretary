@@ -18,6 +18,8 @@ import {
 export interface MarketSentinelOptions {
   rapidMoveThreshold?: number;
   rapidMoveWindowMs?: number;
+  /** 绝对涨跌幅红线: fire when |today's move from prev close| crosses this (default 0.05 = ±5%). */
+  absoluteMoveThreshold?: number;
   positionStopLossRatio?: number;
   watchlistMoveThreshold?: number;
   watchlistObservePriceNearRatio?: number;
@@ -45,6 +47,7 @@ export interface MarketSentinelCheckResult {
 interface NormalizedMarketSentinelOptions {
   rapidMoveThreshold: number;
   rapidMoveWindowMs: number;
+  absoluteMoveThreshold: number;
   positionStopLossRatio: number;
   watchlistMoveThreshold: number;
   watchlistObservePriceNearRatio: number;
@@ -69,6 +72,7 @@ export function checkMarketSentinel(input: MarketSentinelCheckInput): MarketSent
   const nextCooldownState = { ...(input.cooldownState ?? {}) };
   const candidates: CerebellumEvent[] = [
     ...detectRapidMoveEvents(quotes, previousQuoteMap, checkedAt, options),
+    ...detectAbsoluteMoveEvents(quotes, checkedAt, options),
     ...detectStopLossEvents(positions, currentQuoteMap, checkedAt, options),
     ...detectWatchlistEvents(watchlistEntries, currentQuoteMap, checkedAt, options),
   ];
@@ -136,6 +140,51 @@ function detectRapidMoveEvents(
         changePct,
         threshold: options.rapidMoveThreshold,
         message: `${quote.name} ${direction} ${formatPct(changePct)} within sentinel window`,
+      }),
+    ];
+  });
+}
+
+/**
+ * 绝对涨跌幅红线 (±5% by default): fire when a quote's TODAY move (from previous close)
+ * crosses the threshold — independent of the rapid-move window. This is the spec's
+ * "绝对涨跌幅突破 ±5%" 强弱分界线. Shares the price_surge/price_drop cooldown key with the
+ * rapid-move detector, so within the cooldown window the same name alerts at most once.
+ */
+function detectAbsoluteMoveEvents(
+  quotes: QuoteSnapshot[],
+  checkedAt: string,
+  options: NormalizedMarketSentinelOptions,
+): CerebellumEvent[] {
+  if (options.absoluteMoveThreshold <= 0) {
+    return []; // disabled unless a caller opts in (production daemon sets 0.05)
+  }
+
+  return quotes.flatMap((quote) => {
+    // Prefer the unit-safe daily move from previous close; fall back to the provider's changePct.
+    const dailyMove =
+      quote.previousClose !== undefined && quote.previousClose > 0
+        ? roundRatio((quote.latestPrice - quote.previousClose) / quote.previousClose)
+        : roundRatio(quote.changePct);
+
+    if (Math.abs(dailyMove) < options.absoluteMoveThreshold) {
+      return [];
+    }
+
+    const eventType: CerebellumEventType = dailyMove > 0 ? "price_surge" : "price_drop";
+    const direction = dailyMove > 0 ? "今日涨幅" : "今日跌幅";
+
+    return [
+      createEvent({
+        eventType,
+        severity: "warning",
+        quote,
+        checkedAt,
+        currentPrice: quote.latestPrice,
+        previousPrice: quote.previousClose,
+        changePct: dailyMove,
+        threshold: options.absoluteMoveThreshold,
+        message: `${quote.name} ${direction} ${formatPct(dailyMove)} 突破 ±${formatPct(options.absoluteMoveThreshold)} 绝对红线`,
       }),
     ];
   });
@@ -305,6 +354,9 @@ function normalizeOptions(options: MarketSentinelOptions = {}): NormalizedMarket
   const normalized = {
     rapidMoveThreshold: options.rapidMoveThreshold ?? 0.02,
     rapidMoveWindowMs: options.rapidMoveWindowMs ?? 60_000,
+    // 0 = disabled by default (keeps the pure function's behavior stable); the live
+    // sentinel daemon opts in with 0.05 to enforce the spec's ±5% 绝对涨跌幅 redline.
+    absoluteMoveThreshold: options.absoluteMoveThreshold ?? 0,
     positionStopLossRatio: options.positionStopLossRatio ?? 0.08,
     watchlistMoveThreshold: options.watchlistMoveThreshold ?? 0.03,
     watchlistObservePriceNearRatio: options.watchlistObservePriceNearRatio ?? 0.01,
@@ -313,6 +365,7 @@ function normalizeOptions(options: MarketSentinelOptions = {}): NormalizedMarket
   };
 
   assertRatio(normalized.rapidMoveThreshold, "rapidMoveThreshold");
+  assertRatio(normalized.absoluteMoveThreshold, "absoluteMoveThreshold");
   assertRatio(normalized.positionStopLossRatio, "positionStopLossRatio");
   assertRatio(normalized.watchlistMoveThreshold, "watchlistMoveThreshold");
   assertRatio(normalized.watchlistObservePriceNearRatio, "watchlistObservePriceNearRatio");

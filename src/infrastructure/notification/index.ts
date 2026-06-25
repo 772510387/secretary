@@ -20,10 +20,12 @@ export {
   type WebhookNotifierOptions,
 } from "./webhook-notifier.js";
 export {
-  WeComBotNotifier,
-  WeComBotNotifierError,
-  type WeComBotNotifierOptions,
-} from "./wecom-bot-notifier.js";
+  FeishuNotifier,
+  FeishuNotifierError,
+  type FeishuMessageSender,
+  type FeishuNotifierOptions,
+  type FeishuPushMessage,
+} from "./feishu-notifier.js";
 export {
   NotificationRouter,
   NotificationRouterError,

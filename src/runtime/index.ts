@@ -8,6 +8,25 @@ export {
   type SchedulerRuntimeOptions,
 } from "./scheduler-runtime.js";
 export {
+  DailyBudget,
+  type BudgetKind,
+  type DailyBudgetLimits,
+  type DailyBudgetSnapshot,
+} from "./daily-budget.js";
+export {
+  ReplayRunnerError,
+  runReplay,
+  type ReplayConfig,
+  type ReplayReport,
+  type ReplaySkipRecord,
+  type ReplaySnapshotRecord,
+} from "./replay-runner.js";
+export {
+  runWalkForward,
+  type WalkForwardConfig,
+  type WalkForwardResult,
+} from "./walk-forward-runner.js";
+export {
   MarketSentinelDaemon,
   MarketSentinelDaemonError,
   createMarketSentinelDaemon,

@@ -95,6 +95,7 @@ const indicators = calculateKlineTechnicalIndicators(bars);
 - K 线和快照都只在 domain 层计算确定性标签，不联网、不调用 LLM、不生成订单。
 - 标签包括 `volume_surge`、`volume_price_rise`、`volume_stagnation`、`low_liquidity`、`suspended_or_no_volume`、`insufficient_data` 和 `normal`。
 - 输出只包含指标、标签和 metadata，metadata 固定标记 `brokerConnected=false`、`liveTrading=false`。
+- `createLivePaperSentinelTask` 已接入 quote 成交量增量窗口：样本足够且触发 `volume_surge` / `volume_price_rise` / `volume_stagnation` / `suspended_or_no_volume` 时转换为通知；仍然只提示人工复核，不自动下单。
 
 ## R5-1 Watchlist
 

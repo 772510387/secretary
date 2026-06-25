@@ -36,7 +36,36 @@ export {
   CEREBELLUM_ALARM_SOP_TEMPLATES,
   CerebellumAlarmSopError,
   buildCerebellumAlarmSop,
+  buildCerebellumAlarmSopByType,
+  renderCerebellumAlarmSop,
 } from "./alarm-sop.js";
+export { buildNodeSearchQuery } from "./search-query.js";
+export {
+  CerebellumWakeError,
+  buildCerebellumWakeEvent,
+  cerebellumWakeEventSchema,
+  cerebellumWakeKindSchema,
+  cerebellumWakeModeSchema,
+  cerebellumWakeSeveritySchema,
+  cerebellumWakeSourceSchema,
+  dispatchCerebellumWake,
+  wakeEventToSteeringMessage,
+  type BuildCerebellumWakeEventInput,
+  type CerebellumWakeDispatchDeps,
+  type CerebellumWakeDispatchResult,
+  type CerebellumWakeEvent,
+  type CerebellumWakeKind,
+  type CerebellumWakeMode,
+  type CerebellumWakeSeverity,
+  type CerebellumWakeSource,
+} from "./wake-event.js";
+export {
+  SOP_CATALOG,
+  resolveSopByAlarmType,
+  resolveSopByName,
+  sopCatalogForPrompt,
+  type SopCatalogEntry,
+} from "./sop-catalog.js";
 export {
   CerebellumAlarmError,
   FIXED_CEREBELLUM_ALARM_RULES,

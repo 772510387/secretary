@@ -1,0 +1,33 @@
+{
+  "proposalId": "funnelprop-paper-main-600522-SELL-20260622063000",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260622063000",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "600522",
+  "market": "SSE",
+  "name": "中天科技",
+  "side": "SELL",
+  "currency": "CNY",
+  "rationale": "当前持仓，虽uptrend但60日位置0.9632已处高位，需人工判断止盈节奏（仅提示候选，非执行指令）",
+  "reviewReason": "选股漏斗候选,待人工复核;数量与价格由后端按风控决定,模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-22T06:30:00.000Z",
+  "updatedAt": "2026-06-22T06:30:00.000Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true
+  }
+}

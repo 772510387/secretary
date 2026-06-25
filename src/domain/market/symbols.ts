@@ -12,6 +12,35 @@ export function inferAshareMarket(symbol: string): StockSymbolInfo["market"] {
   throw new MarketSymbolError(`Cannot infer A-share market for symbol ${symbol}`);
 }
 
+export type AshareBoard = "sse_main" | "szse_main" | "star" | "chinext" | "other";
+
+/** Classifies an A-share code by board (科创/创业板 vs 主板). */
+export function inferAshareBoard(symbol: string): AshareBoard {
+  if (/^(600|601|603|605)\d{3}$/.test(symbol)) {
+    return "sse_main";
+  }
+
+  if (/^688\d{3}$/.test(symbol)) {
+    return "star"; // 科创板
+  }
+
+  if (/^(000|001|002|003)\d{3}$/.test(symbol)) {
+    return "szse_main";
+  }
+
+  if (/^(300|301)\d{3}$/.test(symbol)) {
+    return "chinext"; // 创业板
+  }
+
+  return "other";
+}
+
+/** Project rule: only SSE/SZSE main boards are tradable. */
+export function isMainBoardSymbol(symbol: string): boolean {
+  const board = inferAshareBoard(symbol);
+  return board === "sse_main" || board === "szse_main";
+}
+
 export function normalizeStockSymbol(input: string | StockSymbolInfo): StockSymbolInfo {
   if (typeof input !== "string") {
     return stockSymbolInfoSchema.parse(input);

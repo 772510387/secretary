@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import type { AppConfig } from "../../src/config/schema.js";
@@ -8,7 +8,7 @@ import {
   KlineAsOfIndexSource,
   buildPaperAgentToolDeps,
   buildPaperAgentTools,
-  buildWatchlistFromScreen,
+  persistCategorizedPool,
   inferMarket,
   type AsOfIndexSource,
   type AskIndex,
@@ -30,11 +30,15 @@ import {
   type Position,
 } from "../../src/domain/portfolio/index.js";
 import {
+  buildIntradayCheckpoint,
   buildWatchlistSnapshot,
   computeThemeHeat,
+  renderIntradayTimeline,
+  type IntradayCheckpoint,
   type KlineBar,
   type StockSymbolInfo,
   type ThemeHeatSummary,
+  type UniverseStock,
 } from "../../src/domain/market/index.js";
 import { buildNodeSearchQuery, type CerebellumAlarmType } from "../../src/domain/cerebellum/index.js";
 import {
@@ -99,6 +103,9 @@ export async function buildBridgeContext(input: {
 
   // The 100池: read only for alarm nodes (chat doesn't need to price 100 symbols).
   const watchlist = input.includeWatchlist ? readWatchlist100(input.memoryDir) : undefined;
+  // 层级1+层级2 categorized overview (persisted at 换血 time); fed to the brain so the
+  // push can name 涨停/昨日涨停/涨幅榜… instead of a flat list.
+  const poolOverview = input.includeWatchlist ? readWatchlistPoolOverview(input.memoryDir) : undefined;
 
   // Price the union of held + pool symbols so an EMPTY account still has real data
   // (this morning's "pricesAvailable:false" came from pricing positions only → []).
@@ -126,7 +133,7 @@ export async function buildBridgeContext(input: {
     includeWatchlist: input.includeWatchlist ?? false,
   });
 
-  return { account, positions, prices, technicals, indices, watchlist, dataHealth, webSearch };
+  return { account, positions, prices, technicals, indices, watchlist, poolOverview, dataHealth, webSearch };
 }
 
 function toSymbolInfo(position: Position): StockSymbolInfo {
@@ -162,6 +169,171 @@ export function readWatchlist100(memoryDir: string): PlanWatchlistEntry[] {
     return snapshotWatchlist(snapshot.entries);
   } catch {
     return [];
+  }
+}
+
+/** Reads the persisted 观察池分类概览 (层级1+层级2) string from the stored pool, if any. */
+export function readWatchlistPoolOverview(memoryDir: string): string | undefined {
+  try {
+    const snapshot = new WatchlistMemoryStore({ memoryDir }).readCategory("watchlist_today");
+    const overview = snapshot.metadata?.poolOverview;
+    return typeof overview === "string" && overview.trim().length > 0 ? overview : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Reads the CURRENT pool's per-symbol changePct (the prior cycle, before this 换血 overwrites it). */
+function readPoolChangeMap(memoryDir: string): Record<string, number> {
+  const map: Record<string, number> = {};
+  try {
+    const snapshot = new WatchlistMemoryStore({ memoryDir }).readCategory("watchlist_today");
+    for (const entry of snapshot.entries) {
+      const changePct = entry.metadata?.changePct;
+      if (typeof changePct === "number" && Number.isFinite(changePct)) {
+        map[entry.symbol] = changePct;
+      }
+    }
+  } catch {
+    // no prior pool → no momentum baseline; not an error
+  }
+  return map;
+}
+
+const LIMIT_BOARD_DIR = ["market", "limit-board"] as const;
+
+interface LimitBoardSnapshot {
+  date: string;
+  limitUp: Array<{ symbol: string; name: string }>;
+  limitDown: Array<{ symbol: string; name: string }>;
+  updatedAt: string;
+}
+
+/** Beijing trading date (YYYY-MM-DD) for an optional now. */
+function beijingDateOf(now: Date | string | undefined): string {
+  const date = now instanceof Date ? now : now ? new Date(now) : new Date();
+  return toBeijingDateTime(Number.isNaN(date.getTime()) ? new Date() : date).date;
+}
+
+/**
+ * Persists today's limit boards so the NEXT trading day's 换血 can tag 昨日涨停/跌停.
+ * Self-maintaining: every refresh overwrites today's file with the current limit boards;
+ * by close it holds the closing state. Best-effort — a write failure never aborts 换血.
+ */
+function writeLimitBoardSnapshot(
+  memoryDir: string,
+  date: string,
+  limitUp: Array<{ symbol: string; name: string }>,
+  limitDown: Array<{ symbol: string; name: string }>,
+): void {
+  try {
+    const dir = path.join(memoryDir, ...LIMIT_BOARD_DIR);
+    mkdirSync(dir, { recursive: true });
+    const snapshot: LimitBoardSnapshot = {
+      date,
+      limitUp,
+      limitDown,
+      updatedAt: new Date().toISOString(),
+    };
+    writeFileSync(path.join(dir, `${date}.json`), JSON.stringify(snapshot, null, 2), "utf8");
+  } catch {
+    // best-effort; 昨日涨停跌停 标注 simply won't be available tomorrow
+  }
+}
+
+const CHECKPOINT_DIR = ["market", "checkpoints"] as const;
+
+/**
+ * Records one 日内检查点 for this alarm node (大盘 + 情绪 + 持仓价格 snapshot), appends it
+ * to today's timeline file, and returns the rendered timeline (prior nodes → 本次) for the
+ * brain. Deterministic + best-effort: a read/write failure degrades to no timeline, never throws.
+ */
+export function recordIntradayCheckpoint(input: {
+  memoryDir: string;
+  now?: Date | string;
+  alarmType: string;
+  indices?: AskIndex[];
+  positions?: Position[];
+  prices?: Record<string, number>;
+  themeHeat?: ThemeHeatSummary;
+}): string {
+  try {
+    const date = beijingDateOf(input.now);
+    const when = input.now instanceof Date ? input.now : input.now ? new Date(input.now) : new Date();
+    const time = toBeijingDateTime(Number.isNaN(when.getTime()) ? new Date() : when).time.slice(0, 5);
+
+    const checkpoint = buildIntradayCheckpoint({
+      time,
+      occurredAt: (Number.isNaN(when.getTime()) ? new Date() : when).toISOString(),
+      alarmType: input.alarmType,
+      indices: input.indices,
+      holdings: (input.positions ?? []).map((position) => ({
+        symbol: position.symbol,
+        name: position.name,
+        price: input.prices?.[position.symbol] ?? position.latestPrice ?? null,
+      })),
+      themeHeat: input.themeHeat,
+    });
+
+    const prior = readIntradayCheckpoints(input.memoryDir, date);
+    // Replace any existing checkpoint for the same node (re-fires shouldn't duplicate the timeline).
+    const timeline = [...prior.filter((entry) => entry.alarmType !== input.alarmType), checkpoint].sort(
+      (left, right) => left.occurredAt.localeCompare(right.occurredAt),
+    );
+    writeIntradayCheckpoints(input.memoryDir, date, timeline);
+    return renderIntradayTimeline(timeline);
+  } catch {
+    return "";
+  }
+}
+
+function readIntradayCheckpoints(memoryDir: string, date: string): IntradayCheckpoint[] {
+  try {
+    const file = path.join(memoryDir, ...CHECKPOINT_DIR, `${date}.json`);
+    if (!existsSync(file)) {
+      return [];
+    }
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    return Array.isArray(parsed) ? (parsed as IntradayCheckpoint[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeIntradayCheckpoints(memoryDir: string, date: string, checkpoints: IntradayCheckpoint[]): void {
+  const dir = path.join(memoryDir, ...CHECKPOINT_DIR);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, `${date}.json`), JSON.stringify(checkpoints, null, 2), "utf8");
+}
+
+/** Reads the most recent prior-day limit board (the latest snapshot dated before `today`). */
+function readYesterdayLimitBoard(
+  memoryDir: string,
+  today: string,
+): { limitUp: string[]; limitDown: string[] } {
+  try {
+    const dir = path.join(memoryDir, ...LIMIT_BOARD_DIR);
+    if (!existsSync(dir)) {
+      return { limitUp: [], limitDown: [] };
+    }
+    const priorDates = readdirSync(dir)
+      .filter((file) => /^\d{4}-\d{2}-\d{2}\.json$/.test(file))
+      .map((file) => file.slice(0, 10))
+      .filter((date) => date < today)
+      .sort();
+    const latest = priorDates[priorDates.length - 1];
+    if (latest === undefined) {
+      return { limitUp: [], limitDown: [] };
+    }
+    const parsed = JSON.parse(
+      readFileSync(path.join(dir, `${latest}.json`), "utf8"),
+    ) as Partial<LimitBoardSnapshot>;
+    return {
+      limitUp: (parsed.limitUp ?? []).map((entry) => entry.symbol).filter(Boolean),
+      limitDown: (parsed.limitDown ?? []).map((entry) => entry.symbol).filter(Boolean),
+    };
+  } catch {
+    return { limitUp: [], limitDown: [] };
   }
 }
 
@@ -232,6 +404,8 @@ export interface RefreshWatchlistResult {
   degraded: boolean;
   /** 新题材热度 — deterministic market-wide heat (涨停家数/涨跌分布/热度评分) for the brain. */
   themeHeat?: ThemeHeatSummary;
+  /** 观察池分类概览 (层级1+层级2) for this refresh; undefined when degraded with no prior overview. */
+  poolOverview?: string;
 }
 
 /**
@@ -256,69 +430,97 @@ export async function refreshWatchlist100(input: {
     store: new FileUniverseCacheStore(path.join(input.memoryDir, "market", "cache")),
   });
 
-  // 新题材热度 (眼): deterministic market-wide heat from the broad universe (no model).
-  // Cheap (the CachingUniverseProvider serves the screen below from the same fetch path).
+  // 一次抓取，多处复用：market-wide universe drives BOTH 题材热度 (needs the whole market for
+  // 涨停家数) AND the categorized pool (categorizeUniverse filters to main-board locally).
+  let broad: UniverseStock[] = [];
   let themeHeat: ThemeHeatSummary | undefined;
   try {
-    const broad = await provider.getUniverse({ targetCount: 500 });
+    broad = await provider.getUniverse({ targetCount: 600 });
     themeHeat = computeThemeHeat(broad);
   } catch {
-    themeHeat = undefined; // degrade silently; the screen below still runs
+    broad = [];
+    themeHeat = undefined; // degrade silently; the fallback below reuses the stored pool
   }
 
   // 基于 A 股开盘时间调整筛选:今日成交额只有开盘(09:30)后才有意义。开盘前/非交易日,
-  // 今日成交额≈0,用 1 亿门槛会把整个市场滤空,所以盘前不设成交额门槛(仅按可得数据排序+主板过滤);
-  // 开盘后到收盘,用正常的 ≥1 亿门槛筛今日真实活跃股。
+  // 今日成交额≈0,用 1 亿门槛会把整个市场滤空,所以盘前不设成交额门槛;开盘后用 ≥1 亿门槛。
   const turnoverFloor = isTodayTurnoverMeaningful(input.now)
     ? input.minAmount ?? 1e8
     : 0;
 
-  const runScreen = async (minAmount: number) => {
-    const screen = await buildWatchlistFromScreen({
-      provider,
-      writer: new WatchlistMemoryStore({ memoryDir: input.memoryDir }),
-      category: "watchlist_today",
-      criteria: {
-        limit: input.limit ?? 100,
-        sortBy: "amount",
-        minAmount,
-        mainBoardOnly: true, // 禁科创(688)/创业板(300) — only tradable main-board names enter the pool
-      },
-      // INFRA-02: never overwrite a good pool with an empty/failed screen.
-      skipWriteWhenEmpty: true,
-      now: input.now,
-    });
-    return {
-      watchlist100: snapshotWatchlist(screen.entries),
-      universeSize: screen.universeSize,
-      screened: screen.screened,
-    };
-  };
-
-  try {
-    const primary = await runScreen(turnoverFloor);
-    if (primary.watchlist100.length > 0) {
-      return { ...primary, degraded: false, themeHeat };
-    }
-    // 兜底：万一开盘后阈值仍把非空 universe 滤空(异常低量),再放宽一次,保证“没有就去查”能建出池。
-    if (turnoverFloor > 0 && primary.universeSize > 0) {
-      const relaxed = await runScreen(0);
-      if (relaxed.watchlist100.length > 0) {
-        console.error(
-          `(100池换血：成交额阈值过滤后为空，已放宽阈值重筛 ${relaxed.watchlist100.length} 支（盘前/低量时段）)`,
-        );
-        return { ...relaxed, degraded: false, themeHeat };
+  if (broad.length > 0) {
+    try {
+      const { positions } = readBridgeAccountAndPositions(input.memoryDir);
+      const heldNames: Record<string, string> = {};
+      for (const position of positions) {
+        heldNames[position.symbol] = position.name;
       }
+      const today = beijingDateOf(input.now);
+      const yesterday = readYesterdayLimitBoard(input.memoryDir, today);
+      // Prior cycle's changePct (read BEFORE this 换血 overwrites the pool) → 加速 momentum bumps.
+      const priorChangeBySymbol = readPoolChangeMap(input.memoryDir);
+
+      const persisted = persistCategorizedPool({
+        universe: broad,
+        writer: new WatchlistMemoryStore({ memoryDir: input.memoryDir }),
+        category: "watchlist_today",
+        heldSymbols: positions.map((position) => position.symbol),
+        heldNames,
+        yesterdayLimitUpSymbols: yesterday.limitUp,
+        yesterdayLimitDownSymbols: yesterday.limitDown,
+        priorChangeBySymbol,
+        minAmount: turnoverFloor,
+        maxTotal: input.limit ?? 100,
+        skipWriteWhenEmpty: true, // INFRA-02: never clobber a good pool with an empty screen
+        now: input.now,
+      });
+
+      // 收盘快照自维护：persist today's limit boards so tomorrow's 换血 can mark 昨日涨停/跌停.
+      // Guard on non-empty so a pre-open refresh (no moves yet) never overwrites the close state.
+      const todayLimitUp = limitNames(persisted.categorized, "limit_up");
+      const todayLimitDown = limitNames(persisted.categorized, "limit_down");
+      if (todayLimitUp.length > 0 || todayLimitDown.length > 0) {
+        writeLimitBoardSnapshot(input.memoryDir, today, todayLimitUp, todayLimitDown);
+      }
+
+      const watchlist100 = snapshotWatchlist(persisted.entries);
+      if (watchlist100.length > 0) {
+        return {
+          watchlist100,
+          universeSize: broad.length,
+          screened: persisted.categorized.length,
+          degraded: false,
+          themeHeat,
+          poolOverview: persisted.overview,
+        };
+      }
+    } catch (error) {
+      console.error(
+        `(100池换血失败，降级使用上次的池：${error instanceof Error ? error.message : String(error)})`,
+      );
     }
-  } catch (error) {
-    console.error(
-      `(100池换血失败，降级使用上次的池：${error instanceof Error ? error.message : String(error)})`,
-    );
   }
 
-  // Degrade: reuse the last stored pool rather than fabricate one.
+  // Degrade: reuse the last stored pool (and its overview) rather than fabricate one.
   const fallback = readWatchlist100(input.memoryDir);
-  return { watchlist100: fallback, universeSize: 0, screened: fallback.length, degraded: true, themeHeat };
+  return {
+    watchlist100: fallback,
+    universeSize: broad.length,
+    screened: fallback.length,
+    degraded: true,
+    themeHeat,
+    poolOverview: readWatchlistPoolOverview(input.memoryDir),
+  };
+}
+
+/** A {symbol,name} pick for one bucket of the categorized pool. */
+function limitNames(
+  categorized: ReturnType<typeof persistCategorizedPool>["categorized"],
+  bucket: "limit_up" | "limit_down",
+): Array<{ symbol: string; name: string }> {
+  return categorized
+    .filter((entry) => entry.bucket === bucket)
+    .map((entry) => ({ symbol: entry.stock.symbol, name: entry.stock.name }));
 }
 
 /** Builds the explicit eye-health signal: which fetches that SHOULD have data came back empty. */

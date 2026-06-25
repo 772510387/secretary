@@ -1,0 +1,33 @@
+{
+  "proposalId": "funnelprop-paper-main-600522-BUY-20260622020000",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260622020000",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "600522",
+  "market": "SSE",
+  "name": "中天科技",
+  "side": "BUY",
+  "currency": "CNY",
+  "rationale": "当前已持仓，但技术面持续强势（uptrend, rangePosition60=0.963），符合加仓候选条件，待人工确认仓位管理策略",
+  "reviewReason": "选股漏斗候选,待人工复核;数量与价格由后端按风控决定,模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-22T02:00:00.000Z",
+  "updatedAt": "2026-06-22T02:00:00.000Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true
+  }
+}

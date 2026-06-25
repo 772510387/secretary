@@ -12,9 +12,13 @@
 - `GenerateDailyReflectionUseCase`：已通过 `generateReport` 支持每日自省。
 - `RunResearchOnceUseCase`：已通过 `runResearchOnce` 支持一次性研究，可只返回报告或显式写入 `memory/research`。
 - `HandleUserQueryUseCase`：已通过 `runWatchMarketOnce` 支持随时看盘，可返回结构化摘要和非执行报告草稿。
+- `AgentPlannerUseCase`：`agent-planner.ts` 用模型驱动路由（`planAgentTurn` + `fulfilTurnPlan`）替代关键词分类，意图（问答 / 跑 SOP / 清库 / 建账户 / 模拟运维）由大脑判断，SOP 按 `sop-catalog` 描述选中；状态变更仍走确定性二次确认，模型不执行工具。模拟运维（单独重演昨日，或重演昨日、更新数据库、模拟今日的复合命令）先走确定性 fast-path，避免被模型误路由成只读复盘 SOP 或采纳错误日期。模型失败时降级到 `classifyAgentIntent`。`agent-router.ts` 保留为确定性兜底层。
 - `CreateTradeIntentUseCase`：把研究建议转成交易意图草案。
 - `ExecutePaperOrderUseCase`：执行模拟盘订单。
+- `BuildFunnelExecutionConstraintsUseCase`：在模型选择前按 A 股模拟盘规则生成可执行买卖候选，覆盖主板过滤、现金、单股仓位、100 股买入、T+1 可卖和具体股数/限价。
 - `WriteMemoryProposalUseCase`：处理大脑提出的记忆写入提案。
+- `KlineAsOfIndexSource`：用历史 K 线生成 as-of 四大指数上下文，供忠实重演使用，避免用实时指数污染历史节点。
+- `PersistPeriodReviewUseCase`：把周/月/年复盘结果追加写入 `memory/weekly_reviews`、`memory/monthly_reviews`、`memory/yearly_reviews`。
 
 ## 输入
 
@@ -128,6 +132,8 @@ const alarmTasks = buildCerebellumAlarmTasks({
 `runWatchMarketOnce` 编排用户主动“随时看盘”查询。它通过注入或默认 mock 的 QuoteProvider、HistoryProvider 和 MemoryRegistry 组装上下文，返回结构化摘要、非执行报告草稿和 metadata-only 审计事件；默认不联网、不调用真实 LLM、不写账户、不接 broker。当前大盘查询按传入标的集合聚合，尚未接指数 provider。
 
 `buildCerebellumAlarmTasks` 根据固定北京时间闹钟矩阵生成小脑任务对象和上下文包。它不启动 scheduler、不调用真实 BrainProvider、不联网、不接 broker；上下文包只包含路径、摘要和必要元数据。
+
+`KlineAsOfIndexSource` 只通过注入的 `HistoryProvider` 读取指数历史日 K，并按 `asOfDate`/`inclusive` 过滤；用于重演时不会读取实时指数。`persistPeriodReview()` 使用原子写入追加复盘 Markdown，只保存报告文本和元数据，不写账户、不下单、不改规则。
 
 ## 禁止
 

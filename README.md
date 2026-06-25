@@ -12,6 +12,27 @@
 
 > 凡是确定的，归于代码；凡是混沌的，归于 AI。
 
+## 快速启动（默认走飞书）
+
+默认对话接入是**飞书双向机器人**（官方长连接，无封号风险、无需公网 IP）：
+
+```powershell
+npm install            # 安装依赖（含飞书 SDK，无需另装）
+npm start              # = npm run feishu:bot，启动飞书机器人
+```
+
+前置：在 `.env` 配好 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_ALLOWED_USERS`，
+并用真实大脑 `BRAIN_PROVIDER=dashscope`（+ `DASHSCOPE_API_KEY`）。看到
+`✅ 飞书机器人已通过长连接启动` 后，在飞书里私聊该应用即可对话。完整步骤见
+`docs/ops/feishu-bot.md`。
+
+其它入口（可选）：`npm run wechat:bot`（个人微信，有 ToS 封号风险）、
+`npm run ask -- "..."`（命令行单问）。
+
+值守进程（按需常驻，外部推送走飞书 `FEISHU_NOTIFY=1`）：
+- `npm run sentinel:dev -- --live --wake-brain` —— 盘中 3 秒级盯盘；异动(红线)时唤醒大脑出 AI 研判再报警（平时零 token）。
+- `npm run cerebellum:dev` —— 全天闹钟矩阵到点用真实数据跑 SOP → 大脑研判 → 推送（`--list` 看节点，`--fire <节点>` 手动验证）。
+
 ## 当前状态
 
 当前项目已经从 T001-T014 架构骨架推进到 U1-U10 基础能力完成或评估阶段：

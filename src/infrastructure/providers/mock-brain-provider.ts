@@ -42,6 +42,13 @@ export class MockBrainProvider implements BrainProvider {
     return output;
   }
 
+  /** Streaming parity for the mock: delegates to generate and emits one progress tick. */
+  async generateStream(input: BrainInput, options: BrainGenerateOptions = {}): Promise<BrainOutput> {
+    const output = await this.generate(input, options);
+    options.onProgress?.({ chars: output.summary.length, elapsedMs: 0 });
+    return output;
+  }
+
   private defaultResponse(input: BrainInput): BrainOutput {
     const generatedAt = this.isoNow();
     const structured = buildMockStructuredOutput(input);

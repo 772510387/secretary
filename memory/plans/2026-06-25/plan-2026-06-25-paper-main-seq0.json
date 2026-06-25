@@ -1,0 +1,689 @@
+{
+  "schemaVersion": 1,
+  "planId": "plan-2026-06-25-paper-main",
+  "tradingDate": "2026-06-25",
+  "accountId": "paper-main",
+  "nodeSequence": 0,
+  "alarmType": "late_session_plan",
+  "generatedAt": "2026-06-25T06:30:02.866Z",
+  "watchlist100": [
+    {
+      "symbol": "600030",
+      "market": "SSE",
+      "name": "中信证券",
+      "rank": 35
+    },
+    {
+      "symbol": "600036",
+      "market": "SSE",
+      "name": "招商银行",
+      "rank": 78
+    },
+    {
+      "symbol": "600105",
+      "market": "SSE",
+      "name": "永鼎股份",
+      "rank": 20
+    },
+    {
+      "symbol": "600110",
+      "market": "SSE",
+      "name": "诺德股份",
+      "rank": 94
+    },
+    {
+      "symbol": "600111",
+      "market": "SSE",
+      "name": "北方稀土",
+      "rank": 49
+    },
+    {
+      "symbol": "600160",
+      "market": "SSE",
+      "name": "巨化股份",
+      "rank": 45
+    },
+    {
+      "symbol": "600172",
+      "market": "SSE",
+      "name": "黄河旋风",
+      "rank": 41
+    },
+    {
+      "symbol": "600176",
+      "market": "SSE",
+      "name": "中国巨石",
+      "rank": 18
+    },
+    {
+      "symbol": "600183",
+      "market": "SSE",
+      "name": "生益科技",
+      "rank": 13
+    },
+    {
+      "symbol": "600206",
+      "market": "SSE",
+      "name": "有研新材",
+      "rank": 36
+    },
+    {
+      "symbol": "600246",
+      "market": "SSE",
+      "name": "万通发展",
+      "rank": 95
+    },
+    {
+      "symbol": "600276",
+      "market": "SSE",
+      "name": "恒瑞医药",
+      "rank": 40
+    },
+    {
+      "symbol": "600330",
+      "market": "SSE",
+      "name": "天通股份",
+      "rank": 87
+    },
+    {
+      "symbol": "600353",
+      "market": "SSE",
+      "name": "旭光电子",
+      "rank": 70
+    },
+    {
+      "symbol": "600362",
+      "market": "SSE",
+      "name": "江西铜业",
+      "rank": 83
+    },
+    {
+      "symbol": "600378",
+      "market": "SSE",
+      "name": "昊华科技",
+      "rank": 69
+    },
+    {
+      "symbol": "600392",
+      "market": "SSE",
+      "name": "盛和资源",
+      "rank": 44
+    },
+    {
+      "symbol": "600397",
+      "market": "SSE",
+      "name": "江钨装备",
+      "rank": 68
+    },
+    {
+      "symbol": "600460",
+      "market": "SSE",
+      "name": "士兰微",
+      "rank": 30
+    },
+    {
+      "symbol": "600487",
+      "market": "SSE",
+      "name": "亨通光电",
+      "rank": 5
+    },
+    {
+      "symbol": "600497",
+      "market": "SSE",
+      "name": "驰宏锌锗",
+      "rank": 60
+    },
+    {
+      "symbol": "600498",
+      "market": "SSE",
+      "name": "烽火通信",
+      "rank": 24
+    },
+    {
+      "symbol": "600519",
+      "market": "SSE",
+      "name": "贵州茅台",
+      "rank": 59
+    },
+    {
+      "symbol": "600522",
+      "market": "SSE",
+      "name": "中天科技",
+      "rank": 6
+    },
+    {
+      "symbol": "600549",
+      "market": "SSE",
+      "name": "厦门钨业",
+      "rank": 25
+    },
+    {
+      "symbol": "600552",
+      "market": "SSE",
+      "name": "凯盛科技",
+      "rank": 84
+    },
+    {
+      "symbol": "600584",
+      "market": "SSE",
+      "name": "长电科技",
+      "rank": 4
+    },
+    {
+      "symbol": "600667",
+      "market": "SSE",
+      "name": "太极实业",
+      "rank": 75
+    },
+    {
+      "symbol": "600703",
+      "market": "SSE",
+      "name": "三安光电",
+      "rank": 73
+    },
+    {
+      "symbol": "600707",
+      "market": "SSE",
+      "name": "彩虹股份",
+      "rank": 64
+    },
+    {
+      "symbol": "600869",
+      "market": "SSE",
+      "name": "远东股份",
+      "rank": 86
+    },
+    {
+      "symbol": "600909",
+      "market": "SSE",
+      "name": "华安证券",
+      "rank": 53
+    },
+    {
+      "symbol": "600961",
+      "market": "SSE",
+      "name": "株冶集团",
+      "rank": 91
+    },
+    {
+      "symbol": "600999",
+      "market": "SSE",
+      "name": "招商证券",
+      "rank": 99
+    },
+    {
+      "symbol": "601138",
+      "market": "SSE",
+      "name": "工业富联",
+      "rank": 8
+    },
+    {
+      "symbol": "601208",
+      "market": "SSE",
+      "name": "东材科技",
+      "rank": 52
+    },
+    {
+      "symbol": "601318",
+      "market": "SSE",
+      "name": "中国平安",
+      "rank": 62
+    },
+    {
+      "symbol": "601869",
+      "market": "SSE",
+      "name": "长飞光纤",
+      "rank": 19
+    },
+    {
+      "symbol": "601899",
+      "market": "SSE",
+      "name": "紫金矿业",
+      "rank": 34
+    },
+    {
+      "symbol": "601958",
+      "market": "SSE",
+      "name": "金钼股份",
+      "rank": 100
+    },
+    {
+      "symbol": "601991",
+      "market": "SSE",
+      "name": "大唐发电",
+      "rank": 63
+    },
+    {
+      "symbol": "603005",
+      "market": "SSE",
+      "name": "晶方科技",
+      "rank": 43
+    },
+    {
+      "symbol": "603019",
+      "market": "SSE",
+      "name": "中科曙光",
+      "rank": 80
+    },
+    {
+      "symbol": "603083",
+      "market": "SSE",
+      "name": "剑桥科技",
+      "rank": 33
+    },
+    {
+      "symbol": "603186",
+      "market": "SSE",
+      "name": "华正新材",
+      "rank": 93
+    },
+    {
+      "symbol": "603256",
+      "market": "SSE",
+      "name": "宏和科技",
+      "rank": 90
+    },
+    {
+      "symbol": "603259",
+      "market": "SSE",
+      "name": "药明康德",
+      "rank": 14
+    },
+    {
+      "symbol": "603618",
+      "market": "SSE",
+      "name": "杭电股份",
+      "rank": 97
+    },
+    {
+      "symbol": "603629",
+      "market": "SSE",
+      "name": "利通电子",
+      "rank": 32
+    },
+    {
+      "symbol": "603773",
+      "market": "SSE",
+      "name": "沃格光电",
+      "rank": 74
+    },
+    {
+      "symbol": "603986",
+      "market": "SSE",
+      "name": "兆易创新",
+      "rank": 1
+    },
+    {
+      "symbol": "603993",
+      "market": "SSE",
+      "name": "洛阳钼业",
+      "rank": 37
+    },
+    {
+      "symbol": "605358",
+      "market": "SSE",
+      "name": "立昂微",
+      "rank": 72
+    },
+    {
+      "symbol": "605589",
+      "market": "SSE",
+      "name": "圣泉集团",
+      "rank": 82
+    },
+    {
+      "symbol": "000021",
+      "market": "SZSE",
+      "name": "深科技",
+      "rank": 27
+    },
+    {
+      "symbol": "000063",
+      "market": "SZSE",
+      "name": "中兴通讯",
+      "rank": 50
+    },
+    {
+      "symbol": "000066",
+      "market": "SZSE",
+      "name": "中国长城",
+      "rank": 47
+    },
+    {
+      "symbol": "000070",
+      "market": "SZSE",
+      "name": "特发信息",
+      "rank": 77
+    },
+    {
+      "symbol": "000100",
+      "market": "SZSE",
+      "name": "TCL科技",
+      "rank": 54
+    },
+    {
+      "symbol": "000630",
+      "market": "SZSE",
+      "name": "铜陵有色",
+      "rank": 58
+    },
+    {
+      "symbol": "000636",
+      "market": "SZSE",
+      "name": "风华高科",
+      "rank": 26
+    },
+    {
+      "symbol": "000657",
+      "market": "SZSE",
+      "name": "中钨高新",
+      "rank": 16
+    },
+    {
+      "symbol": "000725",
+      "market": "SZSE",
+      "name": "京东方Ａ",
+      "rank": 3
+    },
+    {
+      "symbol": "000776",
+      "market": "SZSE",
+      "name": "广发证券",
+      "rank": 81
+    },
+    {
+      "symbol": "000783",
+      "market": "SZSE",
+      "name": "长江证券",
+      "rank": 71
+    },
+    {
+      "symbol": "000792",
+      "market": "SZSE",
+      "name": "盐湖股份",
+      "rank": 89
+    },
+    {
+      "symbol": "000811",
+      "market": "SZSE",
+      "name": "冰轮环境",
+      "rank": 85
+    },
+    {
+      "symbol": "000831",
+      "market": "SZSE",
+      "name": "中国稀土",
+      "rank": 92
+    },
+    {
+      "symbol": "000960",
+      "market": "SZSE",
+      "name": "锡业股份",
+      "rank": 42
+    },
+    {
+      "symbol": "000988",
+      "market": "SZSE",
+      "name": "华工科技",
+      "rank": 28
+    },
+    {
+      "symbol": "001309",
+      "market": "SZSE",
+      "name": "德明利",
+      "rank": 11
+    },
+    {
+      "symbol": "002008",
+      "market": "SZSE",
+      "name": "大族激光",
+      "rank": 7
+    },
+    {
+      "symbol": "002050",
+      "market": "SZSE",
+      "name": "三花智控",
+      "rank": 96
+    },
+    {
+      "symbol": "002080",
+      "market": "SZSE",
+      "name": "中材科技",
+      "rank": 65
+    },
+    {
+      "symbol": "002156",
+      "market": "SZSE",
+      "name": "通富微电",
+      "rank": 10
+    },
+    {
+      "symbol": "002167",
+      "market": "SZSE",
+      "name": "东方锆业",
+      "rank": 48
+    },
+    {
+      "symbol": "002185",
+      "market": "SZSE",
+      "name": "华天科技",
+      "rank": 15
+    },
+    {
+      "symbol": "002281",
+      "market": "SZSE",
+      "name": "光迅科技",
+      "rank": 17
+    },
+    {
+      "symbol": "002297",
+      "market": "SZSE",
+      "name": "博云新材",
+      "rank": 79
+    },
+    {
+      "symbol": "002371",
+      "market": "SZSE",
+      "name": "北方华创",
+      "rank": 22
+    },
+    {
+      "symbol": "002384",
+      "market": "SZSE",
+      "name": "东山精密",
+      "rank": 9
+    },
+    {
+      "symbol": "002407",
+      "market": "SZSE",
+      "name": "多氟多",
+      "rank": 23
+    },
+    {
+      "symbol": "002409",
+      "market": "SZSE",
+      "name": "雅克科技",
+      "rank": 61
+    },
+    {
+      "symbol": "002415",
+      "market": "SZSE",
+      "name": "海康威视",
+      "rank": 57
+    },
+    {
+      "symbol": "002428",
+      "market": "SZSE",
+      "name": "云南锗业",
+      "rank": 12
+    },
+    {
+      "symbol": "002436",
+      "market": "SZSE",
+      "name": "兴森科技",
+      "rank": 31
+    },
+    {
+      "symbol": "002460",
+      "market": "SZSE",
+      "name": "赣锋锂业",
+      "rank": 67
+    },
+    {
+      "symbol": "002463",
+      "market": "SZSE",
+      "name": "沪电股份",
+      "rank": 21
+    },
+    {
+      "symbol": "002466",
+      "market": "SZSE",
+      "name": "天齐锂业",
+      "rank": 46
+    },
+    {
+      "symbol": "002475",
+      "market": "SZSE",
+      "name": "立讯精密",
+      "rank": 2
+    },
+    {
+      "symbol": "002484",
+      "market": "SZSE",
+      "name": "江海股份",
+      "rank": 55
+    },
+    {
+      "symbol": "002594",
+      "market": "SZSE",
+      "name": "比亚迪",
+      "rank": 98
+    },
+    {
+      "symbol": "002600",
+      "market": "SZSE",
+      "name": "领益智造",
+      "rank": 38
+    },
+    {
+      "symbol": "002648",
+      "market": "SZSE",
+      "name": "卫星化学",
+      "rank": 51
+    },
+    {
+      "symbol": "002709",
+      "market": "SZSE",
+      "name": "天赐材料",
+      "rank": 39
+    },
+    {
+      "symbol": "002747",
+      "market": "SZSE",
+      "name": "埃斯顿",
+      "rank": 88
+    },
+    {
+      "symbol": "002837",
+      "market": "SZSE",
+      "name": "英维克",
+      "rank": 29
+    },
+    {
+      "symbol": "002851",
+      "market": "SZSE",
+      "name": "麦格米特",
+      "rank": 76
+    },
+    {
+      "symbol": "002916",
+      "market": "SZSE",
+      "name": "深南电路",
+      "rank": 56
+    },
+    {
+      "symbol": "002938",
+      "market": "SZSE",
+      "name": "鹏鼎控股",
+      "rank": 66
+    }
+  ],
+  "shortlist10": [
+    {
+      "symbol": "603986",
+      "market": "SSE",
+      "name": "兆易创新",
+      "rank": 1,
+      "rationale": "高关注池排名第1，半导体存储芯片龙头，技术面与资金关注度双优"
+    },
+    {
+      "symbol": "002475",
+      "market": "SZSE",
+      "name": "立讯精密",
+      "rank": 2,
+      "rationale": "高关注池排名第2，当前持仓且排名最高，消费电子+苹果链核心标的"
+    },
+    {
+      "symbol": "000725",
+      "market": "SZSE",
+      "name": "京东方Ａ",
+      "rank": 3,
+      "rationale": "高关注池排名第3，面板龙头，当前处于60日价格高位（0.95），趋势向上"
+    },
+    {
+      "symbol": "002156",
+      "market": "SZSE",
+      "name": "通富微电",
+      "rank": 10,
+      "rationale": "高关注池排名第10，先进封装+Chiplet核心标的，国产替代逻辑清晰"
+    },
+    {
+      "symbol": "600584",
+      "market": "SSE",
+      "name": "长电科技",
+      "rank": 4,
+      "rationale": "高关注池排名第4，封测龙头，技术面强势且行业景气度回升"
+    },
+    {
+      "symbol": "002185",
+      "market": "SZSE",
+      "name": "华天科技",
+      "rank": 15,
+      "rationale": "高关注池排名第15，封测二线龙头，当前持仓且60日位置达0.975，趋势明确"
+    },
+    {
+      "symbol": "002281",
+      "market": "SZSE",
+      "name": "光迅科技",
+      "rank": 17,
+      "rationale": "高关注池排名第17，光通信核心器件供应商，受益于AI算力基建加速"
+    },
+    {
+      "symbol": "002371",
+      "market": "SZSE",
+      "name": "北方华创",
+      "rank": 22,
+      "rationale": "高关注池排名第22，半导体设备龙头，国产替代刚性需求支撑"
+    },
+    {
+      "symbol": "002384",
+      "market": "SZSE",
+      "name": "东山精密",
+      "rank": 9,
+      "rationale": "高关注池排名第9，PCB+FPC+软板一体化龙头，AI服务器配套主力"
+    },
+    {
+      "symbol": "600487",
+      "market": "SSE",
+      "name": "亨通光电",
+      "rank": 5,
+      "rationale": "高关注池排名第5，海缆+海洋能源双轮驱动，业绩确定性较强"
+    }
+  ],
+  "pendingOrders": [],
+  "safety": {
+    "liveTrading": false,
+    "autoPaper": true
+  },
+  "metadata": {}
+}

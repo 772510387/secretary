@@ -17,7 +17,9 @@ interface SopRequiredInputDraft {
 }
 
 interface SopTemplateDraft {
+  wakeRule?: string;
   objective: string;
+  operationInstructions?: readonly string[];
   requiredInputs: readonly SopRequiredInputDraft[];
   allowedActions: readonly string[];
   forbiddenActions: readonly string[];
@@ -310,10 +312,21 @@ export const CEREBELLUM_ALARM_SOP_TEMPLATES: Record<CerebellumAlarmType, SopTemp
 
 export function buildCerebellumAlarmSop(alarmInput: CerebellumAlarmRule): CerebellumAlarmSop {
   const alarm = cerebellumAlarmRuleSchema.parse(alarmInput);
-  const draft = CEREBELLUM_ALARM_SOP_TEMPLATES[alarm.alarmType];
+  return buildCerebellumAlarmSopByType(alarm.alarmType);
+}
+
+/**
+ * Builds the deterministic SOP package for an alarm type without requiring a full
+ * alarm rule. Used by the text-invoked SOP path (a user asking for a SOP by name)
+ * where there is no scheduled alarm context, only the chosen SOP type.
+ */
+export function buildCerebellumAlarmSopByType(alarmType: CerebellumAlarmType): CerebellumAlarmSop {
+  const draft = CEREBELLUM_ALARM_SOP_TEMPLATES[alarmType];
 
   return cerebellumAlarmSopSchema.parse({
+    wakeRule: sanitizeText(draft.wakeRule ?? defaultWakeRule(alarmType)),
     objective: sanitizeText(draft.objective),
+    operationInstructions: (draft.operationInstructions ?? defaultOperationInstructions(alarmType)).map(sanitizeText),
     requiredInputs: draft.requiredInputs.map(sanitizeRequiredInput),
     allowedActions: uniqueStrings([...commonAllowedActions, ...draft.allowedActions]).map(sanitizeText),
     forbiddenActions: uniqueStrings([...commonForbiddenActions, ...draft.forbiddenActions]).map(sanitizeText),
@@ -322,6 +335,49 @@ export function buildCerebellumAlarmSop(alarmInput: CerebellumAlarmRule): Cerebe
       ...(draft.safetyConstraints ?? []),
     ]).map(sanitizeText),
   });
+}
+
+export function renderCerebellumAlarmSop(sop: CerebellumAlarmSop): string {
+  return [
+    `唤醒规则：${sop.wakeRule}`,
+    "操作指令：",
+    ...sop.operationInstructions.map((instruction, index) => `${index + 1}. ${instruction}`),
+  ].join("\n");
+}
+
+function defaultWakeRule(alarmType: CerebellumAlarmType): string {
+  const prefix = "固定闹钟唤醒：北京时间调度器命中当前 SOP 节点。";
+
+  switch (alarmType) {
+    case "weekly_review":
+      return `${prefix}本节点按周复盘规则触发，只能读取已落库的周内事实和摘要。`;
+    case "monthly_review":
+      return `${prefix}本节点按月末复盘规则触发，只能读取已落库的月内事实和摘要。`;
+    case "yearly_review":
+      return `${prefix}本节点按年末复盘规则触发，只能读取已落库的年内事实和摘要。`;
+    case "daily_reflection":
+      return `${prefix}本节点按每日自省规则触发，只能总结已发生和已落库的信息。`;
+    default:
+      return `${prefix}执行前必须使用后端提供的真实上下文，缺失数据必须明示为缺口。`;
+  }
+}
+
+function defaultOperationInstructions(alarmType: CerebellumAlarmType): string[] {
+  const reviewScope =
+    alarmType === "weekly_review"
+      ? "本周"
+      : alarmType === "monthly_review"
+        ? "本月"
+        : alarmType === "yearly_review"
+          ? "本年"
+          : "当前节点";
+
+  return [
+    "读取后端提供的账户、持仓、行情、指数、自选池、报告、研究、提案和日志上下文。",
+    "先核对 dataHealth 和来源时间；任何缺失、过期或降级的数据必须明确写为输入缺口。",
+    `围绕${reviewScope}目标输出结论、风险、待人工复核动作和需要补充的数据。`,
+    "不得编造股票、价格、指数、新闻、持仓、成交或资金；不得下单、写账户或改规则。",
+  ];
 }
 
 function input(draft: SopRequiredInputDraft): SopRequiredInputDraft {

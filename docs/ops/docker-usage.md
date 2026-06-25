@@ -82,10 +82,6 @@ docker compose run --rm secretary ./node_modules/.bin/tsx scripts/dev/manual-con
 docker compose run --rm -e BRAIN_NETWORK_SMOKE=1 secretary `
   ./node_modules/.bin/tsx scripts/dev/brain-smoke.ts
 
-# 企业微信群机器人推送测试：向 WECOM_BOT_WEBHOOK_URL 发一条脱敏测试消息。
-# 真实发送必须显式放行（WECHAT_NETWORK_SEND=1）。
-docker compose run --rm -e WECHAT_NETWORK_SEND=1 secretary `
-  ./node_modules/.bin/tsx scripts/dev/wechat-test.ts
 
 # daemon 定时冒烟（跑 1.5 秒自动停，把全天当作开盘）
 docker compose run --rm secretary ./node_modules/.bin/tsx scripts/dev/market-sentinel-daemon.ts `

@@ -30,6 +30,7 @@ export const notificationChannelSchema = z.enum([
   "file",
   "webhook",
   "wechat",
+  "feishu",
 ]);
 
 export const notificationTargetTypeSchema = z.enum([

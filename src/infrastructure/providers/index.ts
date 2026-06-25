@@ -93,6 +93,7 @@ export {
   type HistoryQueryOptions,
   type TencentHistoryProviderOptions,
 } from "./tencent-history-provider.js";
+export { FixtureHistoryProvider } from "./fixture-history-provider.js";
 export {
   DEFAULT_TENCENT_INDEX_SYMBOLS,
   TencentIndexProvider,
@@ -103,3 +104,32 @@ export {
   type TencentIndexProviderOptions,
   type TencentIndexSymbol,
 } from "./tencent-index-provider.js";
+export {
+  EastmoneyUniverseProvider,
+  UniverseProviderError,
+  parseUniverse,
+  parseUniversePage,
+  type EastmoneyUniverseProviderOptions,
+  type UniverseFetchLike,
+  type UniverseFetchResponse,
+  type UniverseProvider,
+} from "./eastmoney-universe-provider.js";
+export {
+  CachingUniverseProvider,
+  FileUniverseCacheStore,
+  cacheKey,
+  type CachingUniverseProviderOptions,
+  type UniverseCacheEntry,
+  type UniverseCacheSource,
+  type UniverseCacheStatus,
+  type UniverseCacheStore,
+} from "./caching-universe-provider.js";
+export {
+  SinaUniverseProvider,
+  parseSinaUniverse,
+  type SinaUniverseProviderOptions,
+} from "./sina-universe-provider.js";
+export {
+  FallbackUniverseProvider,
+  type FallbackUniverseProviderOptions,
+} from "./fallback-universe-provider.js";

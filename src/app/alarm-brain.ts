@@ -28,6 +28,10 @@ export interface RunAlarmNodeInput {
   technicals?: AskTechnical[];
   indices?: AskIndex[];
   watchlist?: PlanWatchlistEntry[];
+  /** 观察池分类概览 (层级1 counts + 层级2 named picks) — injected so the push names categories. */
+  poolOverview?: string;
+  /** 日内检查点时间线 (上次→本次大盘/情绪变化) — injected for node-to-node continuity. */
+  intradayTimeline?: string;
   themeHeat?: ThemeHeatSummary;
   dataHealth?: MarketDataHealth;
   webSearch?: AskWebSearchContext;
@@ -59,6 +63,17 @@ const SWORD_SHIELD_FRAMEWORK = [
   "请用【剑盾双修】框架作答，两个维度都必须给，不许泛泛而谈：",
   "盾(防守)：当前/各持仓的止盈位与止损位、大盘风险等级、优先防守哪只；",
   "剑(进攻)：今日主线板块与龙头、从100池里值得关注的标的、开仓条件与目标买入价(仅建议，不下单)。",
+].join("\n");
+
+/**
+ * The push only renders the brain's `summary` field — `structured` is never shown
+ * to the user. Without this contract the model leaves the detail in `structured`
+ * and emits a one-paragraph abstract as `summary`, producing the empty-looking push.
+ */
+const PUSH_DELIVERY_CONTRACT = [
+  "【推送约束·必读】你输出的 summary 字段是唯一会推送给老板的内容，structured 不会展示给人看。",
+  "所以请把本节点要求的完整结论与具体数字直接写进 summary：股票代码与名称、现价与涨跌幅、止盈位/止损位、从100池里点名的标的及建议买入价、相关大盘/题材数据。",
+  "按要点紧凑表达，不要只给一句泛泛而谈的摘要，也不要把要点藏进 structured；最重要的操作结论放在最前面。",
 ].join("\n");
 
 const OPERATION_REPORT_FRAMEWORK = [
@@ -118,10 +133,20 @@ export async function runAlarmNodeAnalysis(
     "安全边界：",
     ...sop.forbiddenActions.map((action) => `- ${action}`),
     "基于提供的账户、行情、技术指标、指数、100支高关注池和（若有）联网检索，用简体中文产出该 SOP 要求的结论。",
+    ...(input.poolOverview && input.poolOverview.trim()
+      ? [
+          `【观察池分类概览（确定性筛选，按类别）】\n${input.poolOverview.trim()}`,
+          "点评时优先引用上面的分类与点名标的（涨停/昨日涨停/涨幅榜/持仓等），不要泛泛说“市场情绪高涨”；引用个股必须使用概览中给出的代码，严禁自行编造代码。",
+        ]
+      : []),
+    ...(input.intradayTimeline && input.intradayTimeline.trim()
+      ? [input.intradayTimeline.trim()]
+      : []),
     ...(input.todayFills && input.todayFills.trim() ? [input.todayFills.trim()] : []),
     ...(holdingImpact ? [holdingImpact] : []),
     ...(swordShield ? [SWORD_SHIELD_FRAMEWORK] : ["控制在 6 句以内。"]),
     OPERATION_REPORT_FRAMEWORK,
+    PUSH_DELIVERY_CONTRACT,
     "直接给出明确结论与操作建议（模拟盘账户）。",
   ].join("\n");
 

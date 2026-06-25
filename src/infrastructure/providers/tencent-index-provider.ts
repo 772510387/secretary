@@ -5,6 +5,7 @@ import {
 } from "../../domain/market/index.js";
 import { roundMoney, roundRatio } from "../../domain/portfolio/index.js";
 import { IndexProviderError } from "./errors.js";
+import { readGbkText } from "./gbk.js";
 import type { FetchLike } from "./tencent-quote-provider.js";
 
 export interface IndexProvider {
@@ -91,7 +92,7 @@ export class TencentIndexProvider implements IndexProvider {
         );
       }
 
-      return await response.text();
+      return await readGbkText(response);
     } catch (error) {
       if (error instanceof IndexProviderError) {
         throw error;

@@ -1,0 +1,33 @@
+{
+  "proposalId": "funnelprop-paper-main-000725-SELL-20260622033000",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260622033000",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "000725",
+  "market": "SZSE",
+  "name": "京东方Ａ",
+  "side": "SELL",
+  "currency": "CNY",
+  "rationale": "当前持仓，但技术趋势已转为横盘（sideways），60日相对位置0.8788偏高，缺乏突破动能，符合止盈观察条件",
+  "reviewReason": "选股漏斗候选,待人工复核;数量与价格由后端按风控决定,模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-22T03:30:00.000Z",
+  "updatedAt": "2026-06-22T03:30:00.000Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true
+  }
+}

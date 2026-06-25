@@ -8,6 +8,6 @@ export interface NotificationNotifier {
 }
 
 export interface ExternalNotificationNotifier {
-  readonly channel: "webhook" | "wechat";
+  readonly channel: "webhook" | "wechat" | "feishu";
   notify(event: NotificationEvent): Promise<NotificationDeliveryResult>;
 }

@@ -1,0 +1,33 @@
+{
+  "proposalId": "funnelprop-paper-main-603986-BUY-20260622063000",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260622063000",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "603986",
+  "market": "SSE",
+  "name": "兆易创新",
+  "side": "BUY",
+  "currency": "CNY",
+  "rationale": "池内排名第1，uptrend且高位强势，未持仓",
+  "reviewReason": "选股漏斗候选,待人工复核;数量与价格由后端按风控决定,模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-22T06:30:00.000Z",
+  "updatedAt": "2026-06-22T06:30:00.000Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true
+  }
+}

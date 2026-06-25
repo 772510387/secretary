@@ -5,16 +5,28 @@
   "type": "module",
   "description": "A-share trading assistant architecture with deterministic risk control and pluggable AI research brains.",
   "scripts": {
+    "start": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/secretary-daemon.ts",
+    "dev": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/secretary-daemon.ts",
+    "secretary": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/secretary-daemon.ts",
     "doctor": "tsx scripts/dev/doctor.ts",
     "check:docs": "node -e \"console.log('docs scaffold present; implement validation later')\"",
     "seed:paper": "tsx scripts/dev/seed-paper-account.ts",
     "research:once": "tsx scripts/dev/research-once.ts",
     "brain:smoke": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/brain-smoke.ts",
     "ask": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/ask.ts",
+    "plan:smoke": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/plan-smoke.ts",
+    "research:smoke": "tsx scripts/dev/research-smoke.ts",
+    "agent": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/agent.ts",
+    "agent:server": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/agent-server.ts",
     "trade": "tsx scripts/dev/trade.ts",
     "watchlist": "tsx scripts/dev/watchlist.ts",
-    "wechat:test": "tsx scripts/dev/wechat-test.ts",
-    "sentinel:dev": "tsx scripts/dev/market-sentinel-daemon.ts",
+    "screen": "tsx scripts/dev/screen.ts",
+    "replay": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/replay-backtest.ts",
+    "funnel:dev": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/funnel-loop.ts",
+    "wechat:bot": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/wechat-bot.ts",
+    "feishu:bot": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/feishu-bot.ts",
+    "sentinel:dev": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/market-sentinel-daemon.ts",
+    "cerebellum:dev": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/cerebellum-daemon.ts",
     "manual-confirm:dev": "tsx scripts/dev/manual-confirm.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -23,6 +35,10 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.67.0",
+    "wechaty": "^1.20.2",
+    "wechaty-puppet-padlocal": "^1.20.1",
+    "wechaty-puppet-wcferry": "^0.1.7",
     "zod": "^3.23.8"
   },
   "devDependencies": {

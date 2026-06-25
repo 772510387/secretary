@@ -50,3 +50,8 @@ export {
   type NotificationSkippedChannel,
   type PlanNotificationRouteOptions,
 } from "./routing.js";
+export {
+  classifyExternalPush,
+  shouldPushToExternalChannels,
+  type ExternalPushReason,
+} from "./push-policy.js";

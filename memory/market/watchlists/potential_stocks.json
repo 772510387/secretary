@@ -1,0 +1,144 @@
+{
+  "category": "potential_stocks",
+  "updatedAt": "2026-06-25T06:30:02.866Z",
+  "entries": [
+    {
+      "symbol": "600487",
+      "market": "SSE",
+      "name": "亨通光电",
+      "priority": "high",
+      "reason": "高关注池排名第5，海缆+海洋能源双轮驱动，业绩确定性较强",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 5,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "600584",
+      "market": "SSE",
+      "name": "长电科技",
+      "priority": "high",
+      "reason": "高关注池排名第4，封测龙头，技术面强势且行业景气度回升",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 4,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "603986",
+      "market": "SSE",
+      "name": "兆易创新",
+      "priority": "high",
+      "reason": "高关注池排名第1，半导体存储芯片龙头，技术面与资金关注度双优",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 1,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "000725",
+      "market": "SZSE",
+      "name": "京东方Ａ",
+      "priority": "high",
+      "reason": "高关注池排名第3，面板龙头，当前处于60日价格高位（0.95），趋势向上",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 3,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002156",
+      "market": "SZSE",
+      "name": "通富微电",
+      "priority": "high",
+      "reason": "高关注池排名第10，先进封装+Chiplet核心标的，国产替代逻辑清晰",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 10,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002185",
+      "market": "SZSE",
+      "name": "华天科技",
+      "priority": "high",
+      "reason": "高关注池排名第15，封测二线龙头，当前持仓且60日位置达0.975，趋势明确",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 15,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002281",
+      "market": "SZSE",
+      "name": "光迅科技",
+      "priority": "high",
+      "reason": "高关注池排名第17，光通信核心器件供应商，受益于AI算力基建加速",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 17,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002371",
+      "market": "SZSE",
+      "name": "北方华创",
+      "priority": "high",
+      "reason": "高关注池排名第22，半导体设备龙头，国产替代刚性需求支撑",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 22,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002384",
+      "market": "SZSE",
+      "name": "东山精密",
+      "priority": "high",
+      "reason": "高关注池排名第9，PCB+FPC+软板一体化龙头，AI服务器配套主力",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 9,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002475",
+      "market": "SZSE",
+      "name": "立讯精密",
+      "priority": "high",
+      "reason": "高关注池排名第2，当前持仓且排名最高，消费电子+苹果链核心标的",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "metadata": {
+        "rank": 2,
+        "fromFunnel": true
+      }
+    }
+  ],
+  "metadata": {
+    "source": "funnel-shortlist",
+    "screener": false,
+    "fromFunnel": true,
+    "brainProviderCalled": false,
+    "brokerConnected": false,
+    "liveTrading": false
+  }
+}

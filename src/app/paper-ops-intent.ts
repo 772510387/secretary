@@ -1,0 +1,207 @@
+import { beijingDayOfWeek } from "../domain/shared/index.js";
+
+export interface PaperOpsCommand {
+  replayDate?: string;
+  simulateDate?: string;
+  archiveDate?: string;
+}
+
+const DATE_PATTERN = /\b(20\d{2}-\d{2}-\d{2})\b/g;
+const EXPLICIT_DATE_FRAGMENT = String.raw`20\d{2}-\d{2}-\d{2}`;
+// Chinese relative-date expressions for a PAST (replay) target. Deterministic — the
+// model never resolves these. "今天/今日/当天" is intentionally excluded (that is the
+// simulate-today target, handled separately).
+const WEEKDAY_FRAGMENT = String.raw`(?:上上|上|本|这|当|下下|下)?(?:个)?(?:周|星期|礼拜)[一二三四五六日天]`;
+const RELATIVE_PAST_FRAGMENT = String.raw`(?:大前天|前天|昨天|昨日|${WEEKDAY_FRAGMENT}|[0-9]+(?:个)?(?:交易日|天|日)前|[一二三四五六七八九十](?:个)?(?:交易日|天|日)前)`;
+const DATE_TARGET_FRAGMENT = String.raw`(?:${RELATIVE_PAST_FRAGMENT}|${EXPLICIT_DATE_FRAGMENT})`;
+// Explicit "replay" verbs (re-run a past day's operations).
+const REPLAY_VERB_FRAGMENT = String.raw`重新|补跑|重放|回放|复现|重演|重走|重跑`;
+// "Walk/run through (a day's) process once" idioms — colloquial replay requests like
+// "把本周一的流程走一遍 / 跑一遍周一 / 过一遍那天的节点". These are unambiguous replay asks
+// even without an explicit 重演/补跑 verb, so they must reach paper_ops, not a read-only SOP.
+const RUN_THROUGH_FRAGMENT = String.raw`走一遍|走一走|走一趟|走完|跑一遍|跑一趟|跑一跑|跑完|过一遍|过一趟|演练一遍|完整走一遍|重新走一遍|重新跑一遍`;
+const ZH_WEEKDAY: Record<string, number> = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 7, 天: 7 };
+const ZH_NUMBER: Record<string, number> = {
+  一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10,
+};
+const DAY_MS = 24 * 60 * 60 * 1000;
+const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * Conservative detector for paper-only operator commands:
+ * - "replay/simulate yesterday's operation"
+ * - "replay yesterday, refresh/archive DB state, then simulate today's paper flow"
+ *
+ * This intentionally runs before the model router. It is state-changing and
+ * should never be downgraded to a read-only review SOP by fuzzy routing.
+ */
+export function detectPaperOpsCommand(message: string, now?: string | Date): PaperOpsCommand | undefined {
+  const text = message.trim();
+
+  if (!text) {
+    return undefined;
+  }
+
+  const replayRequested = new RegExp(
+    [
+      String.raw`(${REPLAY_VERB_FRAGMENT}).*(${DATE_TARGET_FRAGMENT}|操作|流程)`,
+      String.raw`(${DATE_TARGET_FRAGMENT}).*(操作|流程|模拟|${REPLAY_VERB_FRAGMENT}|${RUN_THROUGH_FRAGMENT})`,
+      String.raw`(模拟|${REPLAY_VERB_FRAGMENT}|${RUN_THROUGH_FRAGMENT}).*(${DATE_TARGET_FRAGMENT}).*(操作|流程)?`,
+      String.raw`(${DATE_TARGET_FRAGMENT}).*(流程|节点).*(${RUN_THROUGH_FRAGMENT}|${REPLAY_VERB_FRAGMENT})`,
+    ].join("|"),
+    "u",
+  ).test(text);
+  const archiveRequested = /(更新|刷新|归档|落库|落盘|罗盘|写库|入库|沉淀).*(数据库|DB|账本|快照|数据库信息|数据)|((数据库|DB|账本|快照).*(更新|刷新|归档|落库|落盘|罗盘|写库|入库|沉淀))/iu.test(text);
+  const simulateRequested = /(模拟|补跑|执行|跑).*(今天|今日|当天).*(操作|节点|流程|模拟)|((今天|今日).*(模拟|补跑|执行|操作))/u.test(text);
+  const standaloneReplayRequested =
+    replayRequested &&
+    new RegExp(
+      [
+        String.raw`(模拟|${REPLAY_VERB_FRAGMENT}|${RUN_THROUGH_FRAGMENT}).*(${DATE_TARGET_FRAGMENT})`,
+        String.raw`(${DATE_TARGET_FRAGMENT}).*(模拟|${REPLAY_VERB_FRAGMENT}|${RUN_THROUGH_FRAGMENT})`,
+        String.raw`(${DATE_TARGET_FRAGMENT}).*(流程|节点).*(${RUN_THROUGH_FRAGMENT}|${REPLAY_VERB_FRAGMENT})`,
+      ].join("|"),
+      "u",
+    ).test(text);
+
+  const requestedCount = [replayRequested, archiveRequested, simulateRequested].filter(Boolean).length;
+
+  if (requestedCount < 2 && !standaloneReplayRequested) {
+    return undefined;
+  }
+
+  const today = beijingDate(now);
+  const explicitDates = extractExplicitDates(text);
+  const replayDate = replayRequested
+    ? explicitDates[0] ?? resolveRelativePastDate(text, today) ?? addDays(today, -1)
+    : undefined;
+
+  return {
+    replayDate,
+    archiveDate: archiveRequested ? today : undefined,
+    simulateDate: simulateRequested ? today : undefined,
+  };
+}
+
+/**
+ * Whether the user explicitly asked to run a paper op NOW, skipping the confirm
+ * round-trip — "直接执行/直接落库/不用确认/马上跑一遍…就行". The bridge consults this
+ * only for paper_ops (paper-only, owner-gated), honouring "直接…就行" while keeping the
+ * default safe for unflagged requests. Pure and deterministic.
+ */
+export function wantsImmediatePaperExecution(message: string): boolean {
+  const text = message.trim();
+  if (!text) {
+    return false;
+  }
+  const skipConfirm = /(不用|无需|别|不要|甭)(?:再)?(确认|问|管)/u.test(text);
+  const immediacy = /(直接|立刻|立即|马上|径直|赶紧|尽快)/u.test(text);
+  const actiony = /(执行|落库|落盘|罗盘|写库|入库|下单|成交|建仓|操作|跑一遍|走一遍|就行|就好|即可)/u.test(text);
+  return skipConfirm || (immediacy && actiony);
+}
+
+export function formatPaperOpsCommand(command: PaperOpsCommand): string {
+  const parts: string[] = [];
+
+  if (command.replayDate) {
+    parts.push(`重演 ${command.replayDate}`);
+  }
+  if (command.simulateDate) {
+    parts.push(`补跑 ${command.simulateDate} 今日模拟节点`);
+  }
+  if (command.archiveDate) {
+    parts.push(`归档 ${command.archiveDate} 盘后账户快照`);
+  }
+
+  return parts.length > 0 ? parts.join("；") : "模拟运维";
+}
+
+export function beijingDate(now: string | Date | undefined = new Date()): string {
+  const date = now instanceof Date ? now : new Date(now);
+
+  if (Number.isNaN(date.getTime())) {
+    return beijingDate(new Date());
+  }
+
+  const shifted = new Date(date.getTime() + BEIJING_OFFSET_MS);
+  return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
+}
+
+function extractExplicitDates(text: string): string[] {
+  const matches = [...text.matchAll(DATE_PATTERN)].map((match) => match[1]!).filter(isValidDate);
+  return [...new Set(matches)];
+}
+
+/**
+ * Deterministically resolves a Chinese relative-date expression for a PAST (replay)
+ * target against a Beijing `today` (YYYY-MM-DD). Returns undefined when no past
+ * expression is found, or when the expression points to a future day (e.g. 下周一) —
+ * a future date is never a valid replay target. The model is never involved.
+ */
+export function resolveRelativePastDate(text: string, today: string): string | undefined {
+  const weekday = new RegExp(
+    String.raw`(上上|上|本|这|当|下下|下)?(?:个)?(?:周|星期|礼拜)([一二三四五六日天])`,
+    "u",
+  ).exec(text);
+  if (weekday) {
+    const weekOffset =
+      weekday[1] === "上"
+        ? -1
+        : weekday[1] === "上上"
+          ? -2
+          : weekday[1] === "下"
+            ? 1
+            : weekday[1] === "下下"
+              ? 2
+              : 0;
+    if (weekOffset > 0) {
+      return undefined; // 下周X — future, not a replay target.
+    }
+    const targetDow = ZH_WEEKDAY[weekday[2]!]!;
+    const delta = targetDow - beijingDayOfWeek(today) + weekOffset * 7;
+    const resolved = addDays(today, delta);
+    // A weekday still ahead this week (e.g. 本周五 asked on a Wednesday) hasn't
+    // happened yet — not a valid past replay target.
+    return resolved > today ? undefined : resolved;
+  }
+
+  if (/大前天/u.test(text)) {
+    return addDays(today, -3);
+  }
+  if (/前天/u.test(text)) {
+    return addDays(today, -2);
+  }
+  if (/昨天|昨日/u.test(text)) {
+    return addDays(today, -1);
+  }
+
+  const digitsAgo = /([0-9]+)\s*(?:个)?\s*(?:交易日|天|日)前/u.exec(text);
+  if (digitsAgo) {
+    const days = Number(digitsAgo[1]);
+    if (Number.isFinite(days) && days > 0) {
+      return addDays(today, -days);
+    }
+  }
+
+  const zhAgo = /([一二三四五六七八九十])\s*(?:个)?\s*(?:交易日|天|日)前/u.exec(text);
+  if (zhAgo) {
+    return addDays(today, -ZH_NUMBER[zhAgo[1]!]!);
+  }
+
+  return undefined;
+}
+
+function addDays(date: string, offset: number): string {
+  const ms = Date.parse(`${date}T00:00:00.000Z`);
+  const next = new Date(ms + offset * DAY_MS);
+  return `${next.getUTCFullYear()}-${pad2(next.getUTCMonth() + 1)}-${pad2(next.getUTCDate())}`;
+}
+
+function isValidDate(value: string): boolean {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && value === `${parsed.getUTCFullYear()}-${pad2(parsed.getUTCMonth() + 1)}-${pad2(parsed.getUTCDate())}`;
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}

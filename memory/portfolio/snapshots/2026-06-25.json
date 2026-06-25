@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "kind": "daily-portfolio-snapshot",
+  "tradingDate": "2026-06-25",
+  "generatedAt": "2026-06-25T07:30:07.200Z",
+  "pricesAvailable": true,
+  "account": {
+    "accountId": "paper-main",
+    "type": "paper",
+    "baseCurrency": "CNY",
+    "initialCash": 20000,
+    "cash": {
+      "available": 722,
+      "frozen": 0
+    },
+    "status": "active",
+    "createdAt": "2026-06-24T12:00:35.522Z",
+    "updatedAt": "2026-06-25T01:16:16.405Z"
+  },
+  "valuation": {
+    "accountId": "paper-main",
+    "cash": {
+      "available": 722,
+      "frozen": 0,
+      "total": 722
+    },
+    "positions": [
+      {
+        "accountId": "paper-main",
+        "symbol": "002475",
+        "market": "SZSE",
+        "name": "立讯精密",
+        "quantity": 100,
+        "sellableQuantity": 0,
+        "t1AvailableQuantity": 0,
+        "frozenQuantity": 0,
+        "todayBuyQuantity": 100,
+        "costPrice": 75.05,
+        "latestPrice": 74.42,
+        "costBasis": 7505,
+        "marketValue": 7442,
+        "unrealizedPnl": -63,
+        "unrealizedPnlRatio": -0.008394,
+        "positionRatio": 0.363326
+      },
+      {
+        "accountId": "paper-main",
+        "symbol": "000725",
+        "market": "SZSE",
+        "name": "京东方Ａ",
+        "quantity": 1100,
+        "sellableQuantity": 0,
+        "t1AvailableQuantity": 0,
+        "frozenQuantity": 0,
+        "todayBuyQuantity": 1100,
+        "costPrice": 7.07,
+        "latestPrice": 7.52,
+        "costBasis": 7777,
+        "marketValue": 8272,
+        "unrealizedPnl": 495,
+        "unrealizedPnlRatio": 0.063649,
+        "positionRatio": 0.403847
+      },
+      {
+        "accountId": "paper-main",
+        "symbol": "002185",
+        "market": "SZSE",
+        "name": "华天科技",
+        "quantity": 100,
+        "sellableQuantity": 0,
+        "t1AvailableQuantity": 0,
+        "frozenQuantity": 0,
+        "todayBuyQuantity": 100,
+        "costPrice": 21.46,
+        "latestPrice": 22.4,
+        "costBasis": 2146,
+        "marketValue": 2240,
+        "unrealizedPnl": 94,
+        "unrealizedPnlRatio": 0.043802,
+        "positionRatio": 0.109359
+      },
+      {
+        "accountId": "paper-main",
+        "symbol": "603993",
+        "market": "SSE",
+        "name": "洛阳钼业",
+        "quantity": 100,
+        "sellableQuantity": 0,
+        "t1AvailableQuantity": 0,
+        "frozenQuantity": 0,
+        "todayBuyQuantity": 100,
+        "costPrice": 18.5,
+        "latestPrice": 18.07,
+        "costBasis": 1850,
+        "marketValue": 1807,
+        "unrealizedPnl": -43,
+        "unrealizedPnlRatio": -0.023243,
+        "positionRatio": 0.088219
+      }
+    ],
+    "totalPositionMarketValue": 19761,
+    "totalCostBasis": 19278,
+    "totalUnrealizedPnl": 483,
+    "totalAssets": 20483,
+    "investedRatio": 0.964751
+  },
+  "summary": {
+    "tradingDate": "2026-06-25",
+    "totalAssets": 20483,
+    "availableCash": 722,
+    "investedRatio": 0.964751,
+    "positionCount": 4,
+    "totalUnrealizedPnl": 483,
+    "generatedAt": "2026-06-25T07:30:07.200Z"
+  }
+}

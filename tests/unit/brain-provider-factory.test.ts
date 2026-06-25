@@ -17,6 +17,10 @@ function makeBrainConfig(overrides: Partial<BrainConfig> = {}): BrainConfig {
     fallbackProvider: undefined,
     temperature: 0.2,
     structuredOutput: true,
+    timeoutMs: 60_000,
+    streaming: true,
+    idleTimeoutMs: 30_000,
+    maxTokens: undefined,
     openai: { apiKey: undefined, model: undefined },
     gemini: { apiKey: undefined, model: undefined },
     dashscope: {

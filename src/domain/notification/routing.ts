@@ -21,7 +21,7 @@ import {
 } from "./policy.js";
 import { redactNotificationEvent } from "./redaction.js";
 
-export const notificationExternalChannelSchema = z.enum(["webhook", "wechat"]);
+export const notificationExternalChannelSchema = z.enum(["webhook", "wechat", "feishu"]);
 
 export const notificationSkippedChannelSchema = z
   .object({

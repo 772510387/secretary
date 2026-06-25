@@ -127,13 +127,15 @@ const task = buildCerebellumAlarmTask({
 
 已新增 `buildCerebellumAlarmSop(alarm)`。`buildCerebellumContextPackage()` 会为每个固定闹钟自动注入确定性 SOP：
 
+- `wakeRule`：说明本次唤醒来自北京时间固定闹钟、周/月/年复盘或每日自省规则。
+- `operationInstructions`：纯动作指令列表，渲染时使用 `1. 2. 3.` 编号，不塞示例股票、价格或持仓。
 - `objective`：本闹钟要完成的操作目标。
 - `requiredInputs`：只列输入路径、类别、摘要和 metadata，不包含完整正文。
 - `allowedActions`：只允许生成报告任务、研究任务、通知或人工提案。
 - `forbiddenActions`：禁止编造股票、自选股、持仓、现金、订单、成交、新闻或外部引用。
 - `safetyConstraints`：固定禁止工具执行、broker 提交、账户写入和实盘开关。
 
-SOP 模板不塞示例股票、不制造虚假持仓，不读取 secrets、`.env`、credential 路径。输入 source 和 metadata 会继续脱敏 `apiKey`、`token`、`password`、`secret`、`account` 等敏感字段。
+SOP 模板不塞示例股票、不制造虚假持仓，不读取 secrets、`.env`、credential 路径。输入 source 和 metadata 会继续脱敏 `apiKey`、`token`、`password`、`secret`、`account` 等敏感字段。闹钟唤醒和盘中异动唤醒都会把“唤醒规则 + 操作指令”传给大脑；模型仍无工具执行权。
 
 ## R6-2 指数系统性风险雷达
 

@@ -62,6 +62,23 @@ export {
   type ThemeHeatSummary,
 } from "./theme-heat.js";
 export {
+  POOL_BUCKET_LABEL,
+  categorizeUniverse,
+  poolByBucket,
+  renderPoolOverview,
+  type CategorizedPoolEntry,
+  type CategorizeUniverseOptions,
+  type PoolBucket,
+} from "./pool-categories.js";
+export {
+  buildIntradayCheckpoint,
+  renderIntradayTimeline,
+  type BuildIntradayCheckpointInput,
+  type CheckpointHolding,
+  type CheckpointIndex,
+  type IntradayCheckpoint,
+} from "./intraday-checkpoint.js";
+export {
   VolumePriceSignalError,
   calculateKlineVolumePriceSignal,
   calculateQuoteVolumePriceSignal,

@@ -14,6 +14,7 @@ export {
   type AlarmJob,
   type AlarmJobRegistryOptions,
 } from "./alarm-job-registry.js";
+export { SimulatedClock } from "./simulated-clock.js";
 export {
   GracefulShutdown,
   type GracefulShutdownResult,

@@ -65,6 +65,7 @@ import {
   prefetchAsOfHistory,
   readBridgeAccountAndPositions,
   readWatchlist100,
+  recordIntradayCheckpoint,
   refreshWatchlist100,
   writePotentialStocksPool,
 } from "./build-context.js";
@@ -324,6 +325,20 @@ export function createAlarmRunNode(
           })?.rendered
         : undefined;
 
+      // MID continuity: record a 日内检查点 and feed the prior nodes' timeline to the brain
+      // (intraday trading nodes only — review nodes don't need a 大盘 timeline).
+      const intradayTimeline = FUNNEL_NODES.has(alarmType)
+        ? recordIntradayCheckpoint({
+            memoryDir: deps.memoryDir,
+            now,
+            alarmType,
+            indices: context.indices,
+            positions: context.positions,
+            prices: context.prices,
+            themeHeat,
+          })
+        : undefined;
+
       const input: RunAlarmNodeInput = {
         alarmType,
         account: context.account,
@@ -332,6 +347,8 @@ export function createAlarmRunNode(
         technicals: context.technicals,
         indices: context.indices,
         watchlist: context.watchlist,
+        poolOverview: context.poolOverview,
+        intradayTimeline,
         themeHeat,
         dataHealth: context.dataHealth,
         webSearch: context.webSearch,

@@ -144,6 +144,37 @@ describe("createLivePaperSentinelTask", () => {
     expect(counts[0]).toBe(1); // first tick alerts
     expect(counts[1]).toBe(0); // second tick is within cooldown
   });
+
+  it("emits volume-price notifications from rolling quote volume deltas", async () => {
+    const notifications: NotificationEvent[][] = [];
+    let tick = 0;
+    const quotes = [
+      makeQuote({ latestPrice: 10, volume: 1000 }),
+      makeQuote({ latestPrice: 10.1, volume: 1100 }),
+      makeQuote({ latestPrice: 10.5, volume: 1400 }),
+    ];
+    const task = createLivePaperSentinelTask({
+      getPositions: () => [makePosition({ costPrice: 10, latestPrice: 10 })],
+      getQuotes: async () => [quotes[Math.min(tick++, quotes.length - 1)]!],
+      now: () => new Date(now),
+      volumeOptions: { volumeSurgeRatio: 2, priceRiseThreshold: 0.02, baselineWindow: 5 },
+      onVolumePriceNotifications: (items) => {
+        notifications.push(items);
+      },
+    });
+
+    await task(); // no previous cumulative volume
+    await task(); // baseline delta = 100
+    await task(); // delta = 300, 3x baseline + price rise
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]![0]).toMatchObject({
+      severity: "warning",
+      source: { id: "volume-price-radar" },
+      target: { type: "symbol", symbol: "000636" },
+    });
+    expect(notifications[0]![0]!.summary).toContain("量价齐升");
+  });
 });
 
 describe("cerebellumEventToNotificationEvent", () => {
@@ -216,14 +247,15 @@ function makeWatchQuote(overrides: { changePct: number }): QuoteSnapshot {
   });
 }
 
-function makeQuote(overrides: { latestPrice?: number } = {}): QuoteSnapshot {
+function makeQuote(overrides: { latestPrice?: number; volume?: number; changePct?: number } = {}): QuoteSnapshot {
   return quoteSnapshotSchema.parse({
     symbol: "000636",
     market: "SZSE",
     name: "Fenghua Hi-Tech",
     provider: "tencent",
     latestPrice: overrides.latestPrice ?? 74,
-    changePct: 0,
+    changePct: overrides.changePct ?? 0,
+    volume: overrides.volume,
     receivedAt: now,
     rawSymbol: "sz000636",
   });

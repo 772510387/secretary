@@ -196,8 +196,11 @@ export {
 } from "./ensure-memory-layout.js";
 export {
   buildWatchlistFromScreen,
+  persistCategorizedPool,
   type BuildWatchlistFromScreenInput,
   type BuildWatchlistFromScreenResult,
+  type PersistCategorizedPoolInput,
+  type PersistCategorizedPoolResult,
   type UniverseSource,
   type WatchlistStore,
   type WatchlistWriteSummary,

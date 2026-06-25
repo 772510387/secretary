@@ -26,6 +26,41 @@ export {
   type ResearchReportWriteResult,
 } from "./research-memory.js";
 export {
+  PortfolioSnapshotMemoryStore,
+  createPortfolioSnapshotMemoryPaths,
+  type PortfolioSnapshotMemoryPaths,
+  type PortfolioSnapshotMemoryStoreOptions,
+  type PortfolioSnapshotWriteResult,
+} from "./portfolio-snapshot-memory.js";
+export {
+  DecisionMemoryStore,
+  createDecisionMemoryPaths,
+  type DecisionMemoryPaths,
+  type DecisionMemoryStoreOptions,
+  type DecisionWriteResult,
+} from "./decision-memory.js";
+export {
+  ExperienceMemoryStore,
+  createExperienceMemoryPaths,
+  type ExperienceMemoryPaths,
+  type ExperienceMemoryStoreOptions,
+  type ExperienceWriteResult,
+} from "./experience-memory.js";
+export {
+  RuleProposalMemoryStore,
+  createRuleProposalMemoryPaths,
+  type RuleProposalMemoryPaths,
+  type RuleProposalMemoryStoreOptions,
+  type RuleProposalWriteResult,
+} from "./rule-proposal-memory.js";
+export {
+  PlanMemoryStore,
+  createPlanMemoryPaths,
+  type PlanMemoryPaths,
+  type PlanMemoryStoreOptions,
+  type PlanWriteResult,
+} from "./plan-memory.js";
+export {
   ProposalMemoryStore,
   createProposalMemoryPaths,
   type ProposalMemoryPaths,
@@ -52,6 +87,11 @@ export {
   type WatchlistMemoryStoreOptions,
   type WatchlistMemoryWriteResult,
 } from "./watchlist-memory.js";
+export {
+  AlertStateStore,
+  alertStateSchema,
+  type AlertState,
+} from "./alert-state-memory.js";
 export {
   RuntimeHealthStore,
   appendRuntimeHeartbeat,
@@ -82,6 +122,13 @@ export {
   type LiveTradingSafetyStoreOptions,
   type LiveTradingSafetyWriteResult,
 } from "./live-trading-safety-store.js";
+export {
+  BrainSessionStore,
+  createBrainSessionPaths,
+  type BrainSessionEntry,
+  type BrainSessionPaths,
+  type BrainSessionStoreOptions,
+} from "./brain-session-store.js";
 export {
   JsonStoreValidationError,
   StorageError,

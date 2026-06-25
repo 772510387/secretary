@@ -36,6 +36,8 @@ export interface WeChatBridgeContext {
   indices?: AskIndex[];
   /** The maintained 100 高关注池 (fed to alarm nodes + the funnel). */
   watchlist?: PlanWatchlistEntry[];
+  /** 观察池分类概览 (层级1 counts + 层级2 named picks) rendered at 换血 time. */
+  poolOverview?: string;
   /** Explicit eye health so the brain degrades honestly instead of inventing data. */
   dataHealth?: MarketDataHealth;
   webSearch?: AskWebSearchContext;

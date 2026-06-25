@@ -5,6 +5,7 @@ import {
   buildCerebellumAlarmSop,
   getDueCerebellumAlarms,
   isCerebellumAlarmDue,
+  renderCerebellumAlarmSop,
   toCerebellumBeijingTime,
 } from "../../src/domain/cerebellum/index.js";
 
@@ -85,6 +86,8 @@ describe("fixed cerebellum alarm matrix", () => {
 
     for (const { sop } of sops) {
       expect(sop.objective).toEqual(expect.any(String));
+      expect(sop.wakeRule).toMatch(/唤醒|闹钟/);
+      expect(sop.operationInstructions.length).toBeGreaterThanOrEqual(3);
       expect(sop.requiredInputs.length).toBeGreaterThan(0);
       expect(sop.allowedActions.length).toBeGreaterThan(0);
       expect(sop.forbiddenActions.length).toBeGreaterThan(0);
@@ -108,6 +111,11 @@ describe("fixed cerebellum alarm matrix", () => {
     expect(serialized).not.toContain("风华高科");
     expect(serialized).not.toContain("sk-test-secret");
     expect(serialized).not.toMatch(/\b[036]\d{5}\b/);
+
+    const rendered = renderCerebellumAlarmSop(sops[0]!.sop);
+    expect(rendered).toContain("唤醒规则：");
+    expect(rendered).toContain("操作指令：");
+    expect(rendered).toMatch(/\n1\. /);
   });
 
   it("evaluates weekday and daily alarms in Beijing time", () => {

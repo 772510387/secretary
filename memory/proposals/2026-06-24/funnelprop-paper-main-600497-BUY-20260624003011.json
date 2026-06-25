@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-600497-BUY-20260624003011",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260624003011",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "600497",
+  "market": "SSE",
+  "name": "驰宏锌锗",
+  "side": "BUY",
+  "quantity": 100,
+  "limitPrice": 11,
+  "currency": "CNY",
+  "rationale": "可执行候选中池内排名最高（第49名），有色金属板块弹性品种，价格适中，资金匹配度高",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-24T00:30:11.715Z",
+  "updatedAt": "2026-06-24T00:30:11.715Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 1100
+  }
+}

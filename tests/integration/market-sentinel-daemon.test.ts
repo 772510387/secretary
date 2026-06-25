@@ -192,9 +192,10 @@ describe("MarketSentinel daemon runtime", () => {
     vi.useFakeTimers();
     vi.setSystemTime(inSession);
 
-    // Keep the script's optional WeCom status push off so this test never hits the network.
-    const previousWecomNotify = process.env.WECOM_NOTIFY;
-    process.env.WECOM_NOTIFY = "0";
+    // Keep the script's optional external push off so this test never hits the network
+    // (and never builds a real Lark client, which would stall under fake timers).
+    const previousFeishuNotify = process.env.FEISHU_NOTIFY;
+    process.env.FEISHU_NOTIFY = "0";
 
     const memoryDir = createTempMemoryDir();
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -236,10 +237,10 @@ describe("MarketSentinel daemon runtime", () => {
     expect(readAuditEvents(memoryDir).some((event) => event.message === "MarketSentinel daemon task completed"))
       .toBe(true);
 
-    if (previousWecomNotify === undefined) {
-      delete process.env.WECOM_NOTIFY;
+    if (previousFeishuNotify === undefined) {
+      delete process.env.FEISHU_NOTIFY;
     } else {
-      process.env.WECOM_NOTIFY = previousWecomNotify;
+      process.env.FEISHU_NOTIFY = previousFeishuNotify;
     }
   });
 });

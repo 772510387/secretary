@@ -6,6 +6,7 @@ import {
 } from "../../domain/market/index.js";
 import { roundMoney, roundRatio } from "../../domain/portfolio/index.js";
 import { QuoteProviderError } from "./errors.js";
+import { readGbkText } from "./gbk.js";
 
 export interface QuoteProvider {
   getQuote(symbol: string | StockSymbolInfo): Promise<QuoteSnapshot>;
@@ -26,6 +27,8 @@ export interface FetchLikeResponse {
   status: number;
   statusText?: string;
   text(): Promise<string>;
+  /** Raw bytes — used to decode the GBK-encoded Tencent body; optional for mocks. */
+  arrayBuffer?(): Promise<ArrayBuffer>;
 }
 
 export class TencentQuoteProvider implements QuoteProvider {
@@ -82,7 +85,7 @@ export class TencentQuoteProvider implements QuoteProvider {
         );
       }
 
-      return await response.text();
+      return await readGbkText(response);
     } catch (error) {
       if (error instanceof QuoteProviderError) {
         throw error;

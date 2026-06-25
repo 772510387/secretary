@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "daily-portfolio-snapshot",
+  "tradingDate": "2026-06-24",
+  "generatedAt": "2026-06-24T07:30:00.000Z",
+  "pricesAvailable": false,
+  "account": {
+    "accountId": "paper-main",
+    "type": "paper",
+    "baseCurrency": "CNY",
+    "initialCash": 20000,
+    "cash": {
+      "available": 20000,
+      "frozen": 0
+    },
+    "status": "active",
+    "createdAt": "2026-06-24T12:00:35.522Z",
+    "updatedAt": "2026-06-24T12:00:35.522Z"
+  },
+  "valuation": {
+    "accountId": "paper-main",
+    "cash": {
+      "available": 20000,
+      "frozen": 0,
+      "total": 20000
+    },
+    "positions": [],
+    "totalPositionMarketValue": 0,
+    "totalCostBasis": 0,
+    "totalUnrealizedPnl": 0,
+    "totalAssets": 20000,
+    "investedRatio": 0
+  },
+  "summary": {
+    "tradingDate": "2026-06-24",
+    "totalAssets": 20000,
+    "availableCash": 20000,
+    "investedRatio": 0,
+    "positionCount": 0,
+    "totalUnrealizedPnl": 0,
+    "generatedAt": "2026-06-24T07:30:00.000Z"
+  }
+}

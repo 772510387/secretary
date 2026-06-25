@@ -28,9 +28,13 @@ export class IndexProviderError extends ProviderError {
 }
 
 export class BrainProviderError extends ProviderError {
-  constructor(message: string, options?: { cause?: unknown }) {
+  /** True for transient failures (429/5xx/empty response) worth a bounded retry. */
+  readonly retryable: boolean;
+
+  constructor(message: string, options?: { cause?: unknown; retryable?: boolean }) {
     super(message, options);
     this.name = "BrainProviderError";
+    this.retryable = options?.retryable ?? false;
   }
 }
 

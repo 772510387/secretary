@@ -97,7 +97,7 @@ const account = store.read();
 
 `MemoryRegistry` 已用于 U3 记忆检索：
 
-- `listDocuments()` 按 `rules`、`research`、`reports`、`proposals`、`logs` 列出 Markdown、JSON、JSONL 和文本文件，支持 `category`/`categories`、`from`、`to` 和 `limit`。
+- `listDocuments()` 按 `daily_logs`、`weekly_reviews`、`monthly_reviews`、`yearly_reviews`、`long_term`、`history`、`rules`、`research`、`reports`、`proposals`、`logs` 列出 Markdown、JSON、JSONL 和文本文件，支持 `category`/`categories`、`from`、`to` 和 `limit`。
 - `search()` 做轻量关键词检索，支持时间范围过滤，返回 `path`、`summary`、`updatedAt`、metadata、文件元数据、命中次数和脱敏短片段。
 - `recent()` 返回最近 `research` 或 `reports` 的元数据，支持 `from`、`to` 和 `limit`，不返回完整研究正文或报告正文。
 - `reports` 最近读取会抽取标准化复盘 metadata：`period`、`symbols`、`marketSummary`、`decisionSummary`、`riskNotes`、`linkedAuditIds`。

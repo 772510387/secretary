@@ -67,6 +67,10 @@ export function buildSingleProvider(
         endpoint: toChatCompletionsEndpoint(config.dashscope.baseUrl),
         model: config.dashscope.model,
         temperature: config.temperature,
+        timeoutMs: config.timeoutMs,
+        streaming: config.streaming,
+        idleTimeoutMs: config.idleTimeoutMs,
+        maxTokens: config.maxTokens,
         now: options.now,
       });
     }
@@ -82,6 +86,8 @@ export function buildSingleProvider(
         apiKey,
         model: config.openai.model,
         temperature: config.temperature,
+        timeoutMs: config.timeoutMs,
+        maxTokens: config.maxTokens,
         now: options.now,
       });
     }
@@ -97,6 +103,8 @@ export function buildSingleProvider(
         apiKey,
         model: config.gemini.model,
         temperature: config.temperature,
+        timeoutMs: config.timeoutMs,
+        maxTokens: config.maxTokens,
         now: options.now,
       });
     }

@@ -22,16 +22,53 @@ export {
   type ToolPermission,
 } from "./schemas.js";
 export {
+  generateBrainOutput,
   type BrainGenerateOptions,
   type BrainProvider,
+  type BrainStreamProgress,
   type BrainStructuredOutput,
 } from "./provider.js";
+export {
+  AgentToolLoopError,
+  asToolCallingProvider,
+  runAgentToolLoop,
+  type AgentLoopEvent,
+  type AgentLoopStoppedReason,
+  type AgentMessage,
+  type AgentToolCall,
+  type AgentToolEffect,
+  type AgentToolExecutor,
+  type AgentToolResult,
+  type AgentToolSpec,
+  type AgentToolStep,
+  type ChatWithToolsRequest,
+  type RunAgentToolLoopInput,
+  type RunAgentToolLoopResult,
+  type ToolCallingProvider,
+} from "./tool-loop.js";
+export { createSteeringQueue, type SteeringQueue } from "./steering-queue.js";
+export {
+  compactSession,
+  summarizeMessagesDigest,
+  type CompactSessionOptions,
+  type CompactSessionResult,
+} from "./session.js";
 export {
   createStructuredOutputValidator,
   validateBrainInput,
   validateBrainOutput,
   type StructuredOutputValidator,
 } from "./validator.js";
+export {
+  buildTurnPlannerBrainInput,
+  parseTurnPlan,
+  turnPlanIntentSchema,
+  turnPlanNeedsContext,
+  turnPlanSchema,
+  type BuildTurnPlannerBrainInput,
+  type TurnPlan,
+  type TurnPlanIntent,
+} from "./turn-planner.js";
 export {
   ToolRuntimeValidationError,
   allowedToolRuntimeToolTypes,

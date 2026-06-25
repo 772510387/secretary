@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "snap-pre-market-plan-20260619-0830",
+  "accountId": "paper-replay",
+  "alarmId": "pre-market-plan",
+  "alarmType": "pre_market_plan",
+  "jobId": "cerebellum-pre-market-plan",
+  "asOfDate": "2026-06-19",
+  "asOfTime": "2026-06-19T00:30:00.000Z",
+  "beijingTime": "08:30",
+  "sameDayBarIncluded": false,
+  "account": {
+    "accountId": "paper-replay",
+    "type": "paper",
+    "baseCurrency": "CNY",
+    "initialCash": 100000,
+    "cash": {
+      "available": 41750,
+      "frozen": 0
+    },
+    "status": "active",
+    "createdAt": "2026-05-01T00:00:00.000Z",
+    "updatedAt": "2026-05-01T00:00:00.000Z"
+  },
+  "positions": [
+    {
+      "accountId": "paper-replay",
+      "symbol": "000001",
+      "market": "SZSE",
+      "name": "平安银行",
+      "quantity": 5000,
+      "availableQuantity": 5000,
+      "todayBuyQuantity": 0,
+      "frozenQuantity": 0,
+      "costPrice": 11.5,
+      "currency": "CNY",
+      "openedAt": "2026-05-10T01:00:00.000Z",
+      "updatedAt": "2026-05-10T01:00:00.000Z"
+    }
+  ],
+  "valuation": {
+    "accountId": "paper-replay",
+    "cash": {
+      "available": 41750,
+      "frozen": 0,
+      "total": 41750
+    },
+    "positions": [
+      {
+        "accountId": "paper-replay",
+        "symbol": "000001",
+        "market": "SZSE",
+        "name": "平安银行",
+        "quantity": 5000,
+        "sellableQuantity": 5000,
+        "t1AvailableQuantity": 5000,
+        "frozenQuantity": 0,
+        "todayBuyQuantity": 0,
+        "costPrice": 11.5,
+        "latestPrice": 13.3,
+        "costBasis": 57500,
+        "marketValue": 66500,
+        "unrealizedPnl": 9000,
+        "unrealizedPnlRatio": 0.156522,
+        "positionRatio": 0.614319
+      }
+    ],
+    "totalPositionMarketValue": 66500,
+    "totalCostBasis": 57500,
+    "totalUnrealizedPnl": 9000,
+    "totalAssets": 108250,
+    "investedRatio": 0.614319
+  },
+  "market": {
+    "pricesAvailable": true,
+    "prices": {
+      "000001": 13.3
+    },
+    "priceSources": {
+      "000001": {
+        "source": "as_of_close",
+        "tradeDate": "2026-06-18"
+      }
+    },
+    "technicals": [
+      {
+        "symbol": "000001",
+        "market": "SZSE",
+        "name": "平安银行",
+        "asOfDate": "2026-06-18",
+        "trend": "uptrend",
+        "ma5": 13.1,
+        "ma10": 12.85,
+        "ma20": 12.35,
+        "high60": 13.38,
+        "low60": 9.92,
+        "rangePosition60": 0.976879
+      }
+    ],
+    "indices": []
+  },
+  "brainContext": {
+    "asOf": "2026-06-19T00:30:00.000Z",
+    "pricesAvailable": true,
+    "technicals": [
+      {
+        "symbol": "000001",
+        "market": "SZSE",
+        "name": "平安银行",
+        "asOfDate": "2026-06-18",
+        "trend": "uptrend",
+        "ma5": 13.1,
+        "ma10": 12.85,
+        "ma20": 12.35,
+        "high60": 13.38,
+        "low60": 9.92,
+        "rangePosition60": 0.976879
+      }
+    ],
+    "account": {
+      "accountId": "paper-replay",
+      "availableCash": 41750,
+      "frozenCash": 0,
+      "totalCash": 41750
+    },
+    "totals": {
+      "totalAssets": 108250,
+      "totalPositionMarketValue": 66500,
+      "totalCostBasis": 57500,
+      "totalUnrealizedPnl": 9000,
+      "investedRatio": 0.614319
+    },
+    "positions": [
+      {
+        "symbol": "000001",
+        "market": "SZSE",
+        "name": "平安银行",
+        "quantity": 5000,
+        "sellableQuantity": 5000,
+        "costPrice": 11.5,
+        "latestPrice": 13.3,
+        "marketValue": 66500,
+        "unrealizedPnl": 9000,
+        "unrealizedPnlRatio": 0.156522,
+        "positionRatio": 0.614319
+      }
+    ]
+  },
+  "metadata": {
+    "reason": "replay",
+    "version": 1,
+    "generatedBy": "replay-runner",
+    "degraded": false,
+    "degradedReasons": [],
+    "historyAsOfDates": {
+      "000001": "2026-06-18"
+    },
+    "indicesAvailable": false,
+    "calendar": "weekday_only"
+  }
+}

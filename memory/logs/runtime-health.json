@@ -1,17 +1,15 @@
 {
   "runtimeId": "market-sentinel-daemon",
-  "status": "stopped",
-  "updatedAt": "2026-06-17T13:56:40.340Z",
-  "startedAt": "2026-06-17T13:56:34.083Z",
-  "stoppedAt": "2026-06-17T13:56:40.340Z",
-  "heartbeatAt": "2026-06-17T13:56:40.340Z",
+  "status": "running",
+  "updatedAt": "2026-06-25T13:10:16.432Z",
+  "startedAt": "2026-06-25T13:10:16.432Z",
+  "heartbeatAt": "2026-06-25T13:10:16.432Z",
   "tasks": [
     {
       "taskId": "market-sentinel-dev",
-      "status": "stopped",
-      "lastStartedAt": "2026-06-17T13:56:34.083Z",
-      "lastHeartbeatAt": "2026-06-17T13:56:40.340Z",
-      "lastStoppedAt": "2026-06-17T13:56:40.340Z"
+      "status": "running",
+      "lastStartedAt": "2026-06-25T13:10:16.432Z",
+      "lastHeartbeatAt": "2026-06-25T13:10:16.432Z"
     }
   ],
   "metadata": {
@@ -23,9 +21,7 @@
     "brainProvider": "mock",
     "networkAllowed": false,
     "directExecutionAllowed": false,
-    "event": "stopped",
-    "pendingRunCount": 0,
-    "shutdownHookCount": 1,
-    "failedShutdownHookCount": 0
+    "event": "started",
+    "pendingRunCount": 0
   }
 }

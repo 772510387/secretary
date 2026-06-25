@@ -96,15 +96,32 @@ export function redactConfig(config: AppConfig): AppConfig {
       ...config.broker,
       accountId: redactSecret(config.broker.accountId),
     },
-    notification: {
-      ...config.notification,
-      wecomBotWebhookUrl: redactSecret(config.notification.wecomBotWebhookUrl),
-    },
     search: {
       ...config.search,
       tavilyApiKey: redactSecret(config.search.tavilyApiKey),
     },
+    wechat: {
+      ...config.wechat,
+      puppetToken: redactSecret(config.wechat.puppetToken),
+    },
+    feishu: {
+      ...config.feishu,
+      appSecret: redactSecret(config.feishu.appSecret),
+    },
   };
+}
+
+function parseCommaList(value: string | undefined): string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const items = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  return items.length > 0 ? items : undefined;
 }
 
 export function getConfiguredSecrets(config: AppConfig): Record<string, boolean> {
@@ -114,8 +131,9 @@ export function getConfiguredSecrets(config: AppConfig): Record<string, boolean>
     dashscopeApiKey: Boolean(config.brain.dashscope.apiKey),
     tushareToken: Boolean(config.market.tushareToken),
     brokerAccountId: Boolean(config.broker.accountId),
-    wecomBotWebhookUrl: Boolean(config.notification.wecomBotWebhookUrl),
     tavilyApiKey: Boolean(config.search.tavilyApiKey),
+    wechatPuppetToken: Boolean(config.wechat.puppetToken),
+    feishuAppSecret: Boolean(config.feishu.appSecret),
   };
 }
 
@@ -178,6 +196,10 @@ function buildEnvOverrides(env: EnvMap): DeepPartial<AppConfig> {
       fallbackProvider: readStringEnv(env, "BRAIN_FALLBACK_PROVIDER"),
       temperature: readNumberEnv(env, "BRAIN_TEMPERATURE"),
       structuredOutput: readBooleanEnv(env, "BRAIN_STRUCTURED_OUTPUT"),
+      timeoutMs: readNumberEnv(env, "BRAIN_TIMEOUT_MS"),
+      streaming: readBooleanEnv(env, "BRAIN_STREAMING"),
+      idleTimeoutMs: readNumberEnv(env, "BRAIN_IDLE_TIMEOUT_MS"),
+      maxTokens: readNumberEnv(env, "BRAIN_MAX_TOKENS"),
       openai: {
         apiKey: readStringEnv(env, "OPENAI_API_KEY"),
         model: readStringEnv(env, "OPENAI_MODEL"),
@@ -195,14 +217,38 @@ function buildEnvOverrides(env: EnvMap): DeepPartial<AppConfig> {
     notification: {
       defaultCooldownSeconds: readNumberEnv(env, "DEFAULT_COOLDOWN_SECONDS"),
       criticalCooldownSeconds: readNumberEnv(env, "CRITICAL_COOLDOWN_SECONDS"),
-      wecomBotWebhookUrl: readStringEnv(env, "WECOM_BOT_WEBHOOK_URL"),
-      wecomNotify: readBooleanEnv(env, "WECOM_NOTIFY"),
-      wecomHeartbeatMs: readNumberEnv(env, "WECOM_HEARTBEAT_MS"),
     },
     search: {
       provider: readStringEnv(env, "SEARCH_PROVIDER"),
       tavilyApiKey: readStringEnv(env, "TAVILY_API_KEY"),
       maxResults: readNumberEnv(env, "SEARCH_MAX_RESULTS"),
+    },
+    research: {
+      provider: readStringEnv(env, "RESEARCH_PROVIDER"),
+      command: readStringEnv(env, "RESEARCH_COMMAND"),
+      scriptPath: readStringEnv(env, "RESEARCH_SCRIPT"),
+      cwd: readStringEnv(env, "RESEARCH_CWD"),
+      timeoutMs: readNumberEnv(env, "RESEARCH_TIMEOUT_MS"),
+      deepModel: readStringEnv(env, "RESEARCH_DEEP_MODEL"),
+      quickModel: readStringEnv(env, "RESEARCH_QUICK_MODEL"),
+      analysts: readStringEnv(env, "RESEARCH_ANALYSTS"),
+    },
+    budget: {
+      brainDailyLimit: readNumberEnv(env, "BRAIN_DAILY_LIMIT"),
+      researchDailyLimit: readNumberEnv(env, "RESEARCH_DAILY_LIMIT"),
+      searchDailyLimit: readNumberEnv(env, "SEARCH_DAILY_LIMIT"),
+    },
+    wechat: {
+      allowedUsers: parseCommaList(readStringEnv(env, "WECHAT_ALLOWED_USERS")),
+      puppet: readStringEnv(env, "WECHATY_PUPPET"),
+      puppetToken: readStringEnv(env, "WECHATY_PUPPET_TOKEN"),
+    },
+    feishu: {
+      appId: readStringEnv(env, "FEISHU_APP_ID"),
+      appSecret: readStringEnv(env, "FEISHU_APP_SECRET"),
+      allowedUsers: parseCommaList(readStringEnv(env, "FEISHU_ALLOWED_USERS")),
+      notify: readBooleanEnv(env, "FEISHU_NOTIFY"),
+      pushUsers: parseCommaList(readStringEnv(env, "FEISHU_PUSH_USERS")),
     },
   }) as DeepPartial<AppConfig>;
 }

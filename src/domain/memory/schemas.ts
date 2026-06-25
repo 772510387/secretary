@@ -98,6 +98,12 @@ export const memoryWriteTargetCategorySchema = z.enum([
 ]);
 
 export const memoryRegistryCategorySchema = z.enum([
+  "daily_logs",
+  "weekly_reviews",
+  "monthly_reviews",
+  "yearly_reviews",
+  "long_term",
+  "history",
   "rules",
   "research",
   "reports",
