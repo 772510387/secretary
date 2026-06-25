@@ -80,10 +80,26 @@ const NEWS_HEAVY: ReadonlySet<CerebellumAlarmType> = new Set([
 /** Heavy nodes routed to the multi-agent deep-research engine when it's configured. */
 const DEEP_RESEARCH_NODES: ReadonlySet<CerebellumAlarmType> = new Set(["deep_review"]);
 
-/** Nodes that 换血 the 100 高关注池 (deterministic screen) before waking the brain. */
+/**
+ * Nodes that 换血 the 100 高关注池 (full-market deterministic screen) before waking the brain.
+ * Per Boss: EVERY fixed trading-day alarm point is itself a full-market 探查 + pool refresh —
+ * not just 08:30/09:15. (Period/reflection-only nodes are excluded as they don't trade a pool,
+ * but they still get the refresh-on-empty fallback below.) An empty pool at ANY node also
+ * triggers a refresh — "没有就去查".
+ */
 const REFRESH_POOL_NODES: ReadonlySet<CerebellumAlarmType> = new Set([
+  "data_warmup", // 08:00 体检 — 顺带探查建池
+  "overnight_digest", // 08:15 隔夜消息 — 探查建池后再逐持仓评估
   "pre_market_plan", // 08:30 晨报选股
   "call_auction_watch", // 09:15 集合竞价补池
+  "pre_open_confirmation", // 09:25 开盘确认
+  "morning_review", // 10:00 早盘
+  "midday_review", // 11:30 午盘
+  "afternoon_risk_scan", // 14:00 跳水排查
+  "late_session_plan", // 14:30 尾盘
+  "closing_snapshot", // 15:00 收盘
+  "closing_review", // 15:30 盘后
+  "post_close_review", // 盘后复盘
 ]);
 
 /** Trading nodes where the funnel maintains 待买卖 + (paper) auto-executes. */
@@ -215,14 +231,22 @@ export function createAlarmRunNode(
         return;
       }
 
-      // 换血 (eye): rebuild the 100 高关注池 deterministically before the brain wakes;
-      // also capture the deterministic market-wide 新题材热度 for the brain/funnel.
+      // 换血 (eye): every trading-day node is a full-market 探查 that rebuilds the 100 高关注池
+      // deterministically before the brain wakes; ANY node also refreshes when the pool is empty
+      // ("没有就去查"). Also captures the market-wide 新题材热度 for the brain/funnel.
       let themeHeat: ThemeHeatSummary | undefined;
-      if (REFRESH_POOL_NODES.has(alarmType)) {
+      const poolEmpty = readWatchlist100(deps.memoryDir).length === 0;
+      if (REFRESH_POOL_NODES.has(alarmType) || poolEmpty) {
         const refresh = await refreshWatchlist100({ config: deps.config, memoryDir: deps.memoryDir });
         themeHeat = refresh.themeHeat;
+        const note =
+          refresh.watchlist100.length === 0
+            ? "（探查到 0 支：行情数据源未就绪/网络不可用，已降级；请检查联网/代理）"
+            : refresh.degraded
+              ? "（降级，沿用上次的池）"
+              : "";
         console.log(
-          `(${alarmType} 100池换血：${refresh.watchlist100.length} 支${refresh.degraded ? "（降级，沿用上次的池）" : ""}${
+          `(${alarmType} 全市场探查·100池换血：${refresh.watchlist100.length} 支${note}${
             themeHeat && !themeHeat.degraded ? `；涨停 ${themeHeat.limitUpCount ?? "?"} 家，热度 ${themeHeat.heatScore}` : ""
           })`,
         );

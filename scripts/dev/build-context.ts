@@ -247,7 +247,7 @@ export async function refreshWatchlist100(input: {
     themeHeat = undefined; // degrade silently; the screen below still runs
   }
 
-  try {
+  const runScreen = async (minAmount: number) => {
     const screen = await buildWatchlistFromScreen({
       provider,
       writer: new WatchlistMemoryStore({ memoryDir: input.memoryDir }),
@@ -255,22 +255,35 @@ export async function refreshWatchlist100(input: {
       criteria: {
         limit: input.limit ?? 100,
         sortBy: "amount",
-        minAmount: input.minAmount ?? 1e8,
+        minAmount,
         mainBoardOnly: true, // 禁科创(688)/创业板(300) — only tradable main-board names enter the pool
       },
       // INFRA-02: never overwrite a good pool with an empty/failed screen.
       skipWriteWhenEmpty: true,
       now: input.now,
     });
-    const watchlist100 = snapshotWatchlist(screen.entries);
-    if (watchlist100.length > 0) {
-      return {
-        watchlist100,
-        universeSize: screen.universeSize,
-        screened: screen.screened,
-        degraded: false,
-        themeHeat,
-      };
+    return {
+      watchlist100: snapshotWatchlist(screen.entries),
+      universeSize: screen.universeSize,
+      screened: screen.screened,
+    };
+  };
+
+  try {
+    const primary = await runScreen(input.minAmount ?? 1e8);
+    if (primary.watchlist100.length > 0) {
+      return { ...primary, degraded: false, themeHeat };
+    }
+    // 盘前/低量兜底：开盘前今日成交额≈0，成交额阈值会把整个 universe 滤空。只要 universe 非空，
+    // 就放宽阈值再筛一次（仍仅主板），保证“没有就去查”能真的建出一个池，而不是空手而归。
+    if (primary.universeSize > 0) {
+      const relaxed = await runScreen(0);
+      if (relaxed.watchlist100.length > 0) {
+        console.error(
+          `(100池换血：成交额阈值过滤后为空，已放宽阈值重筛 ${relaxed.watchlist100.length} 支（盘前/低量时段）)`,
+        );
+        return { ...relaxed, degraded: false, themeHeat };
+      }
     }
   } catch (error) {
     console.error(
