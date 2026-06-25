@@ -173,4 +173,28 @@ describe("renderPoolOverview", () => {
   it("returns empty string for an empty pool", () => {
     expect(renderPoolOverview([])).toBe("");
   });
+
+  it("annotates 涨停 names with 封单/一字板 tags when seal data is supplied", () => {
+    const entries = categorizeUniverse([
+      stock({ symbol: "600584", name: "长电科技", changePct: 10, amount: 5e9 }),
+    ]);
+    const sealBySymbol = new Map([
+      ["600584", { state: "limit_up" as const, isOneWord: true, sealVolumeLots: 84205, sealAmount: 8.77e8, limitPrice: 104.17 }],
+    ]);
+    const overview = renderPoolOverview(entries, { sealBySymbol });
+    expect(overview).toContain("长电科技(600584 +10.00% 封8.8亿一字)");
+  });
+
+  it("renders a 资金面 line (主力净流入) when the universe carries it, omits it otherwise", () => {
+    const withFlow = categorizeUniverse([
+      stock({ symbol: "600036", name: "招商银行", changePct: 3, amount: 5e9, mainNetInflow: 800_000_000 }),
+      stock({ symbol: "600000", name: "浦发银行", changePct: 1, amount: 4e9, mainNetInflow: -200_000_000 }),
+    ]);
+    const overview = renderPoolOverview(withFlow);
+    expect(overview).toContain("资金面：池内主力净流入合计 +6.00亿");
+    expect(overview).toContain("招商银行(600036 +8.00亿)");
+
+    const noFlow = categorizeUniverse([stock({ symbol: "600036", name: "招商银行", changePct: 3, amount: 5e9 })]);
+    expect(renderPoolOverview(noFlow)).not.toContain("资金面");
+  });
 });

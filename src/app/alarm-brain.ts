@@ -32,6 +32,10 @@ export interface RunAlarmNodeInput {
   poolOverview?: string;
   /** 日内检查点时间线 (上次→本次大盘/情绪变化) — injected for node-to-node continuity. */
   intradayTimeline?: string;
+  /** 龙虎榜 (主力净买卖) summary — injected at 盘后 nodes for capital-flow grounding. */
+  dragonTiger?: string;
+  /** 持仓资金面 (Sina 主力净流入 per held position) — injected for 盾/防守 grounding. */
+  holdingsMoneyFlow?: string;
   themeHeat?: ThemeHeatSummary;
   dataHealth?: MarketDataHealth;
   webSearch?: AskWebSearchContext;
@@ -141,6 +145,18 @@ export async function runAlarmNodeAnalysis(
       : []),
     ...(input.intradayTimeline && input.intradayTimeline.trim()
       ? [input.intradayTimeline.trim()]
+      : []),
+    ...(input.holdingsMoneyFlow && input.holdingsMoneyFlow.trim()
+      ? [
+          input.holdingsMoneyFlow.trim(),
+          "盾(防守)分析持仓时引用上面的主力净流入：净流出说明主力在出货、需警惕；净流入说明资金仍在护盘。",
+        ]
+      : []),
+    ...(input.dragonTiger && input.dragonTiger.trim()
+      ? [
+          input.dragonTiger.trim(),
+          "复盘资金面时引用龙虎榜的主力净买卖与点名标的，区分游资抢筹与机构出货。",
+        ]
       : []),
     ...(input.todayFills && input.todayFills.trim() ? [input.todayFills.trim()] : []),
     ...(holdingImpact ? [holdingImpact] : []),

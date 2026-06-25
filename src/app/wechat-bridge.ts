@@ -38,6 +38,10 @@ export interface WeChatBridgeContext {
   watchlist?: PlanWatchlistEntry[];
   /** 观察池分类概览 (层级1 counts + 层级2 named picks) rendered at 换血 time. */
   poolOverview?: string;
+  /** 龙虎榜 (主力净买卖) summary — fetched only for 盘后 review nodes. */
+  dragonTiger?: string;
+  /** 持仓资金面 (Sina 主力净流入 per held position) — the 北向 replacement signal. */
+  holdingsMoneyFlow?: string;
   /** Explicit eye health so the brain degrades honestly instead of inventing data. */
   dataHealth?: MarketDataHealth;
   webSearch?: AskWebSearchContext;

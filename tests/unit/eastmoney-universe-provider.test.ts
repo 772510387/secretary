@@ -10,9 +10,9 @@ const sample = JSON.stringify({
   data: {
     total: 3,
     diff: [
-      { f12: "600519", f13: 1, f14: "贵州茅台", f2: 1600.5, f3: 0.2, f5: 12345, f6: 4_000_000_000, f8: 0.3, f20: 2_000_000_000_000, f100: "白酒" },
-      { f12: "000636", f13: 0, f14: "风华高科", f2: 74.6, f3: 0.73, f5: 84117, f6: 800_000_000, f8: 3.2, f20: 80_000_000_000, f100: "-" },
-      { f12: "688981", f13: 1, f14: "中芯国际", f2: 50, f3: 3.0, f5: 0, f6: "-", f8: "-", f20: 400_000_000_000, f100: "半导体" },
+      { f12: "600519", f13: 1, f14: "贵州茅台", f2: 1600.5, f3: 0.2, f5: 12345, f6: 4_000_000_000, f8: 0.3, f20: 2_000_000_000_000, f100: "白酒", f62: 520_000_000, f184: 12.5 },
+      { f12: "000636", f13: 0, f14: "风华高科", f2: 74.6, f3: 0.73, f5: 84117, f6: 800_000_000, f8: 3.2, f20: 80_000_000_000, f100: "-", f62: -130_000_000, f184: -5.1 },
+      { f12: "688981", f13: 1, f14: "中芯国际", f2: 50, f3: 3.0, f5: 0, f6: "-", f8: "-", f20: 400_000_000_000, f100: "半导体", f62: "-", f184: "-" },
     ],
   },
 });
@@ -42,6 +42,12 @@ describe("parseUniverse", () => {
     expect(maotai?.sector).toBe("白酒");
     expect(smic?.sector).toBe("半导体");
     expect(fenghua?.sector).toBeUndefined();
+
+    // f62/f184 (主力净流入) → can be negative; "-" → undefined.
+    expect(maotai?.mainNetInflow).toBe(520_000_000);
+    expect(maotai?.mainNetInflowRatio).toBe(12.5);
+    expect(fenghua?.mainNetInflow).toBe(-130_000_000); // 净流出 stays negative
+    expect(smic?.mainNetInflow).toBeUndefined();
   });
 
   it("throws on malformed payloads", () => {

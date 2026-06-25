@@ -58,8 +58,9 @@ const DEFAULT_ENDPOINT = "https://push2.eastmoney.com/api/qt/clist/get";
 const BROAD_BOARD_FILTER = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23";
 // Main boards only — half the rows, and the screener's default anyway.
 const MAINBOARD_BOARD_FILTER = "m:0+t:6,m:1+t:2";
-// f100 = 所属行业 (sector). Best-effort: some rows/sources omit it → mapped to undefined.
-const FIELDS = "f12,f13,f14,f2,f3,f5,f6,f8,f20,f100";
+// f100 = 所属行业 (sector); f62 = 主力净流入额; f184 = 主力净流入占比. Best-effort: some
+// rows/sources omit them → mapped to undefined (graceful, never fabricated).
+const FIELDS = "f12,f13,f14,f2,f3,f5,f6,f8,f20,f100,f62,f184";
 
 // Eastmoney sort field id per screener sort field — lets the API sort server-side
 // so we can fetch just the top pages instead of the whole market.
@@ -88,6 +89,8 @@ interface EastmoneyRow {
   f8?: unknown; // turnover rate %
   f20?: unknown; // total market cap (yuan)
   f100?: unknown; // 所属行业 (sector)
+  f62?: unknown; // 主力净流入额 (yuan)
+  f184?: unknown; // 主力净流入占比 (%)
 }
 
 interface EastmoneyResponse {
@@ -311,6 +314,8 @@ function mapRow(row: EastmoneyRow): UniverseStock | undefined {
     amount: nonNegativeOrUndefined(row.f6),
     marketCap: nonNegativeOrUndefined(row.f20),
     sector: sectorOrUndefined(row.f100),
+    mainNetInflow: numberOrUndefined(row.f62),
+    mainNetInflowRatio: numberOrUndefined(row.f184),
   };
 
   const result = universeStockSchema.safeParse(candidate);

@@ -9,6 +9,7 @@ import {
   type CategorizedPoolEntry,
   type PoolBucket,
   type ScreenCriteria,
+  type SealBoard,
   type UniverseQuery,
   type UniverseStock,
   type WatchlistCategory,
@@ -164,6 +165,8 @@ export interface PersistCategorizedPoolInput {
   yesterdayLimitDownSymbols?: readonly string[];
   /** Prior cycle's changePct per symbol — enables 加速上攻 momentum priority bumps. */
   priorChangeBySymbol?: Readonly<Record<string, number>>;
+  /** 封单/一字板 (level-1 盘口) per symbol, for limit-board pool stocks. */
+  sealBySymbol?: ReadonlyMap<string, SealBoard>;
   minAmount?: number;
   maxTotal?: number;
   /** When true, an empty categorization does NOT overwrite the stored pool. */
@@ -205,7 +208,7 @@ export function persistCategorizedPool(input: PersistCategorizedPoolInput): Pers
     minAmount: input.minAmount,
     maxTotal,
   });
-  const overview = renderPoolOverview(categorized);
+  const overview = renderPoolOverview(categorized, { sealBySymbol: input.sealBySymbol });
 
   const counts: Partial<Record<PoolBucket, number>> = {};
   for (const entry of categorized) {
@@ -226,7 +229,7 @@ export function persistCategorizedPool(input: PersistCategorizedPoolInput): Pers
       reason: buildCategorizedReason(entry, adjusted.notes),
       source,
       updatedAt: now,
-      metadata: categorizedMetadata(entry, index, now, adjusted),
+      metadata: categorizedMetadata(entry, index, now, adjusted, input.sealBySymbol?.get(entry.stock.symbol)),
     };
   });
 
@@ -280,6 +283,8 @@ const HIGH_TURNOVER = 15;
 const LOW_TURNOVER = 1;
 /** Intraday 加速 (今日较上次 changePct 提升) that earns a momentum bump. */
 const MOMENTUM_DELTA = 3;
+/** 主力净流入/流出额 (yuan) that moves priority — the 北向 replacement signal. */
+const STRONG_INFLOW = 1e8;
 
 /**
  * 动态优先级 (第3步): deterministic priority nudges on top of the bucket default.
@@ -322,6 +327,14 @@ function applyDynamicPriority(
     level -= 1;
     notes.push("缩量走弱降优先级");
   }
+  const inflow = entry.stock.mainNetInflow;
+  if (inflow !== undefined && inflow >= STRONG_INFLOW) {
+    level += 1;
+    notes.push("主力净流入提优先级");
+  } else if (inflow !== undefined && inflow <= -STRONG_INFLOW) {
+    level -= 1;
+    notes.push("主力净流出降优先级");
+  }
 
   const clamped = Math.min(3, Math.max(1, level));
   return { priority: LEVEL_PRIORITY[clamped], notes };
@@ -339,6 +352,9 @@ function buildCategorizedReason(entry: CategorizedPoolEntry, dynamicNotes: reado
   if (stock.amount !== undefined) {
     parts.push(`成交额 ${(stock.amount / 1e8).toFixed(1)} 亿`);
   }
+  if (stock.mainNetInflow !== undefined) {
+    parts.push(`主力净流入 ${(stock.mainNetInflow / 1e8).toFixed(2)} 亿`);
+  }
   parts.push(...dynamicNotes);
   return parts.join(" · ").slice(0, 1000);
 }
@@ -348,6 +364,7 @@ function categorizedMetadata(
   index: number,
   now: string,
   dynamic: DynamicPriorityResult,
+  seal: SealBoard | undefined,
 ): Record<string, JsonValue> {
   const stock = entry.stock;
   return {
@@ -363,6 +380,11 @@ function categorizedMetadata(
     turnoverRate: stock.turnoverRate ?? null,
     amount: stock.amount ?? null,
     marketCap: stock.marketCap ?? null,
+    mainNetInflow: stock.mainNetInflow ?? null,
+    mainNetInflowRatio: stock.mainNetInflowRatio ?? null,
+    sealAmount: seal ? seal.sealAmount : null,
+    sealVolumeLots: seal ? seal.sealVolumeLots : null,
+    isOneWordBoard: seal ? seal.isOneWord : null,
     limitState: classifyLimitState(stock.symbol, stock.changePct),
     screenedAt: now,
     screener: true,

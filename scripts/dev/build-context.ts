@@ -32,10 +32,16 @@ import {
 import {
   buildIntradayCheckpoint,
   buildWatchlistSnapshot,
+  classifyLimitState,
+  computeSealBoard,
   computeThemeHeat,
+  isMainBoardSymbol,
+  renderDragonTigerSummary,
   renderIntradayTimeline,
+  summarizeDragonTiger,
   type IntradayCheckpoint,
   type KlineBar,
+  type SealBoard,
   type StockSymbolInfo,
   type ThemeHeatSummary,
   type UniverseStock,
@@ -49,8 +55,10 @@ import {
 import { WatchlistMemoryStore } from "../../src/infrastructure/storage/index.js";
 import {
   CachingUniverseProvider,
+  EastmoneyBillboardProvider,
   EastmoneyUniverseProvider,
   FallbackUniverseProvider,
+  SinaMoneyFlowProvider,
   FileUniverseCacheStore,
   FixtureHistoryProvider,
   SinaUniverseProvider,
@@ -133,7 +141,86 @@ export async function buildBridgeContext(input: {
     includeWatchlist: input.includeWatchlist ?? false,
   });
 
-  return { account, positions, prices, technicals, indices, watchlist, poolOverview, dataHealth, webSearch };
+  // 龙虎榜 (盘后): only fetched for evening review nodes (published after close). Best-effort —
+  // unreachable source / not-yet-published day → undefined, never throws.
+  const dragonTiger =
+    input.alarmType !== undefined && BILLBOARD_NODES.has(input.alarmType)
+      ? await fetchDragonTigerSummary(beijingDateOf(asOf))
+      : undefined;
+
+  // 持仓资金面 (北向 replacement, per-stock): Sina 主力净流入 for held positions — bounded
+  // (1-5 calls), reachable here (unlike Tencent/Eastmoney flow). Alarm nodes only; best-effort.
+  const holdingsMoneyFlow =
+    input.includeWatchlist && positions.length > 0
+      ? await fetchHoldingsMoneyFlow(positions)
+      : undefined;
+
+  return {
+    account,
+    positions,
+    prices,
+    technicals,
+    indices,
+    watchlist,
+    poolOverview,
+    dragonTiger,
+    holdingsMoneyFlow,
+    dataHealth,
+    webSearch,
+  };
+}
+
+/** Sina 主力净流入 for held positions, rendered as a 持仓资金面 line. "" → undefined. */
+async function fetchHoldingsMoneyFlow(positions: Position[]): Promise<string | undefined> {
+  try {
+    const provider = new SinaMoneyFlowProvider();
+    const flows = await provider.getMoneyFlows(
+      positions.map((position) => ({ symbol: position.symbol, market: position.market, name: position.name })),
+    );
+    if (flows.size === 0) {
+      return undefined;
+    }
+    const parts = positions
+      .map((position) => {
+        const flow = flows.get(position.symbol);
+        if (!flow) {
+          return undefined;
+        }
+        const ratio =
+          flow.mainNetInflowRatio === undefined
+            ? ""
+            : `(占比${flow.mainNetInflowRatio >= 0 ? "+" : ""}${flow.mainNetInflowRatio.toFixed(1)}%)`;
+        return `${position.name}(${position.symbol}) 主力净流入${formatYiSigned(flow.mainNetInflow)}${ratio}`;
+      })
+      .filter((part): part is string => part !== undefined);
+    return parts.length > 0 ? `【持仓资金面·今日主力净流入(Sina)】${parts.join("；")}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function formatYiSigned(yuan: number): string {
+  const sign = yuan > 0 ? "+" : yuan < 0 ? "-" : "";
+  return `${sign}${(Math.abs(yuan) / 1e8).toFixed(2)}亿`;
+}
+
+/** Evening review nodes where the 龙虎榜 has published (≈18:30+). */
+const BILLBOARD_NODES: ReadonlySet<CerebellumAlarmType> = new Set([
+  "post_close_review",
+  "deep_review",
+  "daily_reflection",
+]);
+
+/** Fetches + summarizes the 龙虎榜 for one Beijing date; "" → undefined. Network-gated. */
+async function fetchDragonTigerSummary(beijingDate: string): Promise<string | undefined> {
+  try {
+    const provider = new EastmoneyBillboardProvider();
+    const entries = await provider.getDragonTiger(beijingDate);
+    const rendered = renderDragonTigerSummary(summarizeDragonTiger(entries));
+    return rendered.trim().length > 0 ? rendered : undefined;
+  } catch {
+    return undefined; // unreachable/empty → degrade honestly (no 龙虎榜 line)
+  }
 }
 
 function toSymbolInfo(position: Position): StockSymbolInfo {
@@ -460,8 +547,14 @@ export async function refreshWatchlist100(input: {
       // Prior cycle's changePct (read BEFORE this 换血 overwrites the pool) → 加速 momentum bumps.
       const priorChangeBySymbol = readPoolChangeMap(input.memoryDir);
 
+      // ②池级主力净流入 (Sina batch, reachable): enrich the universe's mainNetInflow with
+      // verified r0_net, replacing the unverified Eastmoney f62 where Sina has the symbol.
+      const universe = await enrichWithSinaMoneyFlow(broad);
+      // ①封单/一字板 (Tencent 盘口): for the limit-board names, fetch level-1 盘口 + compute seal.
+      const sealBySymbol = await fetchSealBoards(universe);
+
       const persisted = persistCategorizedPool({
-        universe: broad,
+        universe,
         writer: new WatchlistMemoryStore({ memoryDir: input.memoryDir }),
         category: "watchlist_today",
         heldSymbols: positions.map((position) => position.symbol),
@@ -469,6 +562,7 @@ export async function refreshWatchlist100(input: {
         yesterdayLimitUpSymbols: yesterday.limitUp,
         yesterdayLimitDownSymbols: yesterday.limitDown,
         priorChangeBySymbol,
+        sealBySymbol,
         minAmount: turnoverFloor,
         maxTotal: input.limit ?? 100,
         skipWriteWhenEmpty: true, // INFRA-02: never clobber a good pool with an empty screen
@@ -511,6 +605,61 @@ export async function refreshWatchlist100(input: {
     themeHeat,
     poolOverview: readWatchlistPoolOverview(input.memoryDir),
   };
+}
+
+/** Enriches universe `mainNetInflow` with Sina's batch 主力净流入 ranking (verified-reachable). */
+async function enrichWithSinaMoneyFlow(universe: UniverseStock[]): Promise<UniverseStock[]> {
+  try {
+    const ranking = await new SinaMoneyFlowProvider().getMoneyFlowRanking(600);
+    if (ranking.size === 0) {
+      return universe;
+    }
+    return universe.map((stock) =>
+      ranking.has(stock.symbol) ? { ...stock, mainNetInflow: ranking.get(stock.symbol) } : stock,
+    );
+  } catch {
+    return universe; // keep f62/empty
+  }
+}
+
+/** Fetches level-1 盘口 for the main-board limit names and computes 封单/一字板 per symbol. */
+async function fetchSealBoards(universe: UniverseStock[]): Promise<Map<string, SealBoard>> {
+  const map = new Map<string, SealBoard>();
+  const limitSymbols = universe
+    .filter(
+      (stock) =>
+        isMainBoardSymbol(stock.symbol) &&
+        classifyLimitState(stock.symbol, stock.changePct) !== "normal",
+    )
+    .slice(0, 60);
+  if (limitSymbols.length === 0) {
+    return map;
+  }
+  try {
+    const quotes = await new TencentQuoteProvider().getQuotes(
+      limitSymbols.map((stock) => ({ symbol: stock.symbol, market: stock.market, name: stock.name })),
+    );
+    for (const quote of quotes) {
+      const seal = computeSealBoard({
+        symbol: quote.symbol,
+        latestPrice: quote.latestPrice,
+        previousClose: quote.previousClose,
+        openPrice: quote.openPrice,
+        highPrice: quote.highPrice,
+        lowPrice: quote.lowPrice,
+        bid1Price: quote.bid1Price,
+        bid1Volume: quote.bid1Volume,
+        ask1Price: quote.ask1Price,
+        ask1Volume: quote.ask1Volume,
+      });
+      if (seal) {
+        map.set(quote.symbol, seal);
+      }
+    }
+  } catch {
+    // 盘口 unavailable → no seal tags; pool still fine
+  }
+  return map;
 }
 
 /** A {symbol,name} pick for one bucket of the categorized pool. */

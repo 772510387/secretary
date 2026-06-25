@@ -145,6 +145,23 @@ describe("persistCategorizedPool", () => {
     expect(priorityOf("600036")).toBe("high"); // limit_up floored at high despite 缩量
   });
 
+  it("uses 主力净流入 (北向 replacement) for priority and surfaces a 资金面 line", () => {
+    const store = new WatchlistMemoryStore({ memoryDir: dir, now: () => new Date(now) });
+    const universe: UniverseStock[] = [
+      { symbol: "600201", market: "SSE", name: "主力流入股", latestPrice: 20, changePct: 5, turnoverRate: 5, amount: 2e9, marketCap: 5e10, mainNetInflow: 250_000_000 },
+      { symbol: "600202", market: "SSE", name: "主力流出股", latestPrice: 20, changePct: 5, turnoverRate: 5, amount: 1.9e9, marketCap: 5e10, mainNetInflow: -250_000_000 },
+    ].map((stock) => universeStockSchema.parse(stock));
+
+    const result = persistCategorizedPool({ universe, writer: store, now });
+
+    const priorityOf = (symbol: string) => result.entries.find((entry) => entry.symbol === symbol)?.priority;
+    expect(priorityOf("600201")).toBe("high"); // change_top(medium) + 主力净流入 → high
+    expect(priorityOf("600202")).toBe("low"); // change_top(medium) + 主力净流出 → low
+    expect(result.overview).toContain("资金面");
+    const persisted = store.readCategory("watchlist_today");
+    expect(persisted.entries.find((e) => e.symbol === "600201")?.metadata.mainNetInflow).toBe(250_000_000);
+  });
+
   it("does not overwrite a good pool with an empty categorization when skipWriteWhenEmpty", () => {
     const store = new WatchlistMemoryStore({ memoryDir: dir, now: () => new Date(now) });
     const result = persistCategorizedPool({

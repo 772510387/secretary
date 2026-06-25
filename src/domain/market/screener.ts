@@ -25,6 +25,10 @@ export const universeStockSchema = z
     marketCap: z.number().finite().nonnegative().optional(),
     /** 所属行业/板块 (e.g. 半导体). Present only from sources that carry it (Eastmoney f100). */
     sector: z.string().trim().min(1).max(40).optional(),
+    /** 今日主力净流入额 (yuan, CAN be negative). The 北向 replacement: 聪明钱/主力 flow. Eastmoney f62. */
+    mainNetInflow: z.number().finite().optional(),
+    /** 今日主力净流入净占比 (%). Eastmoney f184. */
+    mainNetInflowRatio: z.number().finite().optional(),
   })
   .strict();
 

@@ -349,6 +349,8 @@ export function createAlarmRunNode(
         watchlist: context.watchlist,
         poolOverview: context.poolOverview,
         intradayTimeline,
+        dragonTiger: context.dragonTiger,
+        holdingsMoneyFlow: context.holdingsMoneyFlow,
         themeHeat,
         dataHealth: context.dataHealth,
         webSearch: context.webSearch,

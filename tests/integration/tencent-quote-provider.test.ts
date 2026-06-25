@@ -31,6 +31,10 @@ describe("TencentQuoteProvider parser", () => {
       changePct: 0.0206,
       volume: 123456,
       turnover: 78901234,
+      bid1Price: 64.3,
+      bid1Volume: 84205,
+      ask1Price: 64.31,
+      ask1Volume: 1200,
       providerTime: "2026-06-12T06:59:03.000Z",
       receivedAt,
       rawSymbol: "sz000636",
@@ -156,6 +160,10 @@ function sampleLine(marketPrefix: "sh" | "sz", symbol: string, name: string): st
   parts[4] = "63.00";
   parts[5] = "63.80";
   parts[6] = "123456";
+  parts[9] = "64.30"; // 买一价
+  parts[10] = "84205"; // 买一量(手)
+  parts[19] = "64.31"; // 卖一价
+  parts[20] = "1200"; // 卖一量(手)
   parts[30] = "20260612145903";
   parts[32] = "2.06";
   parts[33] = "65.10";

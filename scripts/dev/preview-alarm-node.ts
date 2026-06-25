@@ -106,12 +106,17 @@ async function main(args: string[]): Promise<void> {
       watchlist: context.watchlist,
       poolOverview: context.poolOverview,
       intradayTimeline,
+      holdingsMoneyFlow: context.holdingsMoneyFlow,
       dataHealth: context.dataHealth,
       webSearch: context.webSearch,
       now,
     },
     { brainProvider },
   );
+
+  if (context.holdingsMoneyFlow) {
+    console.log(`\n[持仓资金面(Sina)]\n${context.holdingsMoneyFlow}\n`);
+  }
 
   const event = result.notification;
   console.log("---- 飞书将推送的内容（与线上一致的渲染） ----\n");

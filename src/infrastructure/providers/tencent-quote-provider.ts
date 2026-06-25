@@ -155,6 +155,11 @@ export function parseTencentQuoteLine(
     changePct,
     volume: parseOptionalInteger(parts[6]),
     turnover: parseOptionalNumber(parts[37]),
+    // 5-档盘口: parts[9..18] = 买一~买五 价/量, parts[19..28] = 卖一~卖五 价/量.
+    bid1Price: parseOptionalNumber(parts[9]),
+    bid1Volume: parseOptionalInteger(parts[10]),
+    ask1Price: parseOptionalNumber(parts[19]),
+    ask1Volume: parseOptionalInteger(parts[20]),
     providerTime: parseTencentProviderTime(parts[30]),
     receivedAt,
     rawSymbol,

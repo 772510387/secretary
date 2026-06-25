@@ -1,5 +1,6 @@
 import { classifyLimitState } from "./theme-heat.js";
 import { isLikelySTName, type UniverseStock } from "./screener.js";
+import { renderSealTag, type SealBoard } from "./seal-board.js";
 import { isMainBoardSymbol } from "./symbols.js";
 
 /**
@@ -250,7 +251,7 @@ const NAMED_BUCKETS: readonly PoolBucket[] = [
  */
 export function renderPoolOverview(
   entries: readonly CategorizedPoolEntry[],
-  options: { namesPerBucket?: number } = {},
+  options: { namesPerBucket?: number; sealBySymbol?: ReadonlyMap<string, SealBoard> } = {},
 ): string {
   if (entries.length === 0) {
     return "";
@@ -265,6 +266,11 @@ export function renderPoolOverview(
 
   const lines = [`观察池 ${entries.length} 只（${counts.join("·")}）。`];
 
+  const capitalLine = renderCapitalFlowLine(entries);
+  if (capitalLine) {
+    lines.push(capitalLine);
+  }
+
   for (const bucket of NAMED_BUCKETS) {
     const bucketEntries = byBucket.get(bucket) ?? [];
     if (bucketEntries.length === 0) {
@@ -272,8 +278,12 @@ export function renderPoolOverview(
     }
     const names = bucketEntries
       .slice(0, namesPerBucket)
-      // Include the REAL code so the model cites it instead of hallucinating one.
-      .map((entry) => `${entry.stock.name}(${entry.stock.symbol}${formatChange(entry.stock.changePct)})`)
+      // Include the REAL code (anti-hallucination) + 封单 tag for limit boards.
+      .map((entry) => {
+        const seal = options.sealBySymbol?.get(entry.stock.symbol);
+        const sealTag = seal ? ` ${renderSealTag(seal)}` : "";
+        return `${entry.stock.name}(${entry.stock.symbol}${formatChange(entry.stock.changePct)}${sealTag})`;
+      })
       .join("、");
     const more = bucketEntries.length > namesPerBucket ? ` 等${bucketEntries.length}只` : "";
     lines.push(`${POOL_BUCKET_LABEL[bucket]}：${names}${more}`);
@@ -288,6 +298,32 @@ function formatChange(changePct: number | undefined): string {
   }
   const sign = changePct > 0 ? "+" : "";
   return ` ${sign}${changePct.toFixed(2)}%`;
+}
+
+/**
+ * 资金面 line — the 北向资金 replacement: pool-wide 主力净流入 total + the strongest
+ * 净流入 names. Returns "" when no entry carries 主力净流入 (source didn't provide it).
+ */
+function renderCapitalFlowLine(entries: readonly CategorizedPoolEntry[]): string {
+  const withFlow = entries.filter((entry) => entry.stock.mainNetInflow !== undefined);
+  if (withFlow.length === 0) {
+    return "";
+  }
+  const total = withFlow.reduce((sum, entry) => sum + (entry.stock.mainNetInflow ?? 0), 0);
+  const topInflow = [...withFlow]
+    .sort((left, right) => (right.stock.mainNetInflow ?? 0) - (left.stock.mainNetInflow ?? 0))
+    .filter((entry) => (entry.stock.mainNetInflow ?? 0) > 0)
+    .slice(0, 5)
+    .map((entry) => `${entry.stock.name}(${entry.stock.symbol} ${formatYi(entry.stock.mainNetInflow ?? 0)})`)
+    .join("、");
+  const head = `资金面：池内主力净流入合计 ${formatYi(total)}`;
+  return topInflow ? `${head}；净流入前${Math.min(5, withFlow.filter((e) => (e.stock.mainNetInflow ?? 0) > 0).length)}：${topInflow}` : head;
+}
+
+/** Formats a yuan amount as a signed 亿 string, e.g. +5.20亿 / -1.30亿. */
+function formatYi(yuan: number): string {
+  const sign = yuan > 0 ? "+" : yuan < 0 ? "-" : "";
+  return `${sign}${(Math.abs(yuan) / 1e8).toFixed(2)}亿`;
 }
 
 /** Group a categorized pool into bucket → entries (positions never dropped). */

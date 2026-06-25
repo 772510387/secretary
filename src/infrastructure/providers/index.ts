@@ -115,6 +115,25 @@ export {
   type UniverseProvider,
 } from "./eastmoney-universe-provider.js";
 export {
+  BillboardProviderError,
+  EastmoneyBillboardProvider,
+  parseDragonTiger,
+  type BillboardFetchLike,
+  type BillboardFetchResponse,
+  type BillboardProvider,
+  type EastmoneyBillboardProviderOptions,
+} from "./eastmoney-billboard-provider.js";
+export {
+  MoneyFlowProviderError,
+  SinaMoneyFlowProvider,
+  parseSinaMoneyFlow,
+  parseSinaMoneyFlowRanking,
+  type SinaFetchLike,
+  type SinaFetchResponse,
+  type SinaMoneyFlowProviderOptions,
+  type StockMoneyFlow,
+} from "./sina-money-flow-provider.js";
+export {
   CachingUniverseProvider,
   FileUniverseCacheStore,
   cacheKey,

@@ -63,6 +63,12 @@ export const quoteSnapshotSchema = z
     changePct: z.number().finite(),
     volume: nonNegativeQuantitySchema.optional(),
     turnover: nonNegativeMoneySchema.optional(),
+    /** 买一价 / 买一量(手) — level-1 bid. 涨停时 买一量=封单量. */
+    bid1Price: nonNegativeMoneySchema.optional(),
+    bid1Volume: nonNegativeQuantitySchema.optional(),
+    /** 卖一价 / 卖一量(手) — level-1 ask. 跌停时 卖一量=封单量；涨停封死时 卖盘=0. */
+    ask1Price: nonNegativeMoneySchema.optional(),
+    ask1Volume: nonNegativeQuantitySchema.optional(),
     providerTime: isoDateTimeSchema.optional(),
     receivedAt: isoDateTimeSchema,
     rawSymbol: z.string().trim().min(1),
