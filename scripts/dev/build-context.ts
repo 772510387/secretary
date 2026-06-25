@@ -58,6 +58,7 @@ import {
 } from "../../src/infrastructure/providers/index.js";
 import { createPortfolioMemoryPaths } from "../../src/infrastructure/storage/index.js";
 import { TtlCache } from "../../src/infrastructure/cache/index.js";
+import { toBeijingDateTime } from "../../src/infrastructure/scheduler/index.js";
 
 const positionsSchema = z.array(positionSchema);
 
@@ -205,6 +206,24 @@ export function writePotentialStocksPool(input: {
   return result.entryCount;
 }
 
+/** A股开盘竞价后连续交易起点(09:30);此前今日成交额尚未形成。 */
+const A_SHARE_OPEN_MINUTE = 9 * 60 + 30;
+
+/**
+ * Whether TODAY's 成交额 is meaningful at `now` (Beijing): only on a weekday from the
+ * 09:30 open onward. Before the open, or on a weekend/holiday, today's turnover is ~0, so
+ * the screen must not apply a turnover floor (it would empty the whole market).
+ */
+export function isTodayTurnoverMeaningful(now: Date | string | undefined): boolean {
+  const date = now === undefined ? new Date() : new Date(now);
+  const at = Number.isNaN(date.getTime()) ? new Date() : date;
+  const beijing = toBeijingDateTime(at);
+  if (beijing.dayOfWeek > 5) {
+    return false; // 周末:无今日成交
+  }
+  return beijing.minuteOfDay >= A_SHARE_OPEN_MINUTE;
+}
+
 export interface RefreshWatchlistResult {
   watchlist100: PlanWatchlistEntry[];
   universeSize: number;
@@ -247,6 +266,13 @@ export async function refreshWatchlist100(input: {
     themeHeat = undefined; // degrade silently; the screen below still runs
   }
 
+  // 基于 A 股开盘时间调整筛选:今日成交额只有开盘(09:30)后才有意义。开盘前/非交易日,
+  // 今日成交额≈0,用 1 亿门槛会把整个市场滤空,所以盘前不设成交额门槛(仅按可得数据排序+主板过滤);
+  // 开盘后到收盘,用正常的 ≥1 亿门槛筛今日真实活跃股。
+  const turnoverFloor = isTodayTurnoverMeaningful(input.now)
+    ? input.minAmount ?? 1e8
+    : 0;
+
   const runScreen = async (minAmount: number) => {
     const screen = await buildWatchlistFromScreen({
       provider,
@@ -270,13 +296,12 @@ export async function refreshWatchlist100(input: {
   };
 
   try {
-    const primary = await runScreen(input.minAmount ?? 1e8);
+    const primary = await runScreen(turnoverFloor);
     if (primary.watchlist100.length > 0) {
       return { ...primary, degraded: false, themeHeat };
     }
-    // 盘前/低量兜底：开盘前今日成交额≈0，成交额阈值会把整个 universe 滤空。只要 universe 非空，
-    // 就放宽阈值再筛一次（仍仅主板），保证“没有就去查”能真的建出一个池，而不是空手而归。
-    if (primary.universeSize > 0) {
+    // 兜底：万一开盘后阈值仍把非空 universe 滤空(异常低量),再放宽一次,保证“没有就去查”能建出池。
+    if (turnoverFloor > 0 && primary.universeSize > 0) {
       const relaxed = await runScreen(0);
       if (relaxed.watchlist100.length > 0) {
         console.error(

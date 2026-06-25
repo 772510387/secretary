@@ -237,7 +237,7 @@ export function createAlarmRunNode(
       let themeHeat: ThemeHeatSummary | undefined;
       const poolEmpty = readWatchlist100(deps.memoryDir).length === 0;
       if (REFRESH_POOL_NODES.has(alarmType) || poolEmpty) {
-        const refresh = await refreshWatchlist100({ config: deps.config, memoryDir: deps.memoryDir });
+        const refresh = await refreshWatchlist100({ config: deps.config, memoryDir: deps.memoryDir, now });
         themeHeat = refresh.themeHeat;
         const note =
           refresh.watchlist100.length === 0
