@@ -145,10 +145,10 @@ function buildFunnelNotification(
     ),
     recommendedAction:
       proposals.length === 0
-        ? "本节点没有可执行买卖操作；模拟盘不发生纸面成交。"
+        ? "本节点无买卖操作。"
         : willExecute
-          ? "后端将按 paper-only 路径执行并写入模拟盘；不接实盘，仍走现金、仓位、T+1、100股买入和主板过滤。"
-          : "非 A 股连续交易时段，仅生成待买卖清单；待开盘后由后端 paper-only 执行，不接实盘。",
+          ? "后端已按现金、仓位、T+1、100股、主板规则成交并写入账本。"
+          : "非 A 股连续交易时段，先出待买卖清单，开盘后自动成交。",
     channels: ["feishu"],
     metadata: { funnel: true, planId: plan.planId, nodeSequence: plan.nodeSequence },
   });

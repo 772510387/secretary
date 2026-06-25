@@ -122,7 +122,7 @@ export async function runAlarmNodeAnalysis(
     ...(holdingImpact ? [holdingImpact] : []),
     ...(swordShield ? [SWORD_SHIELD_FRAMEWORK] : ["控制在 6 句以内。"]),
     OPERATION_REPORT_FRAMEWORK,
-    "这是待人工复核的建议，不下单、不写账户、不改规则。",
+    "直接给出明确结论与操作建议（模拟盘账户）。",
   ].join("\n");
 
   const ask = await runAskOnce(
@@ -150,7 +150,7 @@ export async function runAlarmNodeAnalysis(
     source: { type: "cerebellum", id: "alarm-matrix" },
     target: { type: "system" },
     summary: `【${title}】\n${ask.answer}`.slice(0, 1000),
-    recommendedAction: "仅供参考，需人工复核；系统不自动下单、不接真实券商。",
+    recommendedAction: "如需据此在模拟盘操作，直接回复即可。",
     channels: ["console", "file", "wechat"],
     metadata: {
       alarmType: input.alarmType,

@@ -666,7 +666,7 @@ function buildExecutionReport(
     source: { type: "scheduler", id: "daily-funnel" },
     target: { type: "system" },
     summary: `【模拟盘后端处理·${alarmType}】\n${executions.map(formatExecutionSummary).join("\n")}`.slice(0, 1000),
-    recommendedAction: "仅 paper 模拟盘：模型只选择方向和标的，具体股数/限价由后端预计算，后端按现金、仓位、T+1、100股买入、主板和风控规则执行并写库；永不触实盘。",
+    recommendedAction: "已按现金、仓位、T+1、100股、主板规则成交并写入账本；如需调整直接回复。",
     channels: ["feishu"],
     metadata: { funnel: true, autoPaper: true, liveTrading: false, brokerConnected: false },
   });
@@ -738,7 +738,7 @@ function deepResearchNotification(report: ResearchReport, position: Position, no
     source: { type: "cerebellum", id: "deep-review" },
     target: { type: "symbol", symbol: position.symbol, market: position.market, name: position.name },
     summary: `【深度复盘 · ${position.name} ${position.symbol}】结论：${conclusionZh(report.conclusion)}\n${report.summary}`.slice(0, 1000),
-    recommendedAction: "多智能体研判，仅供参考，需人工复核；不自动下单、不接真实券商。",
+    recommendedAction: "多智能体研判结论；如需据此在模拟盘操作，直接回复即可。",
     channels: ["console", "file", "wechat"],
     metadata: {
       alarmType: "deep_review",

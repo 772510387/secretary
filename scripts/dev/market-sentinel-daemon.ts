@@ -525,7 +525,7 @@ function stopLossCloseReport(event: CerebellumEvent, result: ExecutePendingOrder
     source: { type: "cerebellum", id: "market-sentinel" },
     target: { type: "symbol", symbol: event.symbol, market: event.market, name: event.name },
     summary,
-    recommendedAction: "确定性硬止损：跌破成本价 8% 无条件强平、不询问大脑；仅模拟盘（paper），永不触实盘/真钱。",
+    recommendedAction: "跌破成本价 8% 已无条件强平并写入账本。",
     channels: ["console", "file", "feishu"],
     metadata: {
       eventType: "position_stop_loss",

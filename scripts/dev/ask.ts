@@ -16,13 +16,10 @@ import {
 import {
   BrainProviderError,
   MockBrainProvider,
-  SearchProviderError,
-  TavilySearchProvider,
-  TencentQuoteProvider,
   createBrainProvider,
 } from "../../src/infrastructure/providers/index.js";
 import { createPortfolioMemoryPaths } from "../../src/infrastructure/storage/index.js";
-import type { AskWebSearchContext } from "../../src/app/index.js";
+import { buildBridgeContext } from "./build-context.js";
 
 const NETWORK_FLAG = "ASK_NETWORK";
 const positionsSchema = z.array(positionSchema);
@@ -69,20 +66,29 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   const brainProvider = wantOnline ? createBrainProvider(config.brain) : new MockBrainProvider();
-  const prices = wantOnline ? await fetchPrices(positions) : {};
-  const webSearch = cli.web && wantOnline ? await runWebSearch(config, cli.question) : undefined;
 
   if (cli.web && !wantOnline) {
     console.error("--web 需要联网（真实大脑 + 搜索）；离线/mock 模式下忽略。");
   }
 
+  const context = wantOnline
+    ? await buildBridgeContext({
+        config,
+        memoryDir: cli.memoryDir ?? config.storage.memoryDir,
+        question: cli.question,
+        forceWebSearch: cli.web,
+      })
+    : { account, positions, prices: {} };
+
   const result = await runAskOnce(
     {
       question: cli.question,
-      account,
-      positions,
-      prices,
-      webSearch,
+      account: context.account ?? account,
+      positions: context.positions ?? positions,
+      prices: context.prices,
+      technicals: context.technicals,
+      indices: context.indices,
+      webSearch: context.webSearch,
       metadata: { source: "ask-cli" },
     },
     { brainProvider },
@@ -110,69 +116,7 @@ export async function main(argv: string[]): Promise<void> {
   console.log(`—— 模型回答（${result.provider}/${result.model}，置信度 ${result.confidence}）——`);
   console.log(result.answer);
   console.log("");
-  console.log(`（行情已${result.pricesAvailable ? "" : "未"}盯市；本回答不可直接下单，任何买卖建议须人工复核。）`);
-}
-
-async function runWebSearch(
-  config: ReturnType<typeof loadConfig>,
-  query: string,
-): Promise<AskWebSearchContext | undefined> {
-  if (config.search.provider !== "tavily") {
-    console.error("--web 已开启，但 SEARCH_PROVIDER 不是 tavily，跳过搜索。");
-    return undefined;
-  }
-
-  if (!config.search.tavilyApiKey) {
-    console.error("--web 已开启，但未配置 TAVILY_API_KEY，跳过搜索。");
-    return undefined;
-  }
-
-  try {
-    const provider = new TavilySearchProvider({ apiKey: config.search.tavilyApiKey });
-    const result = await provider.search(query, { maxResults: config.search.maxResults });
-
-    console.log(`—— 联网检索（Tavily，命中 ${result.results.length} 条）——`);
-    for (const item of result.results) {
-      console.log(`  • ${item.title || item.url}　${item.url}`);
-    }
-
-    return {
-      query: result.query,
-      answer: result.answer,
-      results: result.results.map((item) => ({
-        title: item.title,
-        url: item.url,
-        snippet: item.snippet,
-      })),
-    };
-  } catch (error) {
-    if (error instanceof SearchProviderError) {
-      console.error(`（联网检索失败，改为仅用账户上下文：${error.message}）`);
-      return undefined;
-    }
-
-    throw error;
-  }
-}
-
-async function fetchPrices(
-  positions: ReturnType<typeof readPositions>,
-): Promise<Record<string, number>> {
-  if (positions.length === 0) {
-    return {};
-  }
-
-  try {
-    const provider = new TencentQuoteProvider();
-    const quotes = await provider.getQuotes(
-      positions.map((p) => ({ symbol: p.symbol, market: p.market, name: p.name })),
-    );
-
-    return Object.fromEntries(quotes.map((quote) => [quote.symbol, quote.latestPrice]));
-  } catch (error) {
-    console.error(`（行情拉取失败，改用成本价估值：${error instanceof Error ? error.message : String(error)}）`);
-    return {};
-  }
+  console.log(`（行情已${result.pricesAvailable ? "" : "未"}盯市；模拟盘账本。）`);
 }
 
 function readAccount(accountPath: string): ReturnType<typeof accountSchema.parse> {

@@ -72,7 +72,7 @@ describe("maintainDailyFunnel", () => {
     expect(events[0]!.summary).toContain("模型选择执行");
     expect(events[0]!.summary).toContain("BUY 000001");
     expect(events[0]!.summary).toContain("空仓建仓");
-    expect(events[0]!.recommendedAction).toContain("paper-only 路径");
+    expect(events[0]!.recommendedAction).toContain("成交并写入账本");
   });
 
   it("words a non-trading-hours node as 待买卖 (not 执行) when autoPaper is off", async () => {
