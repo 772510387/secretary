@@ -1,6 +1,7 @@
 import {
   type NotificationEvent,
 } from "./schemas.js";
+import { beijingDateTimeLabel } from "../shared/index.js";
 import { redactNotificationEvent } from "./redaction.js";
 
 export function formatNotificationForConsole(eventInput: NotificationEvent): string {
@@ -10,7 +11,7 @@ export function formatNotificationForConsole(eventInput: NotificationEvent): str
   const correlation = event.correlationId ? ` correlation=${event.correlationId}` : "";
 
   return [
-    `[${event.occurredAt}]`,
+    `[${beijingDateTimeLabel(event.occurredAt)}]`,
     event.severity.toUpperCase(),
     `source=${formatSource(event)}`,
     `target=${target}`,

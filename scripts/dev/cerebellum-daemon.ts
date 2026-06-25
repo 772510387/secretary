@@ -33,6 +33,7 @@ import {
 import {
   AlarmJobRegistry,
   SimulatedClock,
+  isWithinTradingSession,
   toBeijingDateTime,
 } from "../../src/infrastructure/scheduler/index.js";
 import { DailyBudget } from "../../src/runtime/index.js";
@@ -457,6 +458,12 @@ async function runFunnelNode(
       console.error(`(${alarmType} 自动成交关闭，仅提案：${error instanceof Error ? error.message : String(error)})`);
       autoPaper = false;
     }
+  }
+  // A股只有连续竞价时段(09:30–11:30 / 13:00–15:00)能成交。盘前(含 08:30 晨报、09:15 集合竞价)、
+  // 午休、盘后只生成【待买卖】提案,绝不用昨收价假成交。开盘后节点才真正写库成交。
+  if (autoPaper && !isWithinTradingSession(new Date(now))) {
+    console.error(`(${alarmType} 非 A 股连续交易时段，仅生成待买卖提案，不成交)`);
+    autoPaper = false;
   }
   const executionConstraints = buildFunnelExecutionConstraints({
     account,
