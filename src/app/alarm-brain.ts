@@ -19,9 +19,9 @@ import {
   type MarketDataHealth,
 } from "./ask-portfolio.js";
 import {
-  buildPreMarketDisplayContract,
-  isPreMarketDisplayNode,
-} from "./pre-market-display-contract.js";
+  buildNodeDisplayContract,
+  FEISHU_PERSONA_CONTRACT,
+} from "./display-contract.js";
 import type { PlanWatchlistEntry } from "../domain/plan/index.js";
 import type { ThemeHeatSummary } from "../domain/market/index.js";
 
@@ -128,6 +128,7 @@ export async function runAlarmNodeAnalysis(
   const occurredAt = input.now ?? new Date().toISOString();
 
   const swordShield = SWORD_SHIELD_NODES.has(input.alarmType);
+  const nodeDisplayContract = buildNodeDisplayContract(input.alarmType);
   const holdings = input.positions ?? [];
   const holdingImpact =
     HOLDING_IMPACT_NODES.has(input.alarmType) && holdings.length > 0
@@ -175,10 +176,11 @@ export async function runAlarmNodeAnalysis(
       : []),
     ...(input.todayFills && input.todayFills.trim() ? [input.todayFills.trim()] : []),
     ...(holdingImpact ? [holdingImpact] : []),
-    ...(isPreMarketDisplayNode(input.alarmType) ? [buildPreMarketDisplayContract()] : []),
+    ...(nodeDisplayContract ? [nodeDisplayContract] : []),
     ...(swordShield ? [SWORD_SHIELD_FRAMEWORK] : ["控制在 6 句以内。"]),
     OPERATION_REPORT_FRAMEWORK,
     PUSH_DELIVERY_CONTRACT,
+    FEISHU_PERSONA_CONTRACT,
     "直接给出明确结论与操作建议（模拟盘账户）。",
   ].join("\n");
 

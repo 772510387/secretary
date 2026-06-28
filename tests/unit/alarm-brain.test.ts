@@ -84,6 +84,10 @@ describe("runAlarmNodeAnalysis", () => {
 
     expect(result.notification.summary.length).toBeGreaterThan(1000);
     expect(result.notification.summary).toContain("尾部结论：等待下一次复查。");
+    // F1: intraday review nodes carry the 观察→判断→下次复查 display skeleton + persona.
+    expect(brain.lastPrompt).toContain("盘中节点呈现");
+    expect(brain.lastPrompt).toContain("下次复查");
+    expect(brain.lastPrompt).toContain("Boss 摘要");
   });
 
   it("forces a per-holding overnight-impact assessment on morning news nodes (PRE-03)", async () => {

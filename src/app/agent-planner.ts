@@ -56,9 +56,9 @@ import {
   type PaperOpsCommand,
 } from "./paper-ops-intent.js";
 import {
-  buildPreMarketDisplayContract,
-  isPreMarketDisplayNode,
-} from "./pre-market-display-contract.js";
+  buildNodeDisplayContract,
+  FEISHU_PERSONA_CONTRACT,
+} from "./display-contract.js";
 
 export type PlannedAgentIntent = TurnPlanIntent;
 
@@ -666,7 +666,8 @@ function buildSopQuestion(
     ...(input.holdingsMoneyFlow && input.holdingsMoneyFlow.trim() ? [input.holdingsMoneyFlow.trim()] : []),
     ...(input.dragonTiger && input.dragonTiger.trim() ? [input.dragonTiger.trim()] : []),
     ...(input.todayFills && input.todayFills.trim() ? [input.todayFills.trim()] : []),
-    ...(isPreMarketDisplayNode(entry.alarmType) ? [buildPreMarketDisplayContract()] : []),
+    ...(buildNodeDisplayContract(entry.alarmType) ? [buildNodeDisplayContract(entry.alarmType)!] : []),
+    FEISHU_PERSONA_CONTRACT,
     "直接给出明确结论与操作建议（模拟盘账户）。",
   ].join("\n");
 }

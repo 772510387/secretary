@@ -14,6 +14,7 @@ import {
   type NotificationEvent,
 } from "../domain/notification/index.js";
 import type { PaperAgentTools } from "./brain-agent-tools.js";
+import { FEISHU_PERSONA_CONTRACT } from "./display-contract.js";
 
 /**
  * Runs ONE agentic brain turn over the paper account: the model reads what it needs
@@ -115,6 +116,8 @@ export function buildDefaultSystemPrompt(now: string): string {
     "- 用户纠正操作事实（例如“早上卖了200股”）时，先用 get_operation_review 核对成交和时间戳；若工具证据支持用户，立即更正旧说法。",
     "- 对问责/反馈类问题要先讲清证据：哪些日期看过100池，哪些没有证据；该承认遗漏就明确承认，并给出补救动作。",
     "- 全部完成后，用简体中文给出最终结论：你做了哪些操作、为什么这么做、当前账户状态与下一步建议。",
+    "",
+    FEISHU_PERSONA_CONTRACT,
   ].join("\n");
 }
 
