@@ -36,6 +36,7 @@ class PlannerStubBrain implements BrainProvider {
   readonly providerName = "mock" as const;
   routeCalls = 0;
   askCalls = 0;
+  lastAskInput?: BrainInput;
 
   constructor(
     private readonly route: unknown,
@@ -51,6 +52,7 @@ class PlannerStubBrain implements BrainProvider {
     }
 
     this.askCalls += 1;
+    this.lastAskInput = input;
     return this.output(input, { answered: true }, this.answer);
   }
 
@@ -384,6 +386,40 @@ describe("fulfilTurnPlan (deterministic gating)", () => {
     expect(result.sopName).toBe("pre-market-plan");
     expect(result.reply).toContain("盘前计划");
     expect(brain.askCalls).toBe(1);
+    expect(brain.lastAskInput?.prompt).toContain("盘前市场背景呈现");
+    expect(brain.lastAskInput?.prompt).toContain("大盘情况");
+    expect(brain.lastAskInput?.prompt).toContain("热点板块");
+    expect(brain.lastAskInput?.prompt).toContain("连板股");
+  });
+
+  it("feeds manual SOP runs with pool overview, market phase, and data health", async () => {
+    const brain = new PlannerStubBrain({}, "竞价观察内容。");
+    await fulfilTurnPlan(
+      makePlan({ intent: "run_sop", sopName: "call-auction-watch" }),
+      {
+        message: "做9:15集合竞价观察",
+        account: makeAccount(),
+        positions: [],
+        watchlist: [{ symbol: "600584", market: "SSE", name: "长电科技", rank: 1 }],
+        poolOverview: "观察池 100 只\n涨停：长电科技(600584 +10.00% 封8.8亿一字)",
+        marketPhase: "集合竞价",
+        dataHealth: {
+          asOf: now,
+          pricedSymbols: 1,
+          indicesCount: 4,
+          watchlistCount: 100,
+          degraded: false,
+          notes: [],
+        },
+      },
+      { brainProvider: brain },
+    );
+
+    expect(brain.lastAskInput?.prompt).toContain("观察池 100 只");
+    expect(brain.lastAskInput?.prompt).toContain("集合竞价");
+    const context = brain.lastAskInput?.context as { watchlist?: { count?: number }; dataHealth?: { watchlistCount?: number } };
+    expect(context.watchlist?.count).toBe(1);
+    expect(context.dataHealth?.watchlistCount).toBe(100);
   });
 
   it("refuses chat/SOP when no account exists", async () => {

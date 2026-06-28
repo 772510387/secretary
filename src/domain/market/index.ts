@@ -94,6 +94,20 @@ export {
   type SealBoardState,
 } from "./seal-board.js";
 export {
+  MARKET_PHASE_LABEL,
+  isContinuousTrading,
+  resolveMarketPhase,
+  type MarketPhase,
+  type MarketPhaseInput,
+} from "./market-phase.js";
+export {
+  computeSectorHeat,
+  renderSectorHeat,
+  type ComputeSectorHeatOptions,
+  type SectorHeat,
+  type SectorHeatSummary,
+} from "./sector-heat.js";
+export {
   VolumePriceSignalError,
   calculateKlineVolumePriceSignal,
   calculateQuoteVolumePriceSignal,

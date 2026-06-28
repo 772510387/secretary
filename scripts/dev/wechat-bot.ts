@@ -28,7 +28,11 @@ import {
 import {
   createPortfolioMemoryPaths,
 } from "../../src/infrastructure/storage/index.js";
-import { buildLivePaperAgentTools } from "./build-context.js";
+import {
+  buildLivePaperAgentTools,
+  readPotentialStockCandidates,
+  readWatchlist100,
+} from "./build-context.js";
 import { executeAgentAction } from "./agent-actions.js";
 
 const positionsSchema = z.array(positionSchema);
@@ -77,6 +81,11 @@ export async function main(): Promise<void> {
   const loadPortfolio = () => {
     const paths = createPortfolioMemoryPaths(memoryDir);
     return { account: readAccount(paths.accountPath), positions: readPositions(paths.positionsPath) };
+  };
+  const loadWatchlist = () => readWatchlist100(memoryDir); // cheap disk read for 选股 (pick_stocks)
+  const loadPotentialStocks = () => {
+    const paths = createPortfolioMemoryPaths(memoryDir);
+    return readPotentialStockCandidates(memoryDir, readPositions(paths.positionsPath));
   };
   const executeAction = (action: AgentAction): Promise<string> =>
     executeAgentAction(action, { config, memoryDir });
@@ -128,6 +137,8 @@ export async function main(): Promise<void> {
         allowDestructive: () => isOwner,
         loadContext,
         loadPortfolio,
+        loadWatchlist,
+        loadPotentialStocks,
         executeAction,
         runConfirmedPaperOpsInBackground: true,
         onProgress: async (note) => {

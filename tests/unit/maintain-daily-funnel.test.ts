@@ -102,6 +102,80 @@ describe("maintainDailyFunnel", () => {
     expect(events[0]!.recommendedAction).toContain("非 A 股连续交易时段");
   });
 
+  it("surfaces 潜力股名单+逐只理由 in the push (not just a count) + full list in metadata", async () => {
+    const events: NotificationEvent[] = [];
+    await maintainDailyFunnel(
+      {
+        alarmType: "pre_market_plan",
+        tradingDate: "2026-06-22",
+        asOf: ASOF,
+        accountId: "paper-main",
+        watchlist100: POOL,
+        holdings: [],
+      },
+      {
+        brainProvider: new StubBrain({
+          shortlist: [
+            { symbol: "000001", rationale: "主力净流入3.2亿，日线多头" },
+            { symbol: "600519", rationale: "白酒题材龙头，封单0.8亿" },
+          ],
+          orders: [],
+        }),
+        planStore: { writePlan: () => undefined },
+        proposalStore: { writeProposal: () => undefined },
+        notifiers: [{ notify: (event) => events.push(event) }],
+      },
+    );
+    // The boss asked "为何选这些股" — the push must name them WITH reasons, not hide behind "候选 N 支".
+    expect(events[0]!.summary).toContain("潜力股(为何入选)");
+    expect(events[0]!.summary).toContain("平安银行(000001)｜主力净流入3.2亿");
+    const shortlistMeta = events[0]!.metadata.shortlist as Array<{ symbol: string; rationale: string }>;
+    expect(shortlistMeta).toHaveLength(2);
+    expect(shortlistMeta[1]).toMatchObject({ symbol: "600519", rationale: "白酒题材龙头，封单0.8亿" });
+  });
+
+  it("forwards poolOverview + 防幻觉约束 into the selection prompt (so rationale cites real signals)", async () => {
+    let capturedPrompt = "";
+    const capture: BrainProvider = {
+      providerName: "mock",
+      async generate(input: BrainInput): Promise<BrainOutput> {
+        capturedPrompt = input.prompt;
+        return {
+          requestId: input.requestId,
+          provider: "mock",
+          model: "mock",
+          taskType: input.taskType,
+          generatedAt: ASOF,
+          summary: "",
+          structured: { shortlist: [{ symbol: "000001", rationale: "主力净流入3.2亿" }], orders: [] },
+          citations: [],
+          confidence: 0.5,
+          proposals: [],
+        };
+      },
+    };
+    await maintainDailyFunnel(
+      {
+        alarmType: "pre_market_plan",
+        tradingDate: "2026-06-22",
+        asOf: ASOF,
+        accountId: "paper-main",
+        watchlist100: POOL,
+        holdings: [],
+        poolOverview: "涨停30只(平安银行000001 主力净流入+3.2亿)、热门题材成分15(贵州茅台600519 【白酒】)",
+      },
+      {
+        brainProvider: capture,
+        planStore: { writePlan: () => undefined },
+        proposalStore: { writeProposal: () => undefined },
+      },
+    );
+    expect(capturedPrompt).toContain("观察池分类概览");
+    expect(capturedPrompt).toContain("主力净流入+3.2亿");
+    expect(capturedPrompt).toContain("理由硬约束");
+    expect(capturedPrompt).toContain("严禁臆造池外代码");
+  });
+
   it("a push failure never breaks the funnel", async () => {
     const result = await maintainDailyFunnel(
       {

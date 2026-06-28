@@ -51,6 +51,8 @@ export const decisionStanceSchema = z
     confidence: z.number().finite().min(0).max(1),
     rationale: z.string().trim().min(1).max(500),
     basis: decisionBasisSchema,
+    /** Human-facing named strategy ids used as audit/explanation links; never execution permission. */
+    strategyIds: identifierSchema.array().max(8).optional(),
   })
   .strict();
 

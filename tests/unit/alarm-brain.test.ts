@@ -13,6 +13,8 @@ class StubBrain implements BrainProvider {
   readonly providerName = "mock" as const;
   lastPrompt = "";
 
+  constructor(private readonly summary = "今日基调防守，关注风华高科压力位，半仓应对。") {}
+
   async generate(input: BrainInput): Promise<BrainOutput> {
     this.lastPrompt = input.prompt;
     return {
@@ -21,7 +23,7 @@ class StubBrain implements BrainProvider {
       model: "mock-brain-v1",
       taskType: input.taskType,
       generatedAt: now,
-      summary: "今日基调防守，关注风华高科压力位，半仓应对。",
+      summary: this.summary,
       structured: {},
       citations: [],
       confidence: 0.6,
@@ -61,11 +63,27 @@ describe("runAlarmNodeAnalysis", () => {
     expect(brain.lastPrompt).toContain("操作汇报格式");
     expect(brain.lastPrompt).toContain("本节点操作判断");
     expect(brain.lastPrompt).toContain("最终是否成交由后端 paper-only 规则");
+    expect(brain.lastPrompt).toContain("盘前市场背景呈现");
+    expect(brain.lastPrompt).toContain("大盘情况");
+    expect(brain.lastPrompt).toContain("热点板块");
+    expect(brain.lastPrompt).toContain("连板股");
     expect(brain.lastPrompt).toContain("安全边界：");
     // The result is a real, pushable notification.
     expect(result.notification.summary).toContain("【盘前计划】");
     expect(result.notification.channels).toContain("wechat");
     expect(result.notification.severity).toBe("info");
+  });
+
+  it("keeps deep alarm reports beyond the old 1000-char push ceiling", async () => {
+    const longSummary = `本节点操作判断：持有观察。\n${"观察：大盘、板块、持仓、100池逐项复核。".repeat(120)}\n尾部结论：等待下一次复查。`;
+    const brain = new StubBrain(longSummary);
+    const result = await runAlarmNodeAnalysis(
+      { alarmType: "morning_review", account: makeAccount(), positions: [makePosition()], now },
+      { brainProvider: brain },
+    );
+
+    expect(result.notification.summary.length).toBeGreaterThan(1000);
+    expect(result.notification.summary).toContain("尾部结论：等待下一次复查。");
   });
 
   it("forces a per-holding overnight-impact assessment on morning news nodes (PRE-03)", async () => {

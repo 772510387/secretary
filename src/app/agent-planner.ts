@@ -23,6 +23,7 @@ import {
   type SopCatalogEntry,
 } from "../domain/cerebellum/index.js";
 import type { Account, Position } from "../domain/portfolio/index.js";
+import type { PlanShortlistEntry } from "../domain/plan/index.js";
 import {
   AgentRouterError,
   CAPABILITIES_REPLY,
@@ -34,15 +35,30 @@ import {
   type AskPortfolioResult,
   type AskTechnical,
   type AskWebSearchContext,
+  type MarketDataHealth,
 } from "./ask-portfolio.js";
 import { runResearchOnce, type ResearchRunner } from "./run-research-once.js";
 import { classifyAgentIntent } from "./agent-router.js";
+import { selectFunnelStage } from "./select-funnel.js";
+import type { PlanWatchlistEntry } from "../domain/plan/index.js";
+import type { ThemeHeatSummary } from "../domain/market/index.js";
+import type { TradeIntentReviewProposal } from "../domain/memory/index.js";
 import type { ResearchReport } from "../domain/research/index.js";
+import {
+  analyzePotentialStocks,
+  candidatesFromShortlist,
+  renderPotentialStockAnalysisReport,
+  type PotentialStockCandidate,
+} from "./potential-stock-analysis.js";
 import {
   detectPaperOpsCommand,
   formatPaperOpsCommand,
   type PaperOpsCommand,
 } from "./paper-ops-intent.js";
+import {
+  buildPreMarketDisplayContract,
+  isPreMarketDisplayNode,
+} from "./pre-market-display-contract.js";
 
 export type PlannedAgentIntent = TurnPlanIntent;
 
@@ -95,6 +111,21 @@ export interface FulfilTurnPlanInput {
   technicals?: AskTechnical[];
   indices?: AskIndex[];
   webSearch?: AskWebSearchContext;
+  /** The maintained 100 高关注池 — required for pick_stocks (read-only 选股). */
+  watchlist?: PlanWatchlistEntry[];
+  /** Rich current 潜力股池 entries, usually loaded from memory/market/watchlists/potential_stocks.json. */
+  potentialStocks?: PotentialStockCandidate[];
+  /** Layer-1/2 categorized pool overview rendered during the last pool refresh. */
+  poolOverview?: string;
+  /** Current market phase label, e.g. 集合竞价 / 上午盘中. */
+  marketPhase?: string;
+  /** Explicit data health so manual SOP runs degrade honestly. */
+  dataHealth?: MarketDataHealth;
+  themeHeat?: ThemeHeatSummary;
+  dataCaveat?: string;
+  dragonTiger?: string;
+  holdingsMoneyFlow?: string;
+  todayFills?: string;
   now?: string;
 }
 
@@ -211,9 +242,124 @@ export async function fulfilTurnPlan(
     case "deep_research":
       return fulfilDeepResearch(plan, input, dependencies);
 
+    case "pick_stocks":
+      return fulfilPickStocks(input, dependencies);
+
     case "chat":
       return fulfilChat(input, dependencies);
   }
+}
+
+/**
+ * Read-only 选股: the model picks a shortlist (潜力股) + 待买/待卖 candidates from the maintained
+ * 100池 + current holdings via selectFunnelStage — and NOTHING is written. Every BUY is gated to
+ * the real pool keys / main-board, every output is a review-required proposal (executable:false).
+ * No account write, no order, no confirmation.
+ */
+async function fulfilPickStocks(
+  input: FulfilTurnPlanInput,
+  dependencies: AgentPlannerDependencies,
+): Promise<PlannedAgentTurnResult> {
+  if (!input.account) {
+    throw new AgentRouterError("尚无模拟盘账户，无法选股；请先初始化（例如：构建一个模拟盘账户）。");
+  }
+  const watchlist = input.watchlist ?? [];
+  const storedPotential = input.potentialStocks ?? [];
+  if (watchlist.length === 0 && storedPotential.length === 0) {
+    return {
+      intent: "pick_stocks",
+      reply:
+        "观察池现在是空的（还没换血/补池）。可以先说『模拟今天集合竞价节点』跑一次选股建池，或稍后再试。",
+      requiresConfirmation: false,
+    };
+  }
+
+  if (watchlist.length === 0 && storedPotential.length > 0) {
+    const analysis = await analyzePotentialStocks(
+      {
+        question: input.message,
+        candidates: storedPotential,
+        positions: input.positions,
+        poolOverview: input.poolOverview,
+        dataHealth: input.dataHealth,
+        webSearch: input.webSearch,
+        now: input.now,
+      },
+      { brainProvider: dependencies.brainProvider },
+    );
+
+    return {
+      intent: "pick_stocks",
+      reply: renderPotentialStockAnalysisReport(analysis.report),
+      requiresConfirmation: false,
+    };
+  }
+
+  const holdings = (input.positions ?? []).map((position) => ({
+    symbol: position.symbol,
+    market: position.market,
+    name: position.name,
+  }));
+  const selection = await selectFunnelStage(
+    {
+      accountId: input.account.accountId,
+      asOf: input.now ?? new Date().toISOString(),
+      watchlist100: watchlist,
+      holdings,
+      poolOverview: input.poolOverview,
+    },
+    { brainProvider: dependencies.brainProvider },
+  );
+  const analysis = await analyzePotentialStocks(
+    {
+      question: input.message,
+      candidates: candidatesFromShortlist({
+        shortlist: selection.shortlist10,
+        details: storedPotential,
+        positions: input.positions,
+        prices: input.prices,
+      }),
+      proposals: selection.proposals,
+      positions: input.positions,
+      poolOverview: input.poolOverview,
+      dataHealth: input.dataHealth,
+      webSearch: input.webSearch,
+      now: input.now,
+    },
+    { brainProvider: dependencies.brainProvider },
+  );
+
+  return {
+    intent: "pick_stocks",
+    reply: [
+      renderPotentialStockAnalysisReport({
+        ...analysis.report,
+        degraded: analysis.report.degraded || selection.degraded,
+      }),
+      renderPickStocksFooter(selection.proposals),
+    ]
+      .filter((part) => part.trim().length > 0)
+      .join("\n\n"),
+    requiresConfirmation: false,
+  };
+}
+
+function renderPickStocksFooter(
+  proposals: readonly TradeIntentReviewProposal[],
+): string {
+  const lines: string[] = [];
+  const buys = proposals.filter((proposal) => proposal.side === "BUY");
+  const sells = proposals.filter((proposal) => proposal.side === "SELL");
+  if (buys.length > 0) {
+    lines.push("待买候选（仅待复核，未下单）：");
+    buys.forEach((p) => lines.push(`· ${p.name ?? p.symbol}(${p.symbol})｜${p.rationale}`));
+  }
+  if (sells.length > 0) {
+    lines.push("待卖候选（仅待复核，未下单）：");
+    sells.forEach((p) => lines.push(`· ${p.name ?? p.symbol}(${p.symbol})｜${p.rationale}`));
+  }
+  lines.push("（以上为只读潜力股分析；未下单、未写账户。要模拟买卖请明确说“模拟买入/卖出”或跑对应 paper 节点。）");
+  return lines.join("\n");
 }
 
 /** Plan + fulfil in one call, for callers that already hold the turn context. */
@@ -396,6 +542,9 @@ async function fulfilChat(
       prices: input.prices,
       technicals: input.technicals,
       indices: input.indices,
+      watchlist: input.watchlist,
+      themeHeat: input.themeHeat,
+      dataHealth: input.dataHealth,
       webSearch: input.webSearch,
       history: input.history,
       now: input.now,
@@ -464,12 +613,15 @@ async function fulfilSop(
   const sop = buildCerebellumAlarmSopByType(entry.alarmType);
   const ask = await runAskOnce(
     {
-      question: buildSopQuestion(entry, sop),
+      question: buildSopQuestion(entry, sop, input),
       account: input.account,
       positions: input.positions ?? [],
       prices: input.prices,
       technicals: input.technicals,
       indices: input.indices,
+      watchlist: input.watchlist,
+      themeHeat: input.themeHeat,
+      dataHealth: input.dataHealth,
       webSearch: input.webSearch,
       history: input.history,
       now: input.now,
@@ -487,14 +639,34 @@ async function fulfilSop(
   };
 }
 
-function buildSopQuestion(entry: SopCatalogEntry, sop: CerebellumAlarmSop): string {
+function buildSopQuestion(
+  entry: SopCatalogEntry,
+  sop: CerebellumAlarmSop,
+  input: FulfilTurnPlanInput,
+): string {
   return [
     `请执行【${entry.title}】这个固定流程（SOP）。`,
     renderCerebellumAlarmSop(sop),
     `目标：${sop.objective}`,
     "安全边界：",
     ...sop.forbiddenActions.map((action) => `- ${action}`),
-    "请基于提供的账户、行情、技术指标和（若有）联网检索上下文，用简体中文产出该 SOP 要求的结论。",
+    "请基于提供的账户、行情、技术指标、观察池、数据健康和（若有）联网检索上下文，用简体中文产出该 SOP 要求的结论。",
+    ...(input.marketPhase && input.marketPhase.trim()
+      ? [`【当前行情阶段】${input.marketPhase.trim()}（据此理解现价语义：集合竞价价≠开盘价≠盘中价≠收盘价）。`]
+      : []),
+    ...(input.dataCaveat && input.dataCaveat.trim()
+      ? [`【数据来源声明】${input.dataCaveat.trim()}。必须在结论里如实说明，不得把降级/回放数据说成实时真实数据。`]
+      : []),
+    ...(input.poolOverview && input.poolOverview.trim()
+      ? [
+          `【观察池分类概览（确定性筛选，按类别）】\n${input.poolOverview.trim()}`,
+          "点评观察池时优先引用上面的分类、代码、封单、连板、题材、资金面和板块行；不得自行编造股票代码、板块或封单金额。",
+        ]
+      : []),
+    ...(input.holdingsMoneyFlow && input.holdingsMoneyFlow.trim() ? [input.holdingsMoneyFlow.trim()] : []),
+    ...(input.dragonTiger && input.dragonTiger.trim() ? [input.dragonTiger.trim()] : []),
+    ...(input.todayFills && input.todayFills.trim() ? [input.todayFills.trim()] : []),
+    ...(isPreMarketDisplayNode(entry.alarmType) ? [buildPreMarketDisplayContract()] : []),
     "直接给出明确结论与操作建议（模拟盘账户）。",
   ].join("\n");
 }

@@ -270,6 +270,7 @@ function maybePersistMarkToMarket(
 const EVENT_LABELS: Record<CerebellumEventType, string> = {
   price_surge: "急速拉升",
   price_drop: "急速跳水",
+  previous_high_breakout: "突破前高",
   position_stop_loss: "触及成本止损线",
   watchlist_price_surge: "自选股急涨",
   watchlist_price_drop: "自选股急跌",
@@ -279,6 +280,7 @@ const EVENT_LABELS: Record<CerebellumEventType, string> = {
 const EVENT_ACTIONS: Record<CerebellumEventType, string> = {
   price_surge: "短时急涨，注意追高风险。",
   price_drop: "短时急跌，注意下行风险。",
+  previous_high_breakout: "拉升突破前高，注意真假突破和追高风险。",
   position_stop_loss: "已触及成本止损线，关注是否减仓（盘中达 8% 会自动强平）。",
   watchlist_price_surge: "自选股异动，关注是否进入。",
   watchlist_price_drop: "自选股异动，关注下行风险。",

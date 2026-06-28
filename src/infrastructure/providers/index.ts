@@ -115,6 +115,13 @@ export {
   type UniverseProvider,
 } from "./eastmoney-universe-provider.js";
 export {
+  ConceptProviderError,
+  EastmoneyConceptProvider,
+  parseConceptList,
+  type ConceptBoard,
+  type EastmoneyConceptProviderOptions,
+} from "./eastmoney-concept-provider.js";
+export {
   BillboardProviderError,
   EastmoneyBillboardProvider,
   parseDragonTiger,

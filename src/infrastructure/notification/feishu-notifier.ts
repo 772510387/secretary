@@ -34,17 +34,17 @@ const DEFAULT_SEVERITY_ALLOWLIST: readonly NotificationSeverity[] = [
   "warning",
   "critical",
 ];
-const MAX_CONTENT_LENGTH = 2048;
+const MAX_FEISHU_MESSAGE_LENGTH = 1800;
+const FEISHU_CHUNK_PREFIX_RESERVE = 32;
 
 /**
  * Proactive one-way push notifier for Feishu (Lark) direct messages.
  *
- * Pushes a de-identified short summary of a NotificationEvent (severity / target /
- * summary / recommended action) to each configured open_id via an injected sender
- * (the daemon wires it to the Lark `im.message.create` API). It only sends a brief
- * redacted summary — never the full research body, account details, or secrets — and
- * it is a notifier, not a command channel: it cannot trigger trades, account writes,
- * rule overrides, or tool execution.
+ * Pushes a de-identified NotificationEvent report to each configured open_id via an
+ * injected sender (the daemon wires it to the Lark `im.message.create` API). Long
+ * reports are split into ordered text chunks so the operator sees the full alarm
+ * analysis instead of a truncated summary. It is a notifier, not a command channel:
+ * it cannot trigger trades, account writes, rule overrides, or tool execution.
  */
 export class FeishuNotifier implements ExternalNotificationNotifier {
   readonly channel = "feishu" as const;
@@ -74,20 +74,31 @@ export class FeishuNotifier implements ExternalNotificationNotifier {
       return this.result(event, "skipped", { output: "feishu_skipped no recipients configured" });
     }
 
-    const text = this.buildContent(event);
-    let sent = 0;
+    const messages = this.buildMessages(event);
+    let sentMessages = 0;
+    let fullySentRecipients = 0;
     const failures: string[] = [];
 
     for (const receiveId of this.recipients) {
-      try {
-        await this.sender({ receiveId, text });
-        sent += 1;
-      } catch (error) {
-        failures.push(`${receiveId}: ${error instanceof Error ? error.message : String(error)}`);
+      let sentForRecipient = 0;
+
+      for (let index = 0; index < messages.length; index += 1) {
+        try {
+          await this.sender({ receiveId, text: messages[index]! });
+          sentMessages += 1;
+          sentForRecipient += 1;
+        } catch (error) {
+          failures.push(`${receiveId}#${index + 1}: ${error instanceof Error ? error.message : String(error)}`);
+          break;
+        }
+      }
+
+      if (sentForRecipient === messages.length) {
+        fullySentRecipients += 1;
       }
     }
 
-    if (sent === 0) {
+    if (sentMessages === 0) {
       return this.result(event, "failed", {
         error: `feishu_send_failed: ${failures.join("; ")}`.slice(0, 1000),
       });
@@ -96,12 +107,12 @@ export class FeishuNotifier implements ExternalNotificationNotifier {
     return this.result(event, "sent", {
       output:
         failures.length > 0
-          ? `feishu_sent recipients=${sent}/${this.recipients.length} (partial)`
-          : `feishu_sent recipients=${sent}`,
+          ? `feishu_sent recipients=${fullySentRecipients}/${this.recipients.length} chunks=${messages.length} messages=${sentMessages} (partial)`
+          : `feishu_sent recipients=${fullySentRecipients} chunks=${messages.length}`,
     });
   }
 
-  private buildContent(eventInput: NotificationEvent): string {
+  private buildMessages(eventInput: NotificationEvent): string[] {
     const event = redactNotificationEvent(eventInput);
     const target = formatTarget(event);
     const lines = [
@@ -112,7 +123,7 @@ export class FeishuNotifier implements ExternalNotificationNotifier {
       `来源：${formatSource(event)}`,
       `时间：${beijingDateTimeLabel(event.occurredAt)}`,
     ];
-    return redactNotificationText(lines.filter(Boolean).join("\n")).slice(0, MAX_CONTENT_LENGTH);
+    return chunkFeishuText(redactNotificationText(lines.filter(Boolean).join("\n")));
   }
 
   private result(
@@ -136,6 +147,44 @@ export class FeishuNotifier implements ExternalNotificationNotifier {
     }
     return value.toISOString();
   }
+}
+
+function chunkFeishuText(text: string): string[] {
+  const normalized = text.trim();
+
+  if (normalized.length <= MAX_FEISHU_MESSAGE_LENGTH) {
+    return [normalized];
+  }
+
+  const bodyMax = MAX_FEISHU_MESSAGE_LENGTH - FEISHU_CHUNK_PREFIX_RESERVE;
+  const bodies: string[] = [];
+  let rest = normalized;
+
+  while (rest.length > bodyMax) {
+    const cut = findChunkCut(rest, bodyMax);
+    bodies.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+
+  if (rest.length > 0) {
+    bodies.push(rest);
+  }
+
+  return bodies.map((body, index) => `（${index + 1}/${bodies.length}）\n${body}`);
+}
+
+function findChunkCut(text: string, max: number): number {
+  const floor = Math.floor(max * 0.6);
+
+  for (const marker of ["\n", "。", "；", "，", " "] as const) {
+    const index = text.lastIndexOf(marker, max);
+
+    if (index >= floor) {
+      return index + marker.length;
+    }
+  }
+
+  return max;
 }
 
 function formatSource(event: NotificationEvent): string {

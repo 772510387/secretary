@@ -18,6 +18,7 @@ export const turnPlanIntentSchema = z.enum([
   "chat",
   "run_sop",
   "deep_research",
+  "pick_stocks",
   "capabilities",
   "reset_paper",
   "seed_paper",
@@ -66,7 +67,12 @@ export interface BuildTurnPlannerBrainInput {
 
 /** Intents whose fulfilment needs the (networked) account + market context. */
 export function turnPlanNeedsContext(intent: TurnPlanIntent): boolean {
-  return intent === "chat" || intent === "run_sop" || intent === "deep_research";
+  return (
+    intent === "chat" ||
+    intent === "run_sop" ||
+    intent === "deep_research" ||
+    intent === "pick_stocks"
+  );
 }
 
 /**
@@ -93,6 +99,7 @@ export function buildTurnPlannerBrainInput(input: BuildTurnPlannerBrainInput): B
     "- chat：需要看数据的问答——行情、大盘、个股、持仓、仓位、风险、盈亏、操作建议、趋势研判等。",
     "- run_sop：用户想要某个固定流程（复盘、盘前计划、风险扫描等），从下面的 SOP 清单里按含义选一个，并在 sopName 里填它的 name。",
     "- deep_research：用户想要对股票做深度/完整研判、是否买卖、下周/未来操作策略、要不要加减仓等需要认真分析的问题。这会调度多智能体团队（行情/基本面/消息面 + 多空辩论 + 风控），比 chat 重得多。若用户点名了某只股票，把它的 6 位代码填进 symbol；没点名就留空（默认分析持仓）。",
+    "- pick_stocks：用户想【选股】——从全市场100高关注池里挑潜力股、或问\"现在买什么/选几支/推荐潜力股/帮我选股/潜力股池深度分析\"。这会跑确定性漏斗选股(模型只在已筛好的100池里点名候选)，并生成一篮子潜力股深度分析；只读、不下单、不写账户。它和 deep_research 的区别：deep_research 是【深挖某一只】的完整研判；pick_stocks 是【从池子里挑一篮子】的选股推荐/潜力股池报告。和 chat 的区别：chat 是问答/点评，pick_stocks 是明确要候选名单或潜力股池报告。",
     "- capabilities：用户在问“有什么能力 / 怎么用 / 支持什么”。",
     "- reset_paper：用户想清空 / 重置模拟盘账户数据。requiresConfirmation 必须为 true。",
     "- seed_paper：用户想新建 / 构建模拟盘账户；若提到金额，填 initialCash（单位：元）。requiresConfirmation 必须为 true。",
@@ -106,6 +113,7 @@ export function buildTurnPlannerBrainInput(input: BuildTurnPlannerBrainInput): B
     "- 用户明确要求“模拟/重演/补跑昨天或某日操作”，或“把某日的流程走一遍/跑一遍/过一遍（尤其带‘落库/落盘/写库/数据库’）”时用 paper_ops，并把那天解析进 replayDate；复合说法如“重演昨天、更新数据库、再模拟今天”也用 paper_ops，且 requiresConfirmation=true。只是问“昨天怎么操作/昨天复盘”（没有要你去跑/落库）时不要用 paper_ops。",
     "- 用户想要某个流程化的复盘/计划/扫描时用 run_sop 并选最贴近的 sopName；拿不准就用 chat。",
     "- 需要‘深度分析/完整研判/该不该买卖/下周或未来怎么操作/要不要加减仓’这种要认真分析的问题用 deep_research；只是随口看一眼盘面、快速点评用 chat。",
+    "- 用户明确要‘选股/挑几支/推荐潜力股/潜力股池深度分析/现在买什么/从池子里选’这种要一份候选名单或一篮子报告的，用 pick_stocks（只读漏斗选股，不下单不写账户）；问‘为什么看好某只/帮我深挖某只’用 deep_research；只是闲聊点评用 chat。",
     "- 纯打招呼/寒暄/闲聊（如“你好”“在吗”“你是谁”）用 smalltalk，不要当成看盘问题。",
     "- 涉及行情/持仓/个股/操作的才用 chat；其余拿不准时优先 smalltalk。",
     "- smalltalk 时，在 reply 字段直接写好要发给用户的回复：像真人一样自然、简短（1-2 句），可顺带提示能做什么（例如“想看盘就说‘现在盘面怎么样’，复盘就说‘来个收盘复盘’”）。reply 必须是直接对用户说的话，不要写成对你自己的指令或第三人称说明。",
@@ -114,7 +122,7 @@ export function buildTurnPlannerBrainInput(input: BuildTurnPlannerBrainInput): B
       : "",
     "",
     "把路由结果放进输出 JSON 的 structured 字段，结构如下（只填用得到的键）：",
-    '{"intent":"smalltalk|chat|run_sop|deep_research|capabilities|reset_paper|seed_paper|paper_ops","sopName":"<run_sop 时填>","symbol":"<deep_research 且点名个股时填 6 位代码>","initialCash":<seed_paper 且有金额时填数字>,"replayDate":"<paper_ops 可选 YYYY-MM-DD>","simulateDate":"<paper_ops 可选 YYYY-MM-DD>","archiveDate":"<paper_ops 可选 YYYY-MM-DD>","reply":"<smalltalk 时：直接发给用户的回复>","requiresConfirmation":true|false,"confirmationReason":"<需确认时一句话>","routeReason":"<一句话说明为什么这样路由>"}',
+    '{"intent":"smalltalk|chat|run_sop|deep_research|pick_stocks|capabilities|reset_paper|seed_paper|paper_ops","sopName":"<run_sop 时填>","symbol":"<deep_research 且点名个股时填 6 位代码>","initialCash":<seed_paper 且有金额时填数字>,"replayDate":"<paper_ops 可选 YYYY-MM-DD>","simulateDate":"<paper_ops 可选 YYYY-MM-DD>","archiveDate":"<paper_ops 可选 YYYY-MM-DD>","reply":"<smalltalk 时：直接发给用户的回复>","requiresConfirmation":true|false,"confirmationReason":"<需确认时一句话>","routeReason":"<一句话说明为什么这样路由>"}',
     "summary 字段填一句话中文说明你的判断即可。",
     "",
     input.history && input.history.trim() ? `【最近对话，供理解指代】\n${input.history.trim()}` : "",

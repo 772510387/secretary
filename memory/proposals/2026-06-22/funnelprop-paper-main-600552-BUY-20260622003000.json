@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-600552-BUY-20260622003000",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260622003000",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "600552",
+  "market": "SSE",
+  "name": "凯盛科技",
+  "side": "BUY",
+  "quantity": 300,
+  "limitPrice": 23.32,
+  "currency": "CNY",
+  "rationale": "rank=4；可执行买入候选中rank第二高，且trend=uptrend、rangePosition60=0.902715（近60日高位）；300股@23.32≈6996元，符合执行条件",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-22T00:30:00.000Z",
+  "updatedAt": "2026-06-22T00:30:00.000Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 6996
+  }
+}

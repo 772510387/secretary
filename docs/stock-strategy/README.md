@@ -23,3 +23,4 @@
 | [trading-day-simulation.md](trading-day-simulation.md) | 交易日模拟（节点逐格复盘）：openclaw 样本=叙述式幻觉，secretary 接地等价物现状(~80%)+落地方案 | 2026-06-25 | 已落盘；老板选定方案 A（接分时源） |
 | [intraday-minute-data-source.md](intraday-minute-data-source.md) | 分时（分钟级）数据源可行性：方案 A 接线点+硬限制（免费腾讯端点只给当天，历史日要录制器；竞价段9:15-9:25无源） | 2026-06-25 | 已落盘；范围被 market-data-source-matrix 收缩（历史不要分钟） |
 | [market-data-source-matrix.md](market-data-source-matrix.md) | 行情数据源矩阵（粒度×时间跨度，含付费口径）：当日分时免费、历史只要时/日/周/月；周月K同腾讯端点白捡、60min免费(BaoStock)或付费(Tushare 2000元/年 HTTP) | 2026-06-25 | ✅已定：60min走免费BaoStock；日/周/月K免费腾讯 |
+| [project-sop-map.md](project-sop-map.md) | 项目 SOP 总图：数据流向 / 闹钟 / 业务线能力链路与迭代判断 | 2026-06-27 | 已落盘 |

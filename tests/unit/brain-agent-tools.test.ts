@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPaperAgentTools,
   inferMarket,
+  type OperationReviewContext,
   type PaperAgentToolDeps,
   type PaperOrderOutcome,
   type PaperPortfolioView,
@@ -64,6 +65,24 @@ describe("buildPaperAgentTools", () => {
     expect(names).toContain("get_technicals");
   });
 
+  it("exposes market intelligence read tools only when their deps exist", () => {
+    const names = buildPaperAgentTools(baseDeps()).specs.map((spec) => spec.name);
+    expect(names).not.toContain("get_market_overview");
+    expect(names).not.toContain("query_watchlist");
+    expect(names).not.toContain("get_auction_board");
+
+    const withMarket = buildPaperAgentTools(
+      baseDeps({
+        getMarketOverview: () => ({ ok: true, watchlistCount: 100, poolOverview: "观察池 100 只" }),
+        queryWatchlist: () => ({ ok: true, total: 0, returned: 0, entries: [] }),
+        getAuctionBoard: () => ({ ok: true, total: 0, returned: 0, entries: [] }),
+      }),
+    ).specs.map((spec) => spec.name);
+    expect(withMarket).toContain("get_market_overview");
+    expect(withMarket).toContain("query_watchlist");
+    expect(withMarket).toContain("get_auction_board");
+  });
+
   it("get_portfolio returns the account view", async () => {
     const tools = buildPaperAgentTools(baseDeps());
     const result = await tools.execute(call("get_portfolio", {}));
@@ -124,6 +143,68 @@ describe("buildPaperAgentTools", () => {
     expect(parsed.found).toBe(false);
   });
 
+  it("query_watchlist forwards structured filters and stays read-only", async () => {
+    let received: unknown;
+    const tools = buildPaperAgentTools(
+      baseDeps({
+        queryWatchlist: (query) => {
+          received = query;
+          return {
+            ok: true,
+            total: 1,
+            returned: 1,
+            entries: [
+              {
+                symbol: "600584",
+                market: "SSE",
+                name: "长电科技",
+                priority: "high",
+                rank: 1,
+                reason: "热门题材成分",
+                hotTheme: "先进封装",
+              },
+            ],
+          };
+        },
+      }),
+    );
+    const result = await tools.execute(call("query_watchlist", { priority: "high", theme: "封装", limit: 5 }));
+    const parsed = JSON.parse(result.content) as { ok: boolean; result: { returned: number } };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.result.returned).toBe(1);
+    expect(received).toEqual({ priority: "high", theme: "封装", limit: 5 });
+    expect(result.effect).toBeUndefined();
+  });
+
+  it("get_auction_board returns seal-board facts read-only", async () => {
+    const tools = buildPaperAgentTools(
+      baseDeps({
+        getAuctionBoard: () => ({
+          ok: true,
+          total: 1,
+          returned: 1,
+          entries: [
+            {
+              symbol: "600584",
+              market: "SSE",
+              name: "长电科技",
+              priority: "high",
+              reason: "涨停",
+              sealAmount: 877_000_000,
+              sealVolumeLots: 84205,
+              isOneWordBoard: true,
+            },
+          ],
+        }),
+      }),
+    );
+    const result = await tools.execute(call("get_auction_board", { oneWordOnly: true, minSealAmount: 100_000_000 }));
+    const parsed = JSON.parse(result.content) as { ok: boolean; result: { entries: Array<{ isOneWordBoard: boolean }> } };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.result.entries[0]?.isOneWordBoard).toBe(true);
+    expect(result.effect).toBeUndefined();
+  });
+
   it("hides memory tools unless their deps are provided (MEM-05/07)", () => {
     const names = buildPaperAgentTools(baseDeps()).specs.map((spec) => spec.name);
     expect(names).not.toContain("search_memory");
@@ -137,6 +218,70 @@ describe("buildPaperAgentTools", () => {
     ).specs.map((spec) => spec.name);
     expect(withMemory).toContain("search_memory");
     expect(withMemory).toContain("remember");
+  });
+
+  it("exposes strategy knowledge as a read-only fact pack when wired", async () => {
+    const tools = buildPaperAgentTools(
+      baseDeps({
+        getStrategyKnowledge: (query) => ({
+          ok: true,
+          summaryText: `策略 ${query.strategyId ?? "all"}`,
+          strategyCount: 5,
+          caseCount: 2,
+          decisionCount: 2,
+        }),
+      }),
+    );
+    expect(tools.specs.map((spec) => spec.name)).toContain("get_strategy_knowledge");
+
+    const result = await tools.execute(call("get_strategy_knowledge", { strategyId: "BUY-001", maxCases: 3 }));
+    const parsed = JSON.parse(result.content) as { ok: boolean; result: { summaryText: string; strategyCount: number } };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.result.summaryText).toBe("策略 BUY-001");
+    expect(parsed.result.strategyCount).toBe(5);
+    expect(result.effect).toBeUndefined();
+  });
+
+  it("get_operation_review returns an operation evidence pack read-only", async () => {
+    let received: unknown;
+    const review: OperationReviewContext = {
+      tradingDate: "2026-06-24",
+      symbol: "000636",
+      generatedAt: "2026-06-24T08:00:00.000Z",
+      facts: {
+        tradeCount: 1,
+        buyCount: 0,
+        sellCount: 1,
+        buyAmount: 0,
+        sellAmount: 11689.15,
+        symbols: ["000636"],
+        hasMatchedProposal: true,
+      },
+      trades: [],
+      orders: [],
+      proposals: [],
+      plans: [],
+      reports: [],
+      auditEvents: [],
+      dataGaps: [],
+      rendered: "000636 早盘卖出 200 股证据包",
+    };
+    const tools = buildPaperAgentTools(
+      baseDeps({
+        getOperationReview: (query) => {
+          received = query;
+          return { ok: true, review };
+        },
+      }),
+    );
+
+    expect(tools.specs.map((spec) => spec.name)).toContain("get_operation_review");
+    const result = await tools.execute(call("get_operation_review", { tradingDate: "2026-06-24", symbol: "000636" }));
+    const parsed = JSON.parse(result.content) as { ok: boolean; review: OperationReviewContext };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.review.rendered).toContain("卖出 200 股");
+    expect(received).toEqual({ tradingDate: "2026-06-24", symbol: "000636" });
+    expect(result.effect).toBeUndefined();
   });
 
   it("remember writes a note but is NOT a tradeable mutation", async () => {
@@ -170,6 +315,36 @@ describe("buildPaperAgentTools", () => {
     expect(parsed.ok).toBe(true);
     expect(parsed.count).toBe(1);
     expect(result.effect).toBeUndefined(); // read-only: no effect
+  });
+
+  it("get_feedback_audit returns an accountability fact pack read-only", async () => {
+    const tools = buildPaperAgentTools(
+      baseDeps({
+        getFeedbackAudit: (query) => ({
+          ok: true,
+          generatedAt: "2026-06-24T02:00:00.000Z",
+          query: query.query,
+          range: { from: query.from ?? "2026-06-22", to: query.to ?? "2026-06-23", truncated: false },
+          summary: { daysMissingFullPool: ["2026-06-23"], totalProposals: 1 },
+          findings: ["存在计划/提案但无完整 100 池证据"],
+          evidenceRefs: ["market/pool-snapshots/2026-06-22.jsonl"],
+          answerGuidance: ["先给证据"],
+        }),
+      }),
+    );
+
+    expect(tools.specs.map((spec) => spec.name)).toContain("get_feedback_audit");
+    const result = await tools.execute(
+      call("get_feedback_audit", {
+        query: "上周为什么只操作了两支线",
+        from: "2026-06-22",
+        to: "2026-06-23",
+      }),
+    );
+    const parsed = JSON.parse(result.content) as { ok: boolean; factPack: { findings: string[] } };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.factPack.findings[0]).toContain("无完整 100 池证据");
+    expect(result.effect).toBeUndefined();
   });
 });
 

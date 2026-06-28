@@ -37,6 +37,7 @@ T010 已实现 `MarketSentinel` 单次检查，只做纯函数判断，不做常
 默认规则：
 
 - 60 秒内涨跌幅绝对值达到 2% 触发 `price_surge` 或 `price_drop`，严重级别 `warning`。
+- 常驻哨兵可显式开启“突破前高”红线：当前价突破上一 tick 的日内前高时触发 `previous_high_breakout`，严重级别 `warning`，并受同一冷却账本约束。
 - 持仓相对成本价亏损达到 8% 触发 `position_stop_loss`，严重级别 `critical`。
 - 高优先级自选股日内涨跌幅达到 3% 触发 `watchlist_price_surge` 或 `watchlist_price_drop`，接近 `observePrice` 1% 内触发 `watchlist_observe_price_near`。
 - 冷却键按 `eventType:market:symbol` 区分，默认冷却 10 分钟。
@@ -74,9 +75,9 @@ T010 已实现 `MarketSentinel` 单次检查，只做纯函数判断，不做常
 - `08:30` 盘前计划，工作日。
 - `09:15` 集合竞价观察，工作日。
 - `09:25` 开盘前确认，工作日。
-- `10:00` 早盘第一次回顾，工作日。
+- `10:30` 早盘必报回顾，工作日。
 - `11:30` 午间回顾，工作日。
-- `14:00` 午后风险扫描，工作日。
+- `13:30` 午后跳水风险必报扫描，工作日。
 - `14:30` 尾盘预案，工作日。
 - `15:00` 收盘快照，工作日。
 - `15:30` 盘后扩展复盘，工作日。
@@ -114,13 +115,13 @@ const task = buildCerebellumAlarmTask({
 
 上下文包只保存路径、摘要和必要元数据；`apiKey`、`token`、`password`、`secret` 等元数据会被脱敏，指向 secrets 或 `.env` 的路径会被拒绝。小脑闹钟任务固定 `toolExecutionAllowed=false`、`brokerSubmissionAllowed=false`、`accountWriteAllowed=false`、`liveTradingAllowed=false`。R2-1 只生成任务对象和上下文包，不启动 daemon、不联网、不接 broker。
 
-## R2-2 10 分钟静默巡航
+## R2-2 链式静默巡航
 
-已新增 `buildSilentPatrolTask(input)` 和 `isSilentPatrolDue(now)`。默认规则为北京时间工作日 `09:30-11:30`、`13:00-15:00`，每 10 分钟生成一次 `silent_patrol` 任务。
+已新增 `buildSilentPatrolTask(input)` 和 `isSilentPatrolDue(now)`。默认规则按 `docs/display/daily-alarm-list.md` 的显式北京时间槽位生成 `silent_patrol` 任务：`09:30/09:35/09:40/09:45/10:00/10:10/10:20/10:40/10:50/11:00/11:10/11:20` 和 `13:00/13:10/13:20/13:40/13:50/14:00/14:10/14:20/14:40/14:50`。`10:30`、`13:30`、`14:30`、`15:00` 等必报点由固定闹钟矩阵处理，不重复作为静默巡航点。
 
-- 不在交易时段内，或分钟不在 10 分钟间隔上时，返回 `due=false` 和跳过原因。
+- 不在交易时段内，或分钟不在显式巡航槽位上时，返回 `due=false` 和跳过原因。
 - 在交易时段内但没有异常时，任务状态为 `silent`，`wakeBrain=false`，只保留巡航 metadata 和冷却状态。
-- 出现 `MarketSentinel` 异常时，任务状态为 `pending_events`，输出待处理事件和审计 metadata，但 `brainProviderCalled=false`，不调用 LLM、不接 broker、不写账户。
+- 出现 `MarketSentinel` 异常时，任务状态为 `pending_events`，输出待处理事件和审计 metadata，但 `brainProviderCalled=false`，不调用 LLM、不接 broker、不写账户。巡航默认使用 3% 槽位波动阈值、21 分钟窗口、±5% 绝对红线和突破前高红线，以覆盖 10:20 → 10:40 这类跳过必报点后的间隔。
 - 冷却状态继续由调用方持久化并在下次传入；本领域函数只返回 `nextCooldownState`，不会直接读写文件。
 
 ## R2-3 闹钟 SOP 上下文模板

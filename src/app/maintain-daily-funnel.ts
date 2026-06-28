@@ -5,7 +5,11 @@ import {
   type PlanPendingOrder,
   type PlanWatchlistEntry,
 } from "../domain/plan/index.js";
-import { notificationEventSchema, type NotificationEvent } from "../domain/notification/index.js";
+import {
+  NOTIFICATION_SUMMARY_MAX_LENGTH,
+  notificationEventSchema,
+  type NotificationEvent,
+} from "../domain/notification/index.js";
 import type { TradeIntentReviewProposal } from "../domain/memory/index.js";
 import type { JsonValue } from "../domain/shared/index.js";
 import {
@@ -35,6 +39,8 @@ export interface MaintainDailyFunnelInput {
   holdings: FunnelHolding[];
   autoPaper?: boolean;
   brainContext?: Record<string, JsonValue>;
+  /** 观察池分类概览 (real signals) — fed to the model so selection rationale cites concrete signals. */
+  poolOverview?: string;
   executionConstraints?: FunnelExecutionConstraints;
   shortlistSize?: number;
 }
@@ -72,6 +78,7 @@ export async function maintainDailyFunnel(
       watchlist100: input.watchlist100,
       holdings: input.holdings,
       brainContext: input.brainContext,
+      poolOverview: input.poolOverview,
       executionConstraints: input.executionConstraints,
       shortlistSize: input.shortlistSize,
     },
@@ -132,6 +139,14 @@ function buildFunnelNotification(
       : `模型${verb}：买入 ${buys.length} 笔、卖出 ${sells.length} 笔；${proposals
           .map(formatProposalSummary)
           .join("；")}`;
+  // 潜力股名单 + 逐只选股理由 — the boss asked "why these stocks"; surface it, don't hide behind a count.
+  const shortlistLine =
+    plan.shortlist10.length === 0
+      ? ""
+      : `\n潜力股(为何入选)：${plan.shortlist10
+          .slice(0, SHORTLIST_PUSH_LIMIT)
+          .map((entry) => `${entry.name}(${entry.symbol})｜${clip(entry.rationale, 60)}`)
+          .join("；")}${plan.shortlist10.length > SHORTLIST_PUSH_LIMIT ? `…等${plan.shortlist10.length}支` : ""}`;
 
   return notificationEventSchema.parse({
     eventId: `funnel-${plan.tradingDate}-${plan.alarmType}-seq${plan.nodeSequence}`.slice(0, 128),
@@ -139,9 +154,9 @@ function buildFunnelNotification(
     severity: "info",
     source: { type: "scheduler", id: "daily-funnel" },
     target: { type: "system" },
-    summary: `【选股漏斗·${plan.alarmType}】候选 ${plan.shortlist10.length} 支；持仓 ${holdingCount} 只；${orderLine}`.slice(
-      0,
-      1000,
+    summary: clip(
+      `【选股漏斗·${plan.alarmType}】候选 ${plan.shortlist10.length} 支；持仓 ${holdingCount} 只；${orderLine}${shortlistLine}`,
+      NOTIFICATION_SUMMARY_MAX_LENGTH,
     ),
     recommendedAction:
       proposals.length === 0
@@ -150,8 +165,27 @@ function buildFunnelNotification(
           ? "后端已按现金、仓位、T+1、100股、主板规则成交并写入账本。"
           : "非 A 股连续交易时段，先出待买卖清单，开盘后自动成交。",
     channels: ["feishu"],
-    metadata: { funnel: true, planId: plan.planId, nodeSequence: plan.nodeSequence },
+    metadata: {
+      funnel: true,
+      planId: plan.planId,
+      nodeSequence: plan.nodeSequence,
+      // Full 潜力股名单+理由 in metadata so a richer renderer can show all, even when summary is clipped.
+      shortlist: plan.shortlist10.map((entry) => ({
+        symbol: entry.symbol,
+        name: entry.name,
+        rank: entry.rank ?? null,
+        rationale: entry.rationale,
+      })),
+    },
   });
+}
+
+/** How many 潜力股 to inline into the push summary (the rest go to metadata.shortlist). */
+const SHORTLIST_PUSH_LIMIT = 6;
+
+function clip(text: string, max: number): string {
+  const trimmed = text.trim();
+  return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`;
 }
 
 function formatProposalSummary(proposal: TradeIntentReviewProposal): string {

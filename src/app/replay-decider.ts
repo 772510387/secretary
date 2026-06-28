@@ -9,6 +9,7 @@ import type {
   Position,
   SnapshotTechnical,
 } from "../domain/portfolio/index.js";
+import { deriveStrategyIdsForStance } from "../domain/strategy/index.js";
 
 type DecisionTrend = SnapshotTechnical["trend"];
 
@@ -88,6 +89,12 @@ function buildStance(
   snapshot: PointInTimeSnapshot,
 ): DecisionStance {
   if (technical === null || technical.trend === "insufficient_data") {
+    const basis = {
+      trend: technical?.trend ?? "insufficient_data",
+      technicalAsOfDate: technical?.asOfDate ?? null,
+      rangePosition60: technical?.rangePosition60 ?? null,
+      closeVsMa20: null,
+    } as const;
     return {
       symbol: position.symbol,
       market: position.market,
@@ -95,12 +102,8 @@ function buildStance(
       bias: "hold",
       confidence: 0.2,
       rationale: "无足够 as-of 行情/指标，保持不动。",
-      basis: {
-        trend: technical?.trend ?? "insufficient_data",
-        technicalAsOfDate: technical?.asOfDate ?? null,
-        rangePosition60: technical?.rangePosition60 ?? null,
-        closeVsMa20: null,
-      },
+      basis,
+      strategyIds: deriveStrategyIdsForStance({ bias: "hold", basis }),
     };
   }
 
@@ -112,6 +115,12 @@ function buildStance(
 
   const { bias, confidence } = classifyReplayBias(technical.trend, technical.rangePosition60);
   const rationale = rationaleFor(bias, technical);
+  const basis = {
+    trend: technical.trend,
+    technicalAsOfDate: technical.asOfDate,
+    rangePosition60: technical.rangePosition60,
+    closeVsMa20,
+  } as const;
 
   return {
     symbol: position.symbol,
@@ -120,12 +129,8 @@ function buildStance(
     bias,
     confidence,
     rationale,
-    basis: {
-      trend: technical.trend,
-      technicalAsOfDate: technical.asOfDate,
-      rangePosition60: technical.rangePosition60,
-      closeVsMa20,
-    },
+    basis,
+    strategyIds: deriveStrategyIdsForStance({ bias, basis }),
   };
 }
 

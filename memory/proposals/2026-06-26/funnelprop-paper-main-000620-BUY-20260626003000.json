@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-000620-BUY-20260626003000",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260626003000",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "000620",
+  "market": "SZSE",
+  "name": "盈新发展",
+  "side": "BUY",
+  "quantity": 100,
+  "limitPrice": 3.11,
+  "currency": "CNY",
+  "rationale": "唯一可执行买入候选，已持仓且处于上升趋势，符合T+1可卖与现金约束",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-26T00:30:00.000Z",
+  "updatedAt": "2026-06-26T00:30:00.000Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 311
+  }
+}

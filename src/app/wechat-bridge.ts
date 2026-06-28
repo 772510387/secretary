@@ -22,6 +22,7 @@ import type {
 } from "./ask-portfolio.js";
 import type { PlanWatchlistEntry } from "../domain/plan/index.js";
 import type { ResearchRunner } from "./run-research-once.js";
+import type { PotentialStockCandidate } from "./potential-stock-analysis.js";
 
 export interface WeChatBridgeMessage {
   peerId: string;
@@ -36,12 +37,16 @@ export interface WeChatBridgeContext {
   indices?: AskIndex[];
   /** The maintained 100 高关注池 (fed to alarm nodes + the funnel). */
   watchlist?: PlanWatchlistEntry[];
+  /** Rich current 潜力股池 entries for full-depth basket analysis in chat. */
+  potentialStocks?: PotentialStockCandidate[];
   /** 观察池分类概览 (层级1 counts + 层级2 named picks) rendered at 换血 time. */
   poolOverview?: string;
   /** 龙虎榜 (主力净买卖) summary — fetched only for 盘后 review nodes. */
   dragonTiger?: string;
   /** 持仓资金面 (Sina 主力净流入 per held position) — the 北向 replacement signal. */
   holdingsMoneyFlow?: string;
+  /** 行情相位 label (集合竞价/上午盘中/…) so the brain knows what the current price means. */
+  marketPhase?: string;
   /** Explicit eye health so the brain degrades honestly instead of inventing data. */
   dataHealth?: MarketDataHealth;
   webSearch?: AskWebSearchContext;
@@ -65,6 +70,10 @@ export interface WeChatBridgeDependencies {
   allowDestructive: (peerId: string) => boolean;
   /** Reads fresh account/positions (+ optional prices/web) for the turn. */
   loadContext: (message: string) => WeChatBridgeContext | Promise<WeChatBridgeContext>;
+  /** Reads the maintained 100 高关注池 (cheap, disk-only) — needed for read-only 选股 (pick_stocks). */
+  loadWatchlist?: () => PlanWatchlistEntry[] | Promise<PlanWatchlistEntry[]>;
+  /** Reads the current rich 潜力股池 (cheap, disk-only) for deep basket analysis. */
+  loadPotentialStocks?: () => PotentialStockCandidate[] | Promise<PotentialStockCandidate[]>;
   /**
    * Optional deterministic fast-path source: reads stored account/positions from disk
    * (no network, no model). When present, plain status queries ("当前模拟盘信息") are
@@ -82,6 +91,8 @@ export interface WeChatBridgeDependencies {
   runConfirmedPaperOpsInBackground?: boolean;
   /** Optional: notify the user that a slow turn (look-up + analysis) is in progress. */
   onProgress?: (note: string) => void | Promise<void>;
+  /** Optional deterministic review builder for complete/grounded trading-day reviews. */
+  buildTradingDayReview?: (input: { message: string; now: string }) => string | Promise<string>;
   /** Optional test clock for deterministic relative-date commands such as "昨天". */
   now?: () => Date;
 }
@@ -165,6 +176,15 @@ export async function runWeChatBridgeTurn(
     abandonedNote = "（已放弃上一个待确认操作）\n";
   }
 
+  // Deterministic fast-path: a "完整/接地/交易日/逐节点复盘" must be grounded in the
+  // ledger, not routed to a generic model SOP that may invent missing numbers.
+  if (deps.buildTradingDayReview && detectGroundedTradingDayReviewRequest(text)) {
+    await deps.onProgress?.("📊 正在读取账本、成交和快照，生成接地交易日复盘…");
+    const reply = await deps.buildTradingDayReview({ message: text, now: turnNow });
+    recordTurn(state, message.peerId, { user: text, assistant: reply });
+    return { reply: `${abandonedNote}${reply}` };
+  }
+
   // Deterministic fast-path: a plain account-status lookup is answered from disk —
   // no model router, no networked context, no blocking analysis call (the source of
   // the "查个数据就超时" failure). 确定性归于代码.
@@ -211,7 +231,27 @@ export async function runWeChatBridgeTurn(
     );
   }
 
-  const context = needsContext ? await deps.loadContext(text) : {};
+  const context: WeChatBridgeContext = needsContext ? await deps.loadContext(text) : {};
+  // 选股 (pick_stocks) needs the 100池; load it cheaply (disk-only) when not already present.
+  if (plan.intent === "pick_stocks" && deps.loadWatchlist && !(context.watchlist && context.watchlist.length > 0)) {
+    try {
+      context.watchlist = await deps.loadWatchlist();
+    } catch {
+      // empty pool → fulfilPickStocks returns a friendly "池子为空" reply
+    }
+  }
+
+  if (
+    plan.intent === "pick_stocks" &&
+    deps.loadPotentialStocks &&
+    !(context.potentialStocks && context.potentialStocks.length > 0)
+  ) {
+    try {
+      context.potentialStocks = await deps.loadPotentialStocks();
+    } catch {
+      // optional enrichment only
+    }
+  }
   const result = await fulfilTurnPlan(
     plan,
     { message: text, confirmed: false, history, now: turnNow, ...context },
@@ -378,4 +418,13 @@ function isConfirmWord(text: string): boolean {
 
 function isCancelWord(text: string): boolean {
   return /^(取消|算了|不(用|要)?了?|别(了)?|否|先不|再想想|等等|再说|no|n|cancel|stop)[!！。.~\s]*$/i.test(text.trim());
+}
+
+function detectGroundedTradingDayReviewRequest(text: string): boolean {
+  const value = text.trim();
+  return (
+    /trading[-_ ]day[-_ ]review/i.test(value) ||
+    /(?:完整|接地|交易日|逐节点|逐格|全日).{0,12}(?:复盘|回顾|review)/iu.test(value) ||
+    /(?:复盘|回顾).{0,12}(?:完整|接地|交易日|逐节点|逐格|全日)/iu.test(value)
+  );
 }

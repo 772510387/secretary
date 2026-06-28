@@ -1,134 +1,134 @@
 {
   "category": "potential_stocks",
-  "updatedAt": "2026-06-25T06:30:02.866Z",
+  "updatedAt": "2026-06-22T00:30:00.000Z",
   "entries": [
     {
-      "symbol": "600487",
+      "symbol": "600118",
       "market": "SSE",
-      "name": "亨通光电",
+      "name": "中国卫星",
       "priority": "high",
-      "reason": "高关注池排名第5，海缆+海洋能源双轮驱动，业绩确定性较强",
+      "reason": "中国卫星涨停+10.00%封单1.2亿，位列高关注池第2名，属航天装备Ⅱ板块龙头（领涨+6.85%），主力净流入+19.73亿",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
       "metadata": {
-        "rank": 5,
+        "rank": 2,
         "fromFunnel": true
       }
     },
     {
-      "symbol": "600584",
+      "symbol": "600367",
       "market": "SSE",
-      "name": "长电科技",
+      "name": "红星发展",
       "priority": "high",
-      "reason": "高关注池排名第4，封测龙头，技术面强势且行业景气度回升",
+      "reason": "红星发展涨停+10.00%封单0.9亿，高关注池第7名，明确标注【玻璃基板】题材，日线uptrend（rangePosition60=0.8685）",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "metadata": {
+        "rank": 7,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "600552",
+      "market": "SSE",
+      "name": "凯盛科技",
+      "priority": "high",
+      "reason": "凯盛科技涨停+10.00%封单1.0亿，高关注池第4名，明确标注【玻璃基板】题材，日线呈uptrend（rangePosition60=0.9027）",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
       "metadata": {
         "rank": 4,
         "fromFunnel": true
       }
     },
     {
-      "symbol": "603986",
+      "symbol": "603650",
       "market": "SSE",
-      "name": "兆易创新",
+      "name": "彤程新材",
       "priority": "high",
-      "reason": "高关注池排名第1，半导体存储芯片龙头，技术面与资金关注度双优",
+      "reason": "彤程新材高关注池第9名，日线uptrend（rangePosition60=0.8862），属光刻胶核心标的，光学光电子板块领涨+6.97%（57只含5涨停）",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
-      "metadata": {
-        "rank": 1,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "000725",
-      "market": "SZSE",
-      "name": "京东方Ａ",
-      "priority": "high",
-      "reason": "高关注池排名第3，面板龙头，当前处于60日价格高位（0.95），趋势向上",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
-      "metadata": {
-        "rank": 3,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "002156",
-      "market": "SZSE",
-      "name": "通富微电",
-      "priority": "high",
-      "reason": "高关注池排名第10，先进封装+Chiplet核心标的，国产替代逻辑清晰",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
-      "metadata": {
-        "rank": 10,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "002185",
-      "market": "SZSE",
-      "name": "华天科技",
-      "priority": "high",
-      "reason": "高关注池排名第15，封测二线龙头，当前持仓且60日位置达0.975，趋势明确",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
-      "metadata": {
-        "rank": 15,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "002281",
-      "market": "SZSE",
-      "name": "光迅科技",
-      "priority": "high",
-      "reason": "高关注池排名第17，光通信核心器件供应商，受益于AI算力基建加速",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
-      "metadata": {
-        "rank": 17,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "002371",
-      "market": "SZSE",
-      "name": "北方华创",
-      "priority": "high",
-      "reason": "高关注池排名第22，半导体设备龙头，国产替代刚性需求支撑",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
-      "metadata": {
-        "rank": 22,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "002384",
-      "market": "SZSE",
-      "name": "东山精密",
-      "priority": "high",
-      "reason": "高关注池排名第9，PCB+FPC+软板一体化龙头，AI服务器配套主力",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
       "metadata": {
         "rank": 9,
         "fromFunnel": true
       }
     },
     {
-      "symbol": "002475",
+      "symbol": "000823",
       "market": "SZSE",
-      "name": "立讯精密",
+      "name": "超声电子",
       "priority": "high",
-      "reason": "高关注池排名第2，当前持仓且排名最高，消费电子+苹果链核心标的",
+      "reason": "超声电子高关注池第10名，日线uptrend（rangePosition60=0.9118），属光学光电子板块，该板块领涨+6.97%且含5只涨停",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-25T06:30:02.866Z",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
       "metadata": {
-        "rank": 2,
+        "rank": 10,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "001389",
+      "market": "SZSE",
+      "name": "广合科技",
+      "priority": "high",
+      "reason": "广合科技涨停+10.00%封单0.5亿，高关注池第5名，主力净流入+33.98亿（N惠科同批次新股），日线uptrend（rangePosition60=0.9517）",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "metadata": {
+        "rank": 5,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "001399",
+      "market": "SZSE",
+      "name": "N惠科",
+      "priority": "high",
+      "reason": "N惠科首日上市+315.02%，高关注池第1名，主力净流入+33.98亿，属玻璃基板与AI算力双题材，资金面最强标的",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "metadata": {
+        "rank": 1,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002119",
+      "market": "SZSE",
+      "name": "康强电子",
+      "priority": "high",
+      "reason": "康强电子涨停+10.01%封单0.7亿，高关注池第8名，主力净流入+34.63亿（京东方Ａ同题材联动），日线uptrend（rangePosition60=0.9444）",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "metadata": {
+        "rank": 8,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002129",
+      "market": "SZSE",
+      "name": "TCL中环",
+      "priority": "high",
+      "reason": "TCL中环涨停+10.03%封单1.9亿，高关注池第3名，主力净流入+21.88亿，属玻璃基板题材核心标的",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "metadata": {
+        "rank": 3,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "002354",
+      "market": "SZSE",
+      "name": "天娱数科",
+      "priority": "high",
+      "reason": "天娱数科涨停+9.96%封单0.5亿，高关注池第6名，属热门题材成分（昨日连板_含一字），日线sideways但封单强度支撑短期动能",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "metadata": {
+        "rank": 6,
         "fromFunnel": true
       }
     }

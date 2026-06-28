@@ -140,6 +140,7 @@ function auditEventForDecision(
       hitCount: decision.summary.hitCount,
       hitRate: decision.summary.hitRate,
       avgForwardReturn: decision.summary.avgForwardReturn,
+      strategyIds: uniqueStrategyIds(decision),
       executable: decision.executable,
       reviewRequired: decision.reviewRequired,
       filePath: path.normalize(options.decisionPath),
@@ -147,6 +148,14 @@ function auditEventForDecision(
       liveTrading: false,
     },
   });
+}
+
+function uniqueStrategyIds(decision: ScoredDecision): string[] {
+  return [
+    ...new Set(
+      decision.stances.flatMap((stance) => stance.strategyIds ?? []).filter((strategyId) => strategyId.trim() !== ""),
+    ),
+  ].sort();
 }
 
 function safeFileName(value: string): string {

@@ -54,6 +54,7 @@ import {
 } from "../../src/infrastructure/storage/index.js";
 import { formatNotificationForConsole } from "../../src/domain/notification/index.js";
 import {
+  DEFAULT_SILENT_PATROL_SLOT_MINUTES,
   DEFAULT_SILENT_PATROL_SESSIONS,
   checkMarketSentinel,
   toCerebellumBeijingTime,
@@ -416,8 +417,12 @@ export function buildLivePaperSentinelTask(
     // Cooldown survives restarts + is shared with the 10-min patrol via alert_state.json.
     initialCooldownState: alertStore.readCooldownState(),
     onCooldownState: (state) => alertStore.writeCooldownState(state),
-    // ±5% 绝对涨跌幅红线 + 8% 硬止损（opt-in here; the pure detector defaults off).
-    options: { positionStopLossRatio: config.risk.hardStopLossRatio, absoluteMoveThreshold: 0.05 },
+    // ±5% 绝对涨跌幅红线 + 突破前高 + 8% 硬止损（opt-in here; the pure detector defaults off).
+    options: {
+      positionStopLossRatio: config.risk.hardStopLossRatio,
+      absoluteMoveThreshold: 0.05,
+      previousHighBreakoutThreshold: 0,
+    },
     volumeOptions: { volumeSurgeRatio: 2, baselineWindow: 20 },
     getIndexSnapshots: () => indexProvider.getIndexes(),
     onEvents: async (events) => {
@@ -552,10 +557,10 @@ function pct(value: number): string {
 }
 
 /**
- * 链式静默巡航 (chained-silence cruise): a 10-minute-cadence radar over held + watchlist names.
+ * 链式静默巡航 (chained-silence cruise): a daily-alarm-list slot radar over held + watchlist names.
  *
- * Distinct from the 3-second sentinel (极速兜底). This is the 常规巡航: once per 10-minute slot
- * during sessions it compares now vs the prior slot (~10 min ago). If the max swing stays under
+ * Distinct from the 3-second sentinel (极速兜底). This is the 常规巡航: at the explicit
+ * 9:30/9:35/9:40/9:45/... slots it compares now vs the prior patrol slot. If the max swing stays under
  * 3% it prints a silent `[PULSE]` line and spends NO model tokens; if a name swings ≥3%, breaks the
  * ±5% absolute redline, or a holding hits the 8% stop, it pushes the alert (and the 3s sentinel /
  * its brain path handle deeper analysis). Cooldown is shared with the 3s sentinel via alert_state.json,
@@ -572,6 +577,7 @@ export function buildSilentPatrolDaemonTask(
   const quoteProvider = new TencentQuoteProvider({ timeoutMs: config.market.quoteTimeoutMs });
   const watchlistStore = new WatchlistMemoryStore({ memoryDir });
   const alertStore = new AlertStateStore({ memoryDir });
+  const slotMinutes = new Set(DEFAULT_SILENT_PATROL_SLOT_MINUTES);
   let previousQuotes: Awaited<ReturnType<typeof quoteProvider.getQuotes>> = [];
   let lastSlotKey: string | undefined;
 
@@ -608,8 +614,12 @@ export function buildSilentPatrolDaemonTask(
         return;
       }
 
-      // Fire at most once per 10-minute slot (robust to tick drift — no exact-second requirement).
-      const slotKey = `${beijing.date}-${Math.floor(beijing.minuteOfDay / 10)}`;
+      if (!slotMinutes.has(beijing.minuteOfDay)) {
+        return;
+      }
+
+      // Fire at most once per configured daily-alarm-list slot (robust to tick drift).
+      const slotKey = `${beijing.date}-${beijing.minuteOfDay}`;
       if (slotKey === lastSlotKey) {
         return;
       }
@@ -633,8 +643,9 @@ export function buildSilentPatrolDaemonTask(
         cooldownState,
         options: {
           rapidMoveThreshold: 0.03, // chained-silence: <3% over the 10-min slot stays silent
-          rapidMoveWindowMs: 11 * 60_000, // compare against ~10-min-ago quotes
+          rapidMoveWindowMs: 21 * 60_000, // compare against the prior patrol slot; some gaps skip fixed-report minutes
           absoluteMoveThreshold: 0.05,
+          previousHighBreakoutThreshold: 0,
           positionStopLossRatio: config.risk.hardStopLossRatio,
         },
       });

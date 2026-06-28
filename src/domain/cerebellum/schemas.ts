@@ -13,6 +13,7 @@ export const signalSeveritySchema = z.enum(["info", "watch", "warning", "critica
 export const cerebellumEventTypeSchema = z.enum([
   "price_surge",
   "price_drop",
+  "previous_high_breakout",
   "position_stop_loss",
   "watchlist_price_surge",
   "watchlist_price_drop",

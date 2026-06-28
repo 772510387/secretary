@@ -7,13 +7,15 @@ import type {
   AgentToolSpec,
 } from "../domain/brain/index.js";
 import type { JsonValue } from "../domain/shared/index.js";
+import type { OperationReviewToolQuery, OperationReviewToolResult } from "./operation-review-context.js";
 
 /**
  * The brain's hands & eyes, exposed as callable tools for the agentic loop.
  *
- * Read tools (get_portfolio / get_quote / get_technicals) are the "eye" — the model
- * pulls only what it needs on demand instead of being pre-stuffed with everything
- * (which is what used to blow the request size and time out).
+ * Read tools (get_portfolio / get_quote / get_technicals / market overview /
+ * watchlist / auction board) are the "eye" — the model pulls only what it needs on
+ * demand instead of being pre-stuffed with everything (which is what used to blow
+ * the request size and time out).
  *
  * Write tools (paper_buy / paper_sell) are the "hand" — because the whole surface is a
  * database-simulated paper account (no real broker is wired), the model is trusted to
@@ -96,6 +98,12 @@ export interface PaperOrderOutcome {
 export interface PaperAgentToolDeps {
   /** The "eye" over the ledger: current account valuation + positions. */
   loadPortfolio: () => Promise<PaperPortfolioView> | PaperPortfolioView;
+  /** Market-wide read-only overview from the maintained pool / market fact pack. */
+  getMarketOverview?: () => Promise<MarketOverviewToolResult> | MarketOverviewToolResult;
+  /** Structured query over the maintained 100 高关注池. */
+  queryWatchlist?: (query: WatchlistToolQuery) => Promise<WatchlistToolResult> | WatchlistToolResult;
+  /** Structured 封单 / 一字板 board from persisted pool metadata. */
+  getAuctionBoard?: (query: AuctionBoardToolQuery) => Promise<WatchlistToolResult> | WatchlistToolResult;
   /** The "eye" over the market: a live quote (null when unavailable). Omit to hide the tool. */
   getQuote?: (symbol: string) => Promise<PaperQuoteView | null> | PaperQuoteView | null;
   /** Daily technicals for a symbol (MA/trend/60-day range). Omit to hide the tool. */
@@ -114,6 +122,14 @@ export interface PaperAgentToolDeps {
   searchMemory?: (query: MemorySearchToolQuery) => Promise<MemorySearchToolResult> | MemorySearchToolResult;
   /** Guarded append-only memory write. Omit to hide the remember tool. */
   rememberNote?: (note: MemoryNoteToolInput) => Promise<MemoryNoteToolResult> | MemoryNoteToolResult;
+  /** Read-only named strategy knowledge base with derived metrics/cases. */
+  getStrategyKnowledge?: (
+    query: StrategyKnowledgeToolQuery,
+  ) => Promise<StrategyKnowledgeToolResult> | StrategyKnowledgeToolResult;
+  /** Read-only evidence pack for operation review / trade accountability Q&A. */
+  getOperationReview?: (query: OperationReviewToolQuery) => Promise<OperationReviewToolResult> | OperationReviewToolResult;
+  /** Read-only accountability fact pack for user complaints / missed coverage feedback. */
+  getFeedbackAudit?: (query: FeedbackAuditToolQuery) => Promise<FeedbackAuditToolResult> | FeedbackAuditToolResult;
 }
 
 export interface PaperOpsToolCommand {
@@ -144,6 +160,102 @@ export interface MemoryNoteToolResult {
   ok: boolean;
   path?: string;
   reason?: string;
+}
+
+export interface StrategyKnowledgeToolQuery {
+  strategyId?: string;
+  maxCases?: number;
+}
+
+export interface StrategyKnowledgeToolResult {
+  ok: boolean;
+  summaryText: string;
+  strategyCount?: number;
+  caseCount?: number;
+  decisionCount?: number;
+  strategies?: JsonValue;
+  cases?: JsonValue;
+  notes?: string[];
+}
+
+export interface FeedbackAuditToolQuery {
+  query?: string;
+  from?: string;
+  to?: string;
+}
+
+export interface FeedbackAuditToolResult {
+  ok: boolean;
+  generatedAt?: string;
+  query?: string;
+  range?: Record<string, JsonValue>;
+  summary?: Record<string, JsonValue>;
+  days?: JsonValue[];
+  findings?: string[];
+  evidenceRefs?: string[];
+  answerGuidance?: string[];
+  reason?: string;
+}
+
+export interface MarketOverviewToolResult {
+  ok: boolean;
+  asOf?: string;
+  marketPhase?: string;
+  watchlistCount?: number;
+  poolOverview?: string;
+  dataHealth?: Record<string, JsonValue>;
+  notes?: string[];
+}
+
+export interface WatchlistToolQuery {
+  priority?: "low" | "medium" | "high";
+  bucket?: string;
+  sector?: string;
+  theme?: string;
+  symbol?: string;
+  text?: string;
+  limit?: number;
+}
+
+export interface WatchlistToolEntry {
+  symbol: string;
+  market: string;
+  name: string;
+  priority: "low" | "medium" | "high";
+  rank?: number | null;
+  reason: string;
+  bucket?: string | null;
+  bucketLabel?: string | null;
+  sector?: string | null;
+  hotTheme?: string | null;
+  latestPrice?: number | null;
+  changePct?: number | null;
+  turnoverRate?: number | null;
+  amount?: number | null;
+  mainNetInflow?: number | null;
+  sealAmount?: number | null;
+  sealVolumeLots?: number | null;
+  isOneWordBoard?: boolean | null;
+  consecutiveLimitUpDays?: number | null;
+  dailyTrend?: string | null;
+  updatedAt?: string;
+}
+
+export interface WatchlistToolResult {
+  ok: boolean;
+  updatedAt?: string;
+  overview?: string;
+  total: number;
+  returned: number;
+  entries: WatchlistToolEntry[];
+  notes?: string[];
+}
+
+export interface AuctionBoardToolQuery {
+  side?: "limit_up" | "limit_down" | "both";
+  oneWordOnly?: boolean;
+  minSealAmount?: number;
+  limit?: number;
 }
 
 export interface PaperAgentTools {
@@ -185,7 +297,51 @@ const memoryNoteArgsSchema = z
   })
   .strict();
 
+const strategyKnowledgeArgsSchema = z
+  .object({
+    strategyId: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/).optional(),
+    maxCases: z.number().int().positive().max(20).optional(),
+  })
+  .strict();
+
+const feedbackAuditArgsSchema = z
+  .object({
+    query: z.string().trim().min(1).max(240).optional(),
+    from: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    to: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  })
+  .strict();
+
+const watchlistQueryArgsSchema = z
+  .object({
+    priority: z.enum(["low", "medium", "high"]).optional(),
+    bucket: z.string().trim().min(1).max(80).optional(),
+    sector: z.string().trim().min(1).max(80).optional(),
+    theme: z.string().trim().min(1).max(80).optional(),
+    symbol: z.string().trim().regex(/^\d{6}$/).optional(),
+    text: z.string().trim().min(1).max(80).optional(),
+    limit: z.number().int().positive().max(50).optional(),
+  })
+  .strict();
+
+const auctionBoardArgsSchema = z
+  .object({
+    side: z.enum(["limit_up", "limit_down", "both"]).optional(),
+    oneWordOnly: z.boolean().optional(),
+    minSealAmount: z.number().finite().nonnegative().optional(),
+    limit: z.number().int().positive().max(50).optional(),
+  })
+  .strict();
+
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const operationReviewArgsSchema = z
+  .object({
+    tradingDate: z.string().trim().regex(ISO_DATE_RE).optional(),
+    symbol: z.string().trim().regex(/^\d{6}$/).optional(),
+    includeRaw: z.boolean().optional(),
+  })
+  .strict();
+
 const paperOpsArgsSchema = z
   .object({
     replayDate: z.string().trim().regex(ISO_DATE_RE).optional(),
@@ -240,6 +396,65 @@ const MEMORY_NOTE_PARAM_SCHEMA: JsonValue = {
   additionalProperties: false,
 };
 
+const STRATEGY_KNOWLEDGE_PARAM_SCHEMA: JsonValue = {
+  type: "object",
+  properties: {
+    strategyId: { type: "string", description: "可选策略 ID，如 BUY-001；不填返回总览" },
+    maxCases: { type: "integer", description: "最近案例/决策条数上限，最多 20" },
+  },
+  required: [],
+  additionalProperties: false,
+};
+
+const FEEDBACK_AUDIT_PARAM_SCHEMA: JsonValue = {
+  type: "object",
+  properties: {
+    query: { type: "string", description: "用户的问责/反馈原文，例如“上周为什么只操作两支线，其他股票你确定看了吗”" },
+    from: { type: "string", description: "可选起始日期 YYYY-MM-DD；问上周时由模型换算后传入" },
+    to: { type: "string", description: "可选截止日期 YYYY-MM-DD" },
+  },
+  required: [],
+  additionalProperties: false,
+};
+
+const OPERATION_REVIEW_PARAM_SCHEMA: JsonValue = {
+  type: "object",
+  properties: {
+    tradingDate: { type: "string", description: "要复盘的交易日 YYYY-MM-DD；不填默认今天（北京时间）" },
+    symbol: { type: "string", description: "可选 6 位股票代码，只看某一只股票的操作" },
+    includeRaw: { type: "boolean", description: "可选；通常不需要，默认返回整理好的证据包" },
+  },
+  required: [],
+  additionalProperties: false,
+};
+
+const WATCHLIST_QUERY_PARAM_SCHEMA: JsonValue = {
+  type: "object",
+  properties: {
+    priority: { type: "string", enum: ["low", "medium", "high"], description: "按优先级筛选" },
+    bucket: { type: "string", description: "按池分类筛选，如 limit_up / hot_theme / hot_sector_leader / position" },
+    sector: { type: "string", description: "按板块/行业包含筛选，如 半导体、通信设备" },
+    theme: { type: "string", description: "按热门题材包含筛选，如 机器人、玻璃基板、AI" },
+    symbol: { type: "string", description: "6 位股票代码，精确查一只" },
+    text: { type: "string", description: "自由关键词，会匹配名称、代码、理由、板块、题材" },
+    limit: { type: "integer", description: "返回条数上限，最多 50" },
+  },
+  required: [],
+  additionalProperties: false,
+};
+
+const AUCTION_BOARD_PARAM_SCHEMA: JsonValue = {
+  type: "object",
+  properties: {
+    side: { type: "string", enum: ["limit_up", "limit_down", "both"], description: "涨停封单、跌停封单或两者" },
+    oneWordOnly: { type: "boolean", description: "只看一字板" },
+    minSealAmount: { type: "number", description: "最小封单金额（元），如 100000000 表示 1 亿" },
+    limit: { type: "integer", description: "返回条数上限，最多 50" },
+  },
+  required: [],
+  additionalProperties: false,
+};
+
 const ORDER_PARAM_SCHEMA: JsonValue = {
   type: "object",
   properties: {
@@ -263,6 +478,33 @@ export function buildPaperAgentTools(deps: PaperAgentToolDeps): PaperAgentTools 
       parameters: NO_PARAMS,
     },
   ];
+
+  if (deps.getMarketOverview) {
+    specs.push({
+      name: "get_market_overview",
+      description:
+        "只读查看当前市场概览：观察池层级概览、板块涨幅榜、全市场成交额、数据健康等。回答盘面/9:15/大盘/板块问题前先调用。",
+      parameters: NO_PARAMS,
+    });
+  }
+
+  if (deps.queryWatchlist) {
+    specs.push({
+      name: "query_watchlist",
+      description:
+        "只读查询100高关注池，可按优先级、分类(bucket)、板块、题材、股票代码或关键词筛选。用于回答观察池、高优先级、AI/机器人/板块相关股票等追问。",
+      parameters: WATCHLIST_QUERY_PARAM_SCHEMA,
+    });
+  }
+
+  if (deps.getAuctionBoard) {
+    specs.push({
+      name: "get_auction_board",
+      description:
+        "只读查看观察池里已落库的涨停/跌停封单榜和一字板，返回股票、题材、封单金额、封单量、连板天数。用于9:15/9:25竞价、一字板、封单追问。",
+      parameters: AUCTION_BOARD_PARAM_SCHEMA,
+    });
+  }
 
   if (deps.getQuote) {
     specs.push({
@@ -311,6 +553,33 @@ export function buildPaperAgentTools(deps: PaperAgentToolDeps): PaperAgentTools 
     });
   }
 
+  if (deps.getStrategyKnowledge) {
+    specs.push({
+      name: "get_strategy_knowledge",
+      description:
+        "只读查看成长式策略知识库：命名策略、strategy_id 决策引用、派生胜率、案例库和增长机制。回答策略库/战略/历史胜率/某条策略是否有效时先调用。",
+      parameters: STRATEGY_KNOWLEDGE_PARAM_SCHEMA,
+    });
+  }
+
+  if (deps.getOperationReview) {
+    specs.push({
+      name: "get_operation_review",
+      description:
+        "只读生成某交易日操作复盘证据包：成交时间线、订单、原始提案/理由、当日计划、盘后快照、报告和审计线索。回答“今天复盘/为什么买卖/卖了多少/早上是否卖出/这条价格线怎么定/时间戳是不是北京时间”等追问时先调用。",
+      parameters: OPERATION_REVIEW_PARAM_SCHEMA,
+    });
+  }
+
+  if (deps.getFeedbackAudit) {
+    specs.push({
+      name: "get_feedback_audit",
+      description:
+        "只读生成问题反馈/问责事实包：检查某日期范围内观察池100覆盖、池快照、计划、提案、成交、报告证据。用户质疑“你确定看了吗/为什么只操作几支/是不是漏看/上周复盘”时先调用。",
+      parameters: FEEDBACK_AUDIT_PARAM_SCHEMA,
+    });
+  }
+
   if (deps.executePaperOps) {
     specs.push({
       name: "run_paper_ops",
@@ -324,6 +593,12 @@ export function buildPaperAgentTools(deps: PaperAgentToolDeps): PaperAgentTools 
     switch (call.name) {
       case "get_portfolio":
         return runGetPortfolio(deps);
+      case "get_market_overview":
+        return runGetMarketOverview(deps);
+      case "query_watchlist":
+        return runQueryWatchlist(deps, call);
+      case "get_auction_board":
+        return runGetAuctionBoard(deps, call);
       case "get_quote":
         return runGetQuote(deps, call);
       case "get_technicals":
@@ -338,6 +613,12 @@ export function buildPaperAgentTools(deps: PaperAgentToolDeps): PaperAgentTools 
         return runSearchMemory(deps, call);
       case "remember":
         return runRememberNote(deps, call);
+      case "get_strategy_knowledge":
+        return runGetStrategyKnowledge(deps, call);
+      case "get_operation_review":
+        return runGetOperationReview(deps, call);
+      case "get_feedback_audit":
+        return runGetFeedbackAudit(deps, call);
       default:
         return errorResult(`unknown_tool:${call.name}`);
     }
@@ -349,6 +630,38 @@ export function buildPaperAgentTools(deps: PaperAgentToolDeps): PaperAgentTools 
 async function runGetPortfolio(deps: PaperAgentToolDeps): Promise<AgentToolResult> {
   const view = await deps.loadPortfolio();
   return okResult({ ok: true, portfolio: view as unknown as JsonValue });
+}
+
+async function runGetMarketOverview(deps: PaperAgentToolDeps): Promise<AgentToolResult> {
+  if (!deps.getMarketOverview) {
+    return errorResult("get_market_overview 不可用");
+  }
+  const overview = await deps.getMarketOverview();
+  return okResult({ ok: true, overview: overview as unknown as JsonValue });
+}
+
+async function runQueryWatchlist(deps: PaperAgentToolDeps, call: AgentToolCall): Promise<AgentToolResult> {
+  if (!deps.queryWatchlist) {
+    return errorResult("query_watchlist 不可用");
+  }
+  const args = parseArgs(watchlistQueryArgsSchema, call.arguments);
+  if (!args.ok) {
+    return errorResult(args.error);
+  }
+  const result = await deps.queryWatchlist(args.value);
+  return okResult({ ok: true, result: result as unknown as JsonValue });
+}
+
+async function runGetAuctionBoard(deps: PaperAgentToolDeps, call: AgentToolCall): Promise<AgentToolResult> {
+  if (!deps.getAuctionBoard) {
+    return errorResult("get_auction_board 不可用");
+  }
+  const args = parseArgs(auctionBoardArgsSchema, call.arguments);
+  if (!args.ok) {
+    return errorResult(args.error);
+  }
+  const result = await deps.getAuctionBoard(args.value);
+  return okResult({ ok: true, result: result as unknown as JsonValue });
 }
 
 async function runGetQuote(deps: PaperAgentToolDeps, call: AgentToolCall): Promise<AgentToolResult> {
@@ -520,6 +833,62 @@ async function runRememberNote(deps: PaperAgentToolDeps, call: AgentToolCall): P
     content: JSON.stringify({ ok: outcome.ok, path: outcome.path ?? null, reason: outcome.reason ?? null }),
     effect,
   };
+}
+
+async function runGetStrategyKnowledge(deps: PaperAgentToolDeps, call: AgentToolCall): Promise<AgentToolResult> {
+  if (!deps.getStrategyKnowledge) {
+    return errorResult("get_strategy_knowledge 不可用");
+  }
+  const args = parseArgs(strategyKnowledgeArgsSchema, call.arguments);
+  if (!args.ok) {
+    return errorResult(args.error);
+  }
+  const result = await deps.getStrategyKnowledge({
+    strategyId: args.value.strategyId,
+    maxCases: args.value.maxCases,
+  });
+  return okResult({
+    ok: result.ok,
+    result: result as unknown as JsonValue,
+  });
+}
+
+async function runGetOperationReview(deps: PaperAgentToolDeps, call: AgentToolCall): Promise<AgentToolResult> {
+  if (!deps.getOperationReview) {
+    return errorResult("get_operation_review 不可用");
+  }
+  const args = parseArgs(operationReviewArgsSchema, call.arguments);
+  if (!args.ok) {
+    return errorResult(args.error);
+  }
+  const result = await deps.getOperationReview({
+    tradingDate: args.value.tradingDate,
+    symbol: args.value.symbol,
+    ...(args.value.includeRaw !== undefined ? { includeRaw: args.value.includeRaw } : {}),
+  });
+  return okResult({
+    ok: result.ok,
+    review: result.review as unknown as JsonValue,
+  });
+}
+
+async function runGetFeedbackAudit(deps: PaperAgentToolDeps, call: AgentToolCall): Promise<AgentToolResult> {
+  if (!deps.getFeedbackAudit) {
+    return errorResult("get_feedback_audit 不可用");
+  }
+  const args = parseArgs(feedbackAuditArgsSchema, call.arguments);
+  if (!args.ok) {
+    return errorResult(args.error);
+  }
+  const result = await deps.getFeedbackAudit({
+    query: args.value.query,
+    from: args.value.from,
+    to: args.value.to,
+  });
+  return okResult({
+    ok: result.ok,
+    factPack: result as unknown as JsonValue,
+  });
 }
 
 function clipSummary(text: string): string {

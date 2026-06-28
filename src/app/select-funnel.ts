@@ -45,6 +45,9 @@ export interface SelectFunnelInput {
   holdings: FunnelHolding[];
   /** De-identified as-of context (candidate technicals etc.) fed to the model. */
   brainContext?: Record<string, JsonValue>;
+  /** 观察池分类概览 (层级1+层级2, with real signals: 涨停/封单/连板/资金面/题材/趋势) — fed so the
+   * model's selection rationale cites concrete deterministic signals instead of "排名靠前". */
+  poolOverview?: string;
   /** Backend-sized executable candidates. When present, orders are constrained to these lists. */
   executionConstraints?: FunnelExecutionConstraints;
   shortlistSize?: number;
@@ -211,10 +214,15 @@ async function askModel(
           "你只输出结构化判断，不下单、不写账户；数量和价格采用后端可执行候选里的预计算结果。",
           "在输出 JSON 的 structured 字段放:",
           '{"shortlist":[{"symbol":"6位代码","rationale":"一句话理由"}],"orders":[{"symbol":"6位代码","side":"BUY|SELL","rationale":"一句话理由"}]}',
+          ...(input.poolOverview && input.poolOverview.trim()
+            ? [`【观察池分类概览（确定性筛选，含真实信号：涨停/封单/连板/资金面/题材/趋势）】\n${input.poolOverview.trim()}`]
+            : []),
           `100 支高关注池:${poolList || "（空）"}`,
           `当前持仓:${heldList}`,
           `可执行买入候选:${buyCandidateList}`,
           `可执行卖出候选:${sellCandidateList}`,
+          "【理由硬约束】每只潜力股、每笔待买/待卖的 rationale 必须援引上面观察池概览里【该股的真实信号】(题材/主力净流入/涨停或连板/封单/日线趋势/涨幅榜位置等)至少一项，具体到数字或标签，严禁写“排名靠前/值得关注/情绪高”这类泛泛之词。",
+          "【防幻觉】只能解读上面已列出的池内标的与已给数字，严禁臆造池外代码，严禁编造未提供的价格/资金/涨幅数字。",
         ].join("\n"),
         context: {
           asOf: input.asOf,

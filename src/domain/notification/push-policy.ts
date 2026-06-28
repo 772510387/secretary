@@ -13,23 +13,22 @@ import { type NotificationEvent } from "./schemas.js";
  *      (the deterministic 8% hard-stop force-close, or a funnel auto-paper fill).
  *      Tagged on the notification's metadata (autoClosed / autoPaper / executed /
  *      tradeExecuted). This is the "把你操作的跟操作逻辑讲清楚发给我" path.
- *   2. redline — a hard red-line breach. Only the 8% stop-loss and a systemic index
- *      crash are emitted at `critical` severity (every 3s rapid-move / volume / watch
- *      observation is `warning`/`watch`), so `critical` from the sentinel or the index
- *      radar cleanly selects exactly the red-lines and nothing else.
+ *   2. redline — a hard red-line breach. The sentinel emits cooldown-bounded red-lines
+ *      for 1-minute ±2% moves, ±5% absolute moves, previous-high breakouts, 8% stop-loss,
+ *      and the index radar emits ±1% / systemic moves. These should reach Feishu; low-
+ *      urgency `watch` events (near observe price) stay local.
  *   3. scheduled_report — the daily secretary briefings and node reports
  *      (alarm-matrix nodes, the daily-funnel summaries, deep-review research).
  *
- * Suppressed (local log only): volume-price-radar, the 3-second sentinel's per-tick
- * price_surge / price_drop / watchlist observations, non-critical index radar, and
- * the 10-minute silent patrol.
+ * Suppressed (local log only): volume-price-radar, observe-price proximity, and normal
+ * 10-minute silent patrol pulses with no anomaly.
  */
 export type ExternalPushReason = "executed_operation" | "redline" | "scheduled_report";
 
 /** Metadata flags that mark a notification as an executed paper operation. */
 const OPERATION_METADATA_FLAGS = ["autoClosed", "autoPaper", "executed", "tradeExecuted"] as const;
 
-/** Sources whose `critical` events are hard red-lines worth an external push. */
+/** Sources whose warning/critical events are hard red-lines worth an external push. */
 const REDLINE_SOURCE_IDS: ReadonlySet<string> = new Set(["market-sentinel", "index-risk-radar"]);
 
 /** Scheduled briefings / node reports that should still reach the operator. */
@@ -50,7 +49,11 @@ export function classifyExternalPush(event: NotificationEvent): ExternalPushReas
     return "executed_operation";
   }
 
-  if (event.severity === "critical" && event.source.id !== undefined && REDLINE_SOURCE_IDS.has(event.source.id)) {
+  if (
+    (event.severity === "warning" || event.severity === "critical") &&
+    event.source.id !== undefined &&
+    REDLINE_SOURCE_IDS.has(event.source.id)
+  ) {
     return "redline";
   }
 

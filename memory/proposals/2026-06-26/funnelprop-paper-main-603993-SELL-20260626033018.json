@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-603993-SELL-20260626033018",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260626033018",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "603993",
+  "market": "SSE",
+  "name": "洛阳钼业",
+  "side": "SELL",
+  "quantity": 100,
+  "limitPrice": 17.33,
+  "currency": "CNY",
+  "rationale": "唯一可卖候选，持仓中但技术面横盘（rangePosition60=0.207），T+1规则下部分止盈优化仓位结构",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-26T03:30:18.735Z",
+  "updatedAt": "2026-06-26T03:30:18.735Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 1733
+  }
+}

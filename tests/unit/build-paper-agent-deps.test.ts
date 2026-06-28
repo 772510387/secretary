@@ -1,4 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { mkdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildPaperAgentToolDeps,
   type PaperPortfolioView,
@@ -19,6 +22,14 @@ const portfolio: PaperPortfolioView = {
   positions: [],
   pricesAvailable: true,
 };
+
+const tempRoots: string[] = [];
+
+afterEach(() => {
+  for (const root of tempRoots.splice(0)) {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 describe("buildPaperAgentToolDeps", () => {
   it("turns a model buy intent into a review proposal and runs the deterministic hand", async () => {
@@ -88,5 +99,51 @@ describe("buildPaperAgentToolDeps", () => {
 
     await deps.executePaperOrder({ side: "SELL", symbol: "600519", market: "SSE", limitPrice: 1680, reason: "止盈" });
     expect(captured?.latestPrice).toBe(1680);
+  });
+
+  it("wires the read-only feedback audit fact pack by default", async () => {
+    const root = path.join(tmpdir(), `secretary-agent-deps-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    tempRoots.push(root);
+    const memoryDir = path.join(root, "memory");
+    mkdirSync(memoryDir, { recursive: true });
+    const deps = buildPaperAgentToolDeps({
+      config,
+      memoryDir,
+      loadPortfolioView: () => portfolio,
+      getLatestPrice: () => 1700,
+      now: () => new Date("2026-06-24T02:00:00.000Z"),
+      executeOrder: (): ExecutePendingOrderResult => ({ status: "skipped", reason: "unused", intentId: "unused" }),
+    });
+
+    const factPack = await deps.getFeedbackAudit?.({
+      query: "上周为什么只操作两支线",
+      from: "2026-06-22",
+      to: "2026-06-23",
+    });
+
+    expect(factPack?.ok).toBe(true);
+    expect(factPack?.summary?.daysMissingFullPool).toEqual(["2026-06-22", "2026-06-23"]);
+  });
+
+  it("wires the read-only operation review fact pack by default", async () => {
+    const root = path.join(tmpdir(), `secretary-operation-review-deps-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    tempRoots.push(root);
+    const memoryDir = path.join(root, "memory");
+    mkdirSync(memoryDir, { recursive: true });
+    const deps = buildPaperAgentToolDeps({
+      config,
+      memoryDir,
+      loadPortfolioView: () => portfolio,
+      getLatestPrice: () => 1700,
+      now: () => new Date("2026-06-24T02:00:00.000Z"),
+      executeOrder: (): ExecutePendingOrderResult => ({ status: "skipped", reason: "unused", intentId: "unused" }),
+    });
+
+    const factPack = await deps.getOperationReview?.({ symbol: "000636" });
+
+    expect(factPack?.ok).toBe(true);
+    expect(factPack?.review.tradingDate).toBe("2026-06-24");
+    expect(factPack?.review.symbol).toBe("000636");
+    expect(factPack?.review.dataGaps.some((gap) => gap.includes("未找到 2026-06-24 000636 的成交流水"))).toBe(true);
   });
 });

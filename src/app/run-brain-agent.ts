@@ -9,6 +9,7 @@ import {
 } from "../domain/brain/index.js";
 import { beijingDateLabel } from "../domain/shared/index.js";
 import {
+  NOTIFICATION_SUMMARY_MAX_LENGTH,
   notificationEventSchema,
   type NotificationEvent,
 } from "../domain/notification/index.js";
@@ -100,6 +101,10 @@ export function buildDefaultSystemPrompt(now: string): string {
     "",
     "你可以调用工具：",
     "- get_portfolio：看账户与持仓；get_quote / get_technicals：看个股行情与技术面。决策前先用读工具把数据看清楚，不要凭空臆测价格或持仓。",
+    "- get_market_overview / query_watchlist / get_auction_board（若可用）：看大盘广度、板块/题材、观察池、封单和一字板。回答9:15竞价、封单、题材、观察池追问时优先用这些只读工具。",
+    "- get_strategy_knowledge（若可用）：查看命名策略、strategy_id 引用、派生胜率、案例库和增长机制。回答策略库/战略/历史胜率/某条策略是否有效时先调用。",
+    "- get_operation_review（若可用）：查看某交易日成交时间线、订单、原始提案/理由、当日计划、快照、报告和审计线索。回答“今天复盘/为什么买卖/卖了多少/早上是否卖出/这条价格线怎么定/时间戳是不是北京时间”等操作复盘追问时先调用。",
+    "- get_feedback_audit（若可用）：用户质疑“你确定看了吗/为什么只操作几支/是不是漏看/上周复盘/问题原因”时先调用，拿观察池覆盖、计划、提案、成交和报告证据后再回答。",
     "- paper_buy / paper_sell：在模拟盘直接下单，会立即按规则成交并写库。因为是模拟盘，你可以自主大胆决策买卖，但每一笔都必须在 reason 里把买卖逻辑讲清楚。",
     "- run_paper_ops（若可用）：用户要“重演/重跑/走一遍某个历史交易日的流程、补跑某日、或把账户落库归档”时调用；它会按时点遮掩未来数据重放并写库（replayDate/simulateDate/archiveDate，至少给一个）。",
     "",
@@ -107,6 +112,8 @@ export function buildDefaultSystemPrompt(now: string): string {
     "- 先看后做：先用读工具确认现金、持仓、可卖数量、最新价，再决定是否下单。",
     "- 下单失败（被风控拦截/现金不足/无可卖数量）时，读工具看清原因后再调整，不要硬重试同一笔。",
     "- 所有数字以工具返回为准，缺失就如实说“数据缺失”，绝不编造。",
+    "- 用户纠正操作事实（例如“早上卖了200股”）时，先用 get_operation_review 核对成交和时间戳；若工具证据支持用户，立即更正旧说法。",
+    "- 对问责/反馈类问题要先讲清证据：哪些日期看过100池，哪些没有证据；该承认遗漏就明确承认，并给出补救动作。",
     "- 全部完成后，用简体中文给出最终结论：你做了哪些操作、为什么这么做、当前账户状态与下一步建议。",
   ].join("\n");
 }
@@ -121,6 +128,8 @@ export interface BuildBrainOperationNotificationInput {
   /** Notification source id (defaults to "daily-funnel" so the push gate forwards it). */
   sourceId?: string;
 }
+
+const OPERATION_RATIONALE_MAX_LENGTH = 3000;
 
 /**
  * Turns the executed operations into ONE external-push notification (the "把你操作的
@@ -139,8 +148,13 @@ export function buildBrainOperationNotification(
   const eventId = (input.requestId ?? `brain-op-${Date.parse(occurredAt)}`).slice(0, 128);
   const lines = input.operations.map((operation) => `• ${operation.summary}`);
   const answerBlock =
-    input.answer && input.answer.trim() !== "" ? `\n\n说明：${clip(input.answer, 600)}` : "";
-  const summary = clip(`【模拟盘操作】已执行 ${input.operations.length} 笔：\n${lines.join("\n")}${answerBlock}`, 1000);
+    input.answer && input.answer.trim() !== ""
+      ? `\n\n说明：${clip(input.answer, OPERATION_RATIONALE_MAX_LENGTH)}`
+      : "";
+  const summary = clip(
+    `【模拟盘操作】已执行 ${input.operations.length} 笔：\n${lines.join("\n")}${answerBlock}`,
+    NOTIFICATION_SUMMARY_MAX_LENGTH,
+  );
 
   return notificationEventSchema.parse({
     eventId,

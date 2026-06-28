@@ -1,6 +1,7 @@
 import type { AppConfig } from "../../src/config/index.js";
 import {
   buildInitialPaperAccountSeed,
+  createTradingDayReviewFromMemory,
   createResearchRunner,
   formatPaperOpsCommand,
   type AgentAction,
@@ -78,20 +79,26 @@ async function executePaperOps(
   const completed: string[] = [];
   const replayResults: ReplayDayRunResult[] = [];
 
+  // 单个闹钟场景重演: when the command names one node, scope replay/simulate to just it.
+  const nodeScope = action.node ? `（仅 ${action.node} 节点）` : "";
+
   if (action.replayDate) {
     // INFRA-01: an operator "走一遍某日" should produce real funnel output even if the
     // stored pool is empty — rebuild it from the current universe (non-as-of, logged).
     replayResults.push(
-      await runReplayDay(deps, action.replayDate, { refreshWatchlistWhenEmpty: true }),
+      await runReplayDay(deps, action.replayDate, {
+        refreshWatchlistWhenEmpty: true,
+        onlyNode: action.node,
+      }),
     );
-    completed.push(`已忠实重演 ${action.replayDate}`);
+    completed.push(`已忠实重演 ${action.replayDate}${nodeScope}`);
   }
 
   if (action.simulateDate) {
     await runDueNodesForDate(deps, action.simulateDate, {
-      includeAlarmTypes: PAPER_SIM_NODE_TYPES,
+      includeAlarmTypes: action.node ? new Set([action.node]) : PAPER_SIM_NODE_TYPES,
     });
-    completed.push(`已补跑 ${action.simulateDate} 今日模拟节点`);
+    completed.push(`已补跑 ${action.simulateDate} 今日模拟节点${nodeScope}`);
   }
 
   if (action.archiveDate) {
@@ -99,13 +106,19 @@ async function executePaperOps(
     completed.push(`已归档 ${action.archiveDate} 盘后账户快照`);
   }
 
-  return buildPaperOpsMarkdownReport({
+  const opsReport = await buildPaperOpsMarkdownReport({
     action,
     completed,
     notifications,
     replayResults,
     brainProvider: deps.brainProvider,
   });
+  const reviewDate = action.archiveDate ?? action.simulateDate ?? action.replayDate;
+  const dayReview = reviewDate
+    ? buildTradingDayReviewAppendix(options.memoryDir, reviewDate, options.config.trading.t1Enabled)
+    : undefined;
+
+  return dayReview ? `${opsReport}\n\n---\n\n${dayReview}` : opsReport;
 }
 
 function buildPaperOpsDeps(
@@ -137,6 +150,31 @@ function buildPaperOpsDeps(
 function clip(text: string, max: number): string {
   const trimmed = text.trim().replace(/\s+/g, " ");
   return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`;
+}
+
+function buildTradingDayReviewAppendix(
+  memoryDir: string,
+  tradingDate: string,
+  t1Enabled: boolean,
+): string | undefined {
+  try {
+    const review = createTradingDayReviewFromMemory({
+      memoryDir,
+      tradingDate,
+      t1Enabled,
+      write: true,
+    });
+    const location = review.write ? `\n\n报告已落盘：${review.write.filePath}` : "";
+    return `${review.markdown}${location}`;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return [
+      "# 完整交易日复盘",
+      "",
+      `无法生成 ${tradingDate} 的接地复盘：${clip(message, 220)}`,
+      "已执行的模拟运维报告仍以上方内容为准。",
+    ].join("\n");
+  }
 }
 
 export interface PaperOpsMarkdownReportInput {
@@ -246,6 +284,8 @@ function buildPaperOpsReportContext(input: {
     replayResults: input.replayResults.map((result) => ({
       date: result.date,
       nodeCount: result.nodeCount,
+      poolSource: result.poolSource ?? null,
+      poolFaithful: result.poolFaithful ?? false,
       nodes: result.nodes.map((node) => ({
         alarmType: node.alarmType,
         beijingTime: node.beijingTime,
@@ -260,6 +300,13 @@ function buildPaperOpsReportContext(input: {
                 autoPaper: node.funnel.autoPaper,
                 degraded: node.funnel.degraded,
                 skippedReason: node.funnel.skippedReason ?? null,
+                // 潜力股名单 + 逐只选股理由 — so the report explains WHY each was shortlisted, not just a count.
+                shortlist: node.funnel.shortlist10.map((entry) => ({
+                  symbol: entry.symbol,
+                  name: entry.name,
+                  rank: entry.rank ?? null,
+                  rationale: clip(entry.rationale, 160),
+                })),
                 proposals: node.funnel.proposals.map((proposal) => ({
                   side: proposal.side,
                   symbol: proposal.symbol,
@@ -327,6 +374,11 @@ function dedupeLines(lines: string[]): string[] {
 
 function summarizeReplayResult(result: ReplayDayRunResult): string[] {
   const lines: string[] = [];
+  if (result.poolSource) {
+    lines.push(
+      `- ${result.date} 选股池来源：${result.poolSource}${result.poolFaithful ? "" : "（⚠️非该日历史池，重演不同未记录历史日会拿到同一套当日池，不能据此比较选股差异）"}`,
+    );
+  }
   for (const node of result.nodes) {
     if (node.funnel === undefined) {
       continue;
@@ -336,6 +388,14 @@ function summarizeReplayResult(result: ReplayDayRunResult): string[] {
     if (node.funnel.skippedReason) {
       lines.push(`- ${label}：交易漏斗跳过（${node.funnel.skippedReason}）。`);
       continue;
+    }
+
+    // 潜力股名单 + 逐只入选理由 — answer "为何选这些股", not just a count.
+    if (node.funnel.shortlist10.length > 0) {
+      const shortlistText = node.funnel.shortlist10
+        .map((entry) => `${entry.name}(${entry.symbol})｜${clip(entry.rationale, 60)}`)
+        .join("；");
+      lines.push(`- ${label} 潜力股${node.funnel.shortlist10.length}支(为何入选)：${shortlistText}`);
     }
 
     if (node.funnel.proposals.length === 0) {

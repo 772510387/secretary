@@ -72,3 +72,19 @@
 - [src/infrastructure/storage/memory-registry.ts](src/infrastructure/storage/memory-registry.ts) — 关键词检索
 - 新增（建议）：`src/domain/strategy/*` — 命名策略层（regime 指纹→归因）
 - T+1 跨日结算代码（HAND-02/03，路径待定位）— 步骤3 前提
+
+## 7. 2026-06-28 实现更新
+
+本次已落地方案 B 的第一段可用闭环：
+
+- 新增 `src/domain/strategy/*`：命名策略种子、regime 指纹匹配和 `strategy_id` 归因。
+- `ReplayDecision`/`ScoredDecision` 的 stance 支持可选 `strategyIds`；确定性回放决策会按 regime 自动挂策略 ID。
+- 新增 `src/app/strategy-knowledge.ts`：从 `memory/decisions` 的已评分决策派生策略胜率、案例、决策引用和增长机制说明；不写独立 `stock_knowledge_base/*.json`，避免和现有 scorer/记忆系统形成双库。
+- 飞书 agent 工具面新增 `get_strategy_knowledge`，默认由 `buildPaperAgentToolDeps` 装配；用户在飞书问“策略库现在怎么样 / BUY-001 是否有效”时，模型可先取确定性证据包再组织回答。
+- 已补 `tests/unit/strategy-knowledge.test.ts` 和 `tests/unit/brain-agent-tools.test.ts` 覆盖。
+
+仍未完成：
+
+- 漏斗/真实模拟成交提案尚未把 `strategyIds` 写入 `TradeIntentReviewProposal`。
+- 盘后 consolidation 尚未把真实成交/平仓结果沉淀为策略案例。
+- 周/月策略生命周期提案（<40% 复核、>60% 提炼）尚未接入人工复核链。

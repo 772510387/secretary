@@ -147,6 +147,7 @@ const BUCKET_PRIORITY: Record<PoolBucket, WatchlistPriority> = {
   position: "high",
   limit_up: "high",
   yesterday_limit_up: "high",
+  hot_theme: "high",
   hot_sector_leader: "high",
   limit_down: "medium",
   yesterday_limit_down: "medium",
@@ -163,10 +164,21 @@ export interface PersistCategorizedPoolInput {
   heldNames?: Readonly<Record<string, string>>;
   yesterdayLimitUpSymbols?: readonly string[];
   yesterdayLimitDownSymbols?: readonly string[];
+  /** Members of today's HOT 概念/题材 → guaranteed a pool slot (题材决定谁进池). */
+  hotThemeSymbols?: ReadonlySet<string>;
+  /** symbol → its hot 题材 name, for tagging + reason (real membership, never model-invented). */
+  hotThemeBySymbol?: ReadonlyMap<string, string>;
   /** Prior cycle's changePct per symbol — enables 加速上攻 momentum priority bumps. */
   priorChangeBySymbol?: Readonly<Record<string, number>>;
   /** 封单/一字板 (level-1 盘口) per symbol, for limit-board pool stocks. */
   sealBySymbol?: ReadonlyMap<string, SealBoard>;
+  /** 连板天数 per today-limit-up symbol (1 = first board). */
+  streakBySymbol?: ReadonlyMap<string, number>;
+  /** 日线历史趋势 per candidate (uptrend/downtrend/sideways/insufficient_data) — deterministic
+   * priority signal computed from 60-day k-line; never a model input. */
+  trendBySymbol?: ReadonlyMap<string, string>;
+  /** Extra market-context lines (板块涨幅榜/全市场成交额) appended to the pool overview. */
+  extraOverviewLines?: readonly string[];
   minAmount?: number;
   maxTotal?: number;
   /** When true, an empty categorization does NOT overwrite the stored pool. */
@@ -205,10 +217,22 @@ export function persistCategorizedPool(input: PersistCategorizedPoolInput): Pers
     heldNames: input.heldNames,
     yesterdayLimitUpSymbols: input.yesterdayLimitUpSymbols,
     yesterdayLimitDownSymbols: input.yesterdayLimitDownSymbols,
+    hotThemeSymbols: input.hotThemeSymbols,
     minAmount: input.minAmount,
     maxTotal,
   });
-  const overview = renderPoolOverview(categorized, { sealBySymbol: input.sealBySymbol });
+  const overview = [
+    renderPoolOverview(categorized, {
+      sealBySymbol: input.sealBySymbol,
+      streakBySymbol: input.streakBySymbol,
+      trendBySymbol: input.trendBySymbol,
+      hotThemeBySymbol: input.hotThemeBySymbol,
+    }),
+    ...(input.extraOverviewLines ?? []),
+  ]
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .join("\n");
 
   const counts: Partial<Record<PoolBucket, number>> = {};
   for (const entry of categorized) {
@@ -216,20 +240,32 @@ export function persistCategorizedPool(input: PersistCategorizedPoolInput): Pers
   }
 
   const entries: WatchlistEntryInput[] = categorized.map((entry, index) => {
+    const trend = input.trendBySymbol?.get(entry.stock.symbol);
+    const hotTheme = input.hotThemeBySymbol?.get(entry.stock.symbol);
     const adjusted = applyDynamicPriority(
       BUCKET_PRIORITY[entry.bucket],
       entry,
       input.priorChangeBySymbol?.[entry.stock.symbol],
+      trend,
     );
     return {
       symbol: entry.stock.symbol,
       market: entry.stock.market,
       name: entry.stock.name,
       priority: adjusted.priority,
-      reason: buildCategorizedReason(entry, adjusted.notes),
+      reason: buildCategorizedReason(entry, adjusted.notes, trend, hotTheme),
       source,
       updatedAt: now,
-      metadata: categorizedMetadata(entry, index, now, adjusted, input.sealBySymbol?.get(entry.stock.symbol)),
+      metadata: categorizedMetadata(
+        entry,
+        index,
+        now,
+        adjusted,
+        input.sealBySymbol?.get(entry.stock.symbol),
+        input.streakBySymbol?.get(entry.stock.symbol),
+        trend,
+        hotTheme,
+      ),
     };
   });
 
@@ -295,6 +331,7 @@ function applyDynamicPriority(
   base: WatchlistPriority,
   entry: CategorizedPoolEntry,
   priorChangePct: number | undefined,
+  trend: string | undefined,
 ): DynamicPriorityResult {
   const floorHigh = entry.bucket === "position" || entry.bucket === "limit_up";
   if (floorHigh) {
@@ -335,12 +372,31 @@ function applyDynamicPriority(
     level -= 1;
     notes.push("主力净流出降优先级");
   }
+  // 历史趋势 (deterministic, from 60-day k-line): uptrend bumps, downtrend demotes.
+  if (trend === "uptrend") {
+    level += 1;
+    notes.push("日线上升趋势提优先级");
+  } else if (trend === "downtrend") {
+    level -= 1;
+    notes.push("日线下降趋势降优先级");
+  }
 
   const clamped = Math.min(3, Math.max(1, level));
   return { priority: LEVEL_PRIORITY[clamped], notes };
 }
 
-function buildCategorizedReason(entry: CategorizedPoolEntry, dynamicNotes: readonly string[] = []): string {
+const TREND_LABEL: Record<string, string> = {
+  uptrend: "日线上升趋势",
+  downtrend: "日线下降趋势",
+  sideways: "日线横盘",
+};
+
+function buildCategorizedReason(
+  entry: CategorizedPoolEntry,
+  dynamicNotes: readonly string[] = [],
+  trend?: string,
+  hotTheme?: string,
+): string {
   const stock = entry.stock;
   const parts = [`${POOL_BUCKET_LABEL[entry.bucket]} · 类内第 ${entry.rankInBucket} 名`];
   if (stock.changePct !== undefined) {
@@ -355,6 +411,12 @@ function buildCategorizedReason(entry: CategorizedPoolEntry, dynamicNotes: reado
   if (stock.mainNetInflow !== undefined) {
     parts.push(`主力净流入 ${(stock.mainNetInflow / 1e8).toFixed(2)} 亿`);
   }
+  if (trend && TREND_LABEL[trend]) {
+    parts.push(TREND_LABEL[trend]);
+  }
+  if (hotTheme) {
+    parts.push(`热门题材:${hotTheme}`);
+  }
   parts.push(...dynamicNotes);
   return parts.join(" · ").slice(0, 1000);
 }
@@ -365,6 +427,9 @@ function categorizedMetadata(
   now: string,
   dynamic: DynamicPriorityResult,
   seal: SealBoard | undefined,
+  streak: number | undefined,
+  trend: string | undefined,
+  hotTheme: string | undefined,
 ): Record<string, JsonValue> {
   const stock = entry.stock;
   return {
@@ -385,6 +450,9 @@ function categorizedMetadata(
     sealAmount: seal ? seal.sealAmount : null,
     sealVolumeLots: seal ? seal.sealVolumeLots : null,
     isOneWordBoard: seal ? seal.isOneWord : null,
+    consecutiveLimitUpDays: streak ?? null,
+    dailyTrend: trend ?? null,
+    hotTheme: hotTheme ?? null,
     limitState: classifyLimitState(stock.symbol, stock.changePct),
     screenedAt: now,
     screener: true,

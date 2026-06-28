@@ -1,16 +1,16 @@
 # Secretary
 
-`secretary` 是一个面向 A 股模拟盘、交易辅助和未来实盘接入的独立智能体系统。
+`secretary` 是一个面向 A 股模拟盘、交易辅助和实盘接入口径演进的独立智能体系统。
 
-它不复制 OpenClaw，也不直接以 TradingAgents-CN 作为主工程。当前设计是：
+它借鉴 OpenClaw 式强智能体交易体验，也吸收 TradingAgents-CN 的研究流程思想；当前设计是：
 
 - 用自研确定性底座承载行情、账户、交易、风控、记忆、小脑调度和审计。
-- 用 OpenAI/Gemini/DashScope Qwen 等模型承载研究、复盘、解释和自然语言交互。
-- 将 TradingAgents-CN 作为可选深度研究顾问，而不是交易执行入口。
+- 用 OpenAI/Gemini/DashScope Qwen 等模型承载研究、复盘、解释、标的排序、交易意图和自然语言交互。
+- 将 TradingAgents-CN 作为可选深度研究顾问，研究结果可进入 secretary 的执行提案和审计链路。
 
 核心原则：
 
-> 凡是确定的，归于代码；凡是混沌的，归于 AI。
+> 凡是事实、账本、回执和规则，必须可审计；凡是判断、策略、取舍和表达，交给强 AI。
 
 ## 快速启动（默认走飞书）
 
@@ -18,13 +18,13 @@
 
 ```powershell
 npm install            # 安装依赖（含飞书 SDK，无需另装）
-npm start              # = npm run feishu:bot，启动飞书机器人
+npm start              # 启动全天候值守：飞书对话 + 哨兵 + 闹钟矩阵 + 链式巡航
 ```
 
 前置：在 `.env` 配好 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_ALLOWED_USERS`，
 并用真实大脑 `BRAIN_PROVIDER=dashscope`（+ `DASHSCOPE_API_KEY`）。看到
 `✅ 飞书机器人已通过长连接启动` 后，在飞书里私聊该应用即可对话。完整步骤见
-`docs/ops/feishu-bot.md`。
+`docs/ops/feishu-bot.md`。如果只想启动聊天入口，可单独运行 `npm run feishu:bot`。
 
 其它入口（可选）：`npm run wechat:bot`（个人微信，有 ToS 封号风险）、
 `npm run ask -- "..."`（命令行单问）。
@@ -56,14 +56,14 @@ npm start              # = npm run feishu:bot，启动飞书机器人
 - 已实现 T014 TradingAgents-CN Research Adapter 最小版本，输出 `ResearchReport`，支持超时降级和 `memory/research` 写入
 - 已完成 U1 历史行情和技术指标、U2 记忆写入策略、U3 记忆检索和索引、U4 ToolRuntime 工具请求校验、U5 小脑固定闹钟上下文包、U6 本地通知通道
 - 已完成 U7 DashScope Qwen provider、R8-1 OpenAIProvider、U8 TradingAgents-CN 子进程 runner fake subprocess 版、U9 ManualConfirmBroker paper-only 门禁
-- 已完成 U10 实盘预备评估和 R9 非交易性实盘安全底座，包含 LiveTradingGate、账户 allowlist 和 kill switch；仍没有实现真实 broker，也不允许自动实盘
+- 已完成 U10 实盘预备评估和 R9 实盘安全底座，包含 LiveTradingGate、账户 allowlist 和 kill switch；真实 broker、自动化执行和对账能力按后续阶段接入
 
 当前仍未完成的重点能力：
 
 - 自选股雷达、指数雷达和放量雷达。
 - Webhook/API 入口、真实微信或外部 webhook 通知。
-- 只读 broker、fake live broker contract、对账系统和人工审批持久化。
-- 真实 broker 和自动实盘买入仍明确禁止。
+- 只读 broker、fake live broker contract、真实 broker adapter、对账系统和人工审批持久化。
+- 实盘自动化执行口径：模型强判断 -> 执行提案 -> 风控/权限/适配器 -> 回执/对账/审计。
 
 ## 目录地图
 
@@ -80,11 +80,11 @@ npm start              # = npm run feishu:bot，启动飞书机器人
 - `docs/architecture/`：架构设计。
 - `docs/ai/`：vibecoding 辅助上下文、提示词、检查清单和项目技能。
 
-## 安全边界
+## 执行边界
 
-第一阶段默认只做模拟盘和辅助决策。
+运行模式由配置决定：模拟盘、人工确认、只读 broker、fake live broker 和真实 broker 需要清晰区分。
 
-未来接实盘时，LLM 仍然不能直接下单。模型只能产生 `TradeIntent`，真实发单必须经过：
+模型可以产生强交易判断、`TradeIntent`、执行提案和操作理由；发单和账户变更必须经过可审计执行链路：
 
 1. `PolicyEngine`
 2. `RiskEngine`

@@ -57,7 +57,7 @@ describe("Cerebellum silent patrol", () => {
     });
   });
 
-  it("skips outside trading sessions, off-interval minutes, and weekends", () => {
+  it("skips outside trading sessions, non-list minutes, and weekends", () => {
     expect(
       buildSilentPatrolTask({
         now: "2026-06-12T03:45:00.000Z",
@@ -69,7 +69,7 @@ describe("Cerebellum silent patrol", () => {
 
     expect(
       buildSilentPatrolTask({
-        now: "2026-06-12T01:35:00.000Z",
+        now: "2026-06-12T01:50:00.000Z",
       }),
     ).toMatchObject({
       due: false,
@@ -85,7 +85,10 @@ describe("Cerebellum silent patrol", () => {
       reason: "outside_session",
     });
     expect(isSilentPatrolDue(patrolTime)).toBe(true);
-    expect(isSilentPatrolDue("2026-06-12T01:35:00.000Z")).toBe(false);
+    expect(isSilentPatrolDue("2026-06-12T01:35:00.000Z")).toBe(true);
+    expect(isSilentPatrolDue("2026-06-12T02:30:00.000Z")).toBe(false);
+    expect(isSilentPatrolDue("2026-06-12T05:30:00.000Z")).toBe(false);
+    expect(isSilentPatrolDue("2026-06-12T01:50:00.000Z")).toBe(false);
   });
 
   it("turns anomalies into pending events without allowing direct execution", () => {

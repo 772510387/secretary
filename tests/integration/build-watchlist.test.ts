@@ -162,6 +162,30 @@ describe("persistCategorizedPool", () => {
     expect(persisted.entries.find((e) => e.symbol === "600201")?.metadata.mainNetInflow).toBe(250_000_000);
   });
 
+  it("uses 历史日线趋势 for priority (uptrend bumps, downtrend demotes) and records it", () => {
+    const store = new WatchlistMemoryStore({ memoryDir: dir, now: () => new Date(now) });
+    const universe: UniverseStock[] = [
+      { symbol: "600301", market: "SSE", name: "多头股", latestPrice: 20, changePct: 5, turnoverRate: 5, amount: 2e9, marketCap: 5e10 },
+      { symbol: "600302", market: "SSE", name: "空头股", latestPrice: 20, changePct: 5, turnoverRate: 5, amount: 1.9e9, marketCap: 5e10 },
+    ].map((stock) => universeStockSchema.parse(stock));
+
+    const result = persistCategorizedPool({
+      universe,
+      writer: store,
+      trendBySymbol: new Map([
+        ["600301", "uptrend"],
+        ["600302", "downtrend"],
+      ]),
+      now,
+    });
+
+    const priorityOf = (symbol: string) => result.entries.find((entry) => entry.symbol === symbol)?.priority;
+    expect(priorityOf("600301")).toBe("high"); // change_top(medium) + 上升趋势 → high
+    expect(priorityOf("600302")).toBe("low"); // change_top(medium) + 下降趋势 → low
+    expect(result.overview).toContain("多头股(600301 +5.00% ↑日线多头)");
+    expect(store.readCategory("watchlist_today").entries.find((e) => e.symbol === "600301")?.metadata.dailyTrend).toBe("uptrend");
+  });
+
   it("does not overwrite a good pool with an empty categorization when skipWriteWhenEmpty", () => {
     const store = new WatchlistMemoryStore({ memoryDir: dir, now: () => new Date(now) });
     const result = persistCategorizedPool({

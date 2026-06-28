@@ -43,6 +43,9 @@ export const notificationTargetTypeSchema = z.enum([
   "account",
 ]);
 
+export const NOTIFICATION_SUMMARY_MAX_LENGTH = 12_000;
+export const NOTIFICATION_RECOMMENDED_ACTION_MAX_LENGTH = 500;
+
 export const notificationSourceSchema = z
   .object({
     type: notificationSourceTypeSchema,
@@ -77,8 +80,8 @@ export const notificationEventSchema = z
     severity: notificationSeveritySchema,
     source: notificationSourceSchema,
     target: notificationTargetSchema,
-    summary: z.string().trim().min(1).max(1000),
-    recommendedAction: z.string().trim().min(1).max(500),
+    summary: z.string().trim().min(1).max(NOTIFICATION_SUMMARY_MAX_LENGTH),
+    recommendedAction: z.string().trim().min(1).max(NOTIFICATION_RECOMMENDED_ACTION_MAX_LENGTH),
     auditEventId: identifierSchema.optional(),
     correlationId: identifierSchema.optional(),
     dedupeKey: z.string().trim().min(1).max(240).optional(),

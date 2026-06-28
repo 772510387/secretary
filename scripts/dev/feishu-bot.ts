@@ -6,7 +6,10 @@ import {
 import {
   createResearchRunner,
   createWeChatBridgeState,
+  beijingDate,
+  createTradingDayReviewFromMemory,
   describeTurnError,
+  resolveRelativePastDate,
   runWeChatBridgeTurn,
   type AgentAction,
   type WeChatBridgeDependencies,
@@ -18,6 +21,8 @@ import {
 } from "../../src/infrastructure/providers/index.js";
 import {
   buildBridgeContext,
+  readWatchlist100,
+  readPotentialStockCandidates,
   buildLivePaperAgentTools,
   readBridgeAccountAndPositions,
 } from "./build-context.js";
@@ -66,8 +71,16 @@ export async function main(): Promise<void> {
   }
 
   const loadContext = (message: string) =>
-    buildBridgeContext({ config, memoryDir, question: message });
+    buildBridgeContext({
+      config,
+      memoryDir,
+      question: message,
+      includeWatchlist: shouldLoadWatchlistContext(message),
+    });
   const loadPortfolio = () => readBridgeAccountAndPositions(memoryDir);
+  const loadWatchlist = () => readWatchlist100(memoryDir); // cheap disk read for 选股 (pick_stocks)
+  const loadPotentialStocks = () =>
+    readPotentialStockCandidates(memoryDir, readBridgeAccountAndPositions(memoryDir).positions);
   const executeAction = (action: AgentAction): Promise<string> =>
     executeAgentAction(action, { config, memoryDir });
 
@@ -116,7 +129,20 @@ export async function main(): Promise<void> {
         allowDestructive: () => isOwner,
         loadContext,
         loadPortfolio,
+        loadWatchlist,
+        loadPotentialStocks,
         executeAction,
+        buildTradingDayReview: ({ message, now }) => {
+          const tradingDate = resolveTradingDayReviewDate(message, now);
+          const review = createTradingDayReviewFromMemory({
+            memoryDir,
+            tradingDate,
+            t1Enabled: config.trading.t1Enabled,
+            write: true,
+          });
+          const location = review.write ? `\n\n报告已落盘：${review.write.filePath}` : "";
+          return `${review.markdown}${location}`;
+        },
         runConfirmedPaperOpsInBackground: true,
         onProgress: async (note) => {
           console.log(`[feishu +${elapsed()}] ${openId} 已路由，开始取数+分析`);
@@ -212,6 +238,26 @@ function rememberMessageId(seen: Set<string>, messageId: string): void {
       seen.delete(oldest);
     }
   }
+}
+
+function shouldLoadWatchlistContext(message: string): boolean {
+  return /观察池|高关注池|100池|选股|潜力股|候选股|股票池|买什么|推荐.*股|挑.*股|待买|买入顺序|盘前|早盘|午间|尾盘|收盘|复盘|竞价|9:15|9：15|9:25|9：25|一字板|封单|涨停|跌停|连板|题材|板块|大盘|盘面|市场/.test(
+    message,
+  );
+}
+
+function resolveTradingDayReviewDate(message: string, now: string): string {
+  const explicit = /\b(20\d{2}-\d{2}-\d{2})\b/.exec(message)?.[1];
+  if (explicit) {
+    return explicit;
+  }
+
+  const today = beijingDate(now);
+  if (/今天|今日|当天/u.test(message)) {
+    return today;
+  }
+
+  return resolveRelativePastDate(message, today) ?? today;
 }
 
 interface FeishuMessageEvent {

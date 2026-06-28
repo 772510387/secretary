@@ -25,8 +25,8 @@
 - portfolio 现金、持仓、市值、成本、浮盈浮亏、T+1 可卖数量、仓位比例、成本价计算。
 - PolicyEngine 主板过滤、100 股买入、T+1、现金、持仓、账户状态基础规则。
 - RiskEngine 单股 40%、8% 硬止损、单日亏损限制、禁买、熔断和组合风险结果。
-- MarketSentinel 单次检查，覆盖 1 分钟急涨/急跌、持仓止损、冷却状态、同标的多事件和非法配置。
-- Cerebellum 10 分钟静默巡航，覆盖交易时段到点、非交易时段跳过、无异常静默、异常事件、冷却去重和 metadata 脱敏。
+- MarketSentinel 单次检查，覆盖 1 分钟急涨/急跌、±5% 日内红线、突破前高、持仓止损、冷却状态、同标的多事件和非法配置。
+- Cerebellum 链式静默巡航，覆盖 daily-alarm-list 显式槽位、非交易时段跳过、无异常静默、异常事件、冷却去重和 metadata 脱敏。
 - Cerebellum 闹钟 SOP 上下文模板，覆盖每个固定闹钟的 objective、requiredInputs、allowedActions、forbiddenActions 和安全约束。
 - Market history indicators，覆盖 MA5、MA10、MA20、60 日区间位置、趋势标签、样本不足和空输入。
 - MemoryWritePolicy，覆盖自动允许、软阈值受限允许、硬规则提案和危险写入拒绝。
@@ -45,6 +45,9 @@
 - MarketSentinel 自选股扫描，覆盖 high priority 涨跌、接近观察价、冷却和 metadata-only 审计草稿。
 - Index risk radar，覆盖 1 分钟窗口、最近 N 次窗口、多指数系统性风险、通知草稿和非法阈值。
 - Volume price radar，覆盖量价齐升、爆量滞涨、停牌/无量、缺字段、低流动性和非法参数。
+- Strategy knowledge，覆盖命名策略归因、strategy_id 派生统计、案例/决策引用渲染，以及 agent 只读工具暴露。
+- Problem feedback fact pack，覆盖问责类反馈所需的 100 池覆盖证据、计划/提案/成交区分和 agent 工具只读返回。
+- Operation review context，覆盖操作复盘追问所需的成交/订单/提案/计划/报告/审计拼接、北京时间转换、账户快照和数据缺口提示，以及 agent 工具只读返回。
 
 ## 要求
 

@@ -1,8 +1,8 @@
 [
   {
-    "time": "22:35",
-    "occurredAt": "2026-06-25T14:35:35.266Z",
-    "alarmType": "call_auction_watch",
+    "time": "23:39",
+    "occurredAt": "2026-06-25T15:39:14.771Z",
+    "alarmType": "morning_review",
     "indices": [
       {
         "name": "上证指数",
@@ -48,9 +48,9 @@
     "heatScore": 63
   },
   {
-    "time": "23:39",
-    "occurredAt": "2026-06-25T15:39:14.771Z",
-    "alarmType": "morning_review",
+    "time": "23:59",
+    "occurredAt": "2026-06-25T15:59:18.227Z",
+    "alarmType": "call_auction_watch",
     "indices": [
       {
         "name": "上证指数",

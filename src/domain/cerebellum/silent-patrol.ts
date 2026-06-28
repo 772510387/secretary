@@ -18,6 +18,32 @@ import {
 
 export const DEFAULT_SILENT_PATROL_INTERVAL_MINUTES = 10;
 export const DEFAULT_SILENT_PATROL_ID = "silent-patrol-10m";
+export const DEFAULT_SILENT_PATROL_RAPID_MOVE_THRESHOLD = 0.03;
+export const DEFAULT_SILENT_PATROL_RAPID_MOVE_WINDOW_MS = 21 * 60_000;
+export const DEFAULT_SILENT_PATROL_SLOT_MINUTES: readonly number[] = [
+  9 * 60 + 30,
+  9 * 60 + 35,
+  9 * 60 + 40,
+  9 * 60 + 45,
+  10 * 60,
+  10 * 60 + 10,
+  10 * 60 + 20,
+  10 * 60 + 40,
+  10 * 60 + 50,
+  11 * 60,
+  11 * 60 + 10,
+  11 * 60 + 20,
+  13 * 60,
+  13 * 60 + 10,
+  13 * 60 + 20,
+  13 * 60 + 40,
+  13 * 60 + 50,
+  14 * 60,
+  14 * 60 + 10,
+  14 * 60 + 20,
+  14 * 60 + 40,
+  14 * 60 + 50,
+];
 
 export interface SilentPatrolSession {
   startMinute: number;
@@ -33,6 +59,7 @@ export interface SilentPatrolOptions {
   patrolId?: string;
   intervalMinutes?: number;
   sessions?: readonly SilentPatrolSession[];
+  slotMinutes?: readonly number[];
   weekdaysOnly?: boolean;
   sentinel?: MarketSentinelOptions;
 }
@@ -74,6 +101,7 @@ interface NormalizedSilentPatrolOptions {
   patrolId: string;
   intervalMinutes: number;
   sessions: readonly SilentPatrolSession[];
+  slotMinutes: readonly number[];
   weekdaysOnly: boolean;
   sentinel?: MarketSentinelOptions;
 }
@@ -88,7 +116,7 @@ export function isSilentPatrolDue(
 
   return (
     isWithinPatrolSession(beijingTime, normalized) &&
-    isOnPatrolInterval(beijingTime, normalized.intervalMinutes)
+    isOnPatrolSchedule(beijingTime, normalized)
   );
 }
 
@@ -119,7 +147,7 @@ export function buildSilentPatrolTask(
     };
   }
 
-  if (!isOnPatrolInterval(beijingTime, options.intervalMinutes)) {
+  if (!isOnPatrolSchedule(beijingTime, options)) {
     return {
       due: false,
       reason: "not_on_interval",
@@ -191,6 +219,7 @@ function normalizeOptions(
 ): NormalizedSilentPatrolOptions {
   const intervalMinutes = options.intervalMinutes ?? DEFAULT_SILENT_PATROL_INTERVAL_MINUTES;
   const sessions = options.sessions ?? DEFAULT_SILENT_PATROL_SESSIONS;
+  const slotMinutes = options.slotMinutes ?? DEFAULT_SILENT_PATROL_SLOT_MINUTES;
 
   if (!Number.isInteger(intervalMinutes) || intervalMinutes <= 0 || intervalMinutes > 120) {
     throw new SilentPatrolError("intervalMinutes must be an integer between 1 and 120");
@@ -198,6 +227,10 @@ function normalizeOptions(
 
   if (sessions.length === 0) {
     throw new SilentPatrolError("At least one silent patrol session is required");
+  }
+
+  if (slotMinutes.length === 0) {
+    throw new SilentPatrolError("At least one silent patrol slot is required");
   }
 
   for (const session of sessions) {
@@ -209,12 +242,24 @@ function normalizeOptions(
     }
   }
 
+  const uniqueSlotMinutes = [...new Set(slotMinutes)].sort((left, right) => left - right);
+
+  for (const minute of uniqueSlotMinutes) {
+    assertMinuteOfDay(minute, "slotMinutes");
+  }
+
   return {
     patrolId: safeIdentifier(options.patrolId ?? DEFAULT_SILENT_PATROL_ID, 80),
     intervalMinutes,
     sessions,
+    slotMinutes: uniqueSlotMinutes,
     weekdaysOnly: options.weekdaysOnly ?? true,
-    sentinel: options.sentinel,
+    sentinel: options.sentinel ?? {
+      rapidMoveThreshold: DEFAULT_SILENT_PATROL_RAPID_MOVE_THRESHOLD,
+      rapidMoveWindowMs: DEFAULT_SILENT_PATROL_RAPID_MOVE_WINDOW_MS,
+      absoluteMoveThreshold: 0.05,
+      previousHighBreakoutThreshold: 0,
+    },
   };
 }
 
@@ -233,11 +278,11 @@ function isWithinPatrolSession(
   );
 }
 
-function isOnPatrolInterval(
+function isOnPatrolSchedule(
   beijingTime: CerebellumBeijingTime,
-  intervalMinutes: number,
+  options: NormalizedSilentPatrolOptions,
 ): boolean {
-  return beijingTime.second === 0 && beijingTime.minuteOfDay % intervalMinutes === 0;
+  return beijingTime.second === 0 && options.slotMinutes.includes(beijingTime.minuteOfDay);
 }
 
 function buildBaseMetadata(
@@ -248,6 +293,7 @@ function buildBaseMetadata(
     ...metadata,
     patrolId: options.patrolId,
     intervalMinutes: options.intervalMinutes,
+    slotCount: options.slotMinutes.length,
     timezone: "Asia/Shanghai",
     liveTrading: false,
     brokerConnected: false,

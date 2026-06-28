@@ -12,6 +12,7 @@ import {
   persistPeriodReview,
   pruneOldArtifacts,
   readDailyFillsLedger,
+  readPoolSnapshotAsOf,
   runAlarmNodeAnalysis,
   runDataWarmupSelfCheck,
   runResearchOnce,
@@ -44,6 +45,7 @@ import {
 } from "../../src/infrastructure/storage/index.js";
 import { toBeijingDate, type JsonValue } from "../../src/domain/shared/index.js";
 import {
+  NOTIFICATION_SUMMARY_MAX_LENGTH,
   formatNotificationForConsole,
   notificationEventSchema,
   shouldPushToExternalChannels,
@@ -65,6 +67,7 @@ import {
   prefetchAsOfHistory,
   readBridgeAccountAndPositions,
   readWatchlist100,
+  readWatchlistPoolOverview,
   recordIntradayCheckpoint,
   refreshWatchlist100,
   writePotentialStocksPool,
@@ -95,9 +98,9 @@ const REFRESH_POOL_NODES: ReadonlySet<CerebellumAlarmType> = new Set([
   "pre_market_plan", // 08:30 晨报选股
   "call_auction_watch", // 09:15 集合竞价补池
   "pre_open_confirmation", // 09:25 开盘确认
-  "morning_review", // 10:00 早盘
+  "morning_review", // 10:30 早盘必报
   "midday_review", // 11:30 午盘
-  "afternoon_risk_scan", // 14:00 跳水排查
+  "afternoon_risk_scan", // 13:30 跳水排查
   "late_session_plan", // 14:30 尾盘
   "closing_snapshot", // 15:00 收盘
   "closing_review", // 15:30 盘后
@@ -186,10 +189,19 @@ export interface FunnelExecutionSummary {
   idempotent?: boolean;
 }
 
+export interface FunnelShortlistSummary {
+  symbol: string;
+  name: string;
+  rank: number | null;
+  rationale: string;
+}
+
 export interface FunnelNodeRunResult {
   alarmType: CerebellumAlarmType;
   planId?: string;
   shortlistCount: number;
+  /** 潜力股名单 + 逐只选股理由 — surfaced so the replay report explains WHY each was picked. */
+  shortlist10: FunnelShortlistSummary[];
   proposals: FunnelProposalSummary[];
   executions: FunnelExecutionSummary[];
   autoPaper: boolean;
@@ -209,6 +221,10 @@ export interface ReplayDayRunResult {
   date: string;
   nodeCount: number;
   nodes: ReplayNodeRunResult[];
+  /** Where the 选股池 came from (as-of 快照忠实还原 vs 当日实时兜底) — surfaced so two un-recorded past days aren't silently identical. */
+  poolSource?: string;
+  /** True only when the pool was an as-of snapshot recorded on/before the replay day (truly faithful). */
+  poolFaithful?: boolean;
 }
 
 /** Builds the per-node runner: heavy nodes -> deep research, the rest -> SOP+brain. */
@@ -239,7 +255,7 @@ export function createAlarmRunNode(
       let themeHeat: ThemeHeatSummary | undefined;
       const poolEmpty = readWatchlist100(deps.memoryDir).length === 0;
       if (REFRESH_POOL_NODES.has(alarmType) || poolEmpty) {
-        const refresh = await refreshWatchlist100({ config: deps.config, memoryDir: deps.memoryDir, now });
+        const refresh = await refreshWatchlist100({ config: deps.config, memoryDir: deps.memoryDir, now, alarmType });
         themeHeat = refresh.themeHeat;
         const note =
           refresh.watchlist100.length === 0
@@ -351,6 +367,7 @@ export function createAlarmRunNode(
         intradayTimeline,
         dragonTiger: context.dragonTiger,
         holdingsMoneyFlow: context.holdingsMoneyFlow,
+        marketPhase: context.marketPhase,
         themeHeat,
         dataHealth: context.dataHealth,
         webSearch: context.webSearch,
@@ -508,6 +525,7 @@ async function runFunnelNode(
       })),
       autoPaper,
       brainContext: funnelBrainContext(context, themeHeat),
+      poolOverview: context.poolOverview,
       executionConstraints,
     },
     {
@@ -544,12 +562,19 @@ async function runFunnelNode(
       limitPrice: proposal.limitPrice,
       rationale: proposal.rationale,
     }));
+  const shortlistSummaries: FunnelShortlistSummary[] = plan.shortlist10.map((entry) => ({
+    symbol: entry.symbol,
+    name: entry.name,
+    rank: entry.rank,
+    rationale: entry.rationale,
+  }));
 
   if (!autoPaper || proposals.length === 0) {
     return {
       alarmType,
       planId: plan.planId,
       shortlistCount: plan.shortlist10.length,
+      shortlist10: shortlistSummaries,
       proposals: proposalSummaries,
       executions: [],
       autoPaper,
@@ -604,6 +629,7 @@ async function runFunnelNode(
     alarmType,
     planId: plan.planId,
     shortlistCount: plan.shortlist10.length,
+    shortlist10: shortlistSummaries,
     proposals: proposalSummaries,
     executions,
     autoPaper,
@@ -635,6 +661,7 @@ function skippedFunnel(alarmType: CerebellumAlarmType, reason: string): FunnelNo
   return {
     alarmType,
     shortlistCount: 0,
+    shortlist10: [],
     proposals: [],
     executions: [],
     autoPaper: false,
@@ -684,7 +711,10 @@ function buildExecutionReport(
     severity: "info",
     source: { type: "scheduler", id: "daily-funnel" },
     target: { type: "system" },
-    summary: `【模拟盘后端处理·${alarmType}】\n${executions.map(formatExecutionSummary).join("\n")}`.slice(0, 1000),
+    summary: clipText(
+      `【模拟盘后端处理·${alarmType}】\n${executions.map(formatExecutionSummary).join("\n")}`,
+      NOTIFICATION_SUMMARY_MAX_LENGTH,
+    ),
     recommendedAction: "已按现金、仓位、T+1、100股、主板规则成交并写入账本；如需调整直接回复。",
     channels: ["feishu"],
     metadata: { funnel: true, autoPaper: true, liveTrading: false, brokerConnected: false },
@@ -756,7 +786,10 @@ function deepResearchNotification(report: ResearchReport, position: Position, no
     severity: "info",
     source: { type: "cerebellum", id: "deep-review" },
     target: { type: "symbol", symbol: position.symbol, market: position.market, name: position.name },
-    summary: `【深度复盘 · ${position.name} ${position.symbol}】结论：${conclusionZh(report.conclusion)}\n${report.summary}`.slice(0, 1000),
+    summary: clipText(
+      `【深度复盘 · ${position.name} ${position.symbol}】结论：${conclusionZh(report.conclusion)}\n${report.summary}`,
+      NOTIFICATION_SUMMARY_MAX_LENGTH,
+    ),
     recommendedAction: "多智能体研判结论；如需据此在模拟盘操作，直接回复即可。",
     channels: ["console", "file", "wechat"],
     metadata: {
@@ -904,7 +937,10 @@ export async function main(args: string[]): Promise<void> {
     if (!isReal) {
       console.log("注意：BRAIN_PROVIDER=mock，产出为占位文本。设真实 provider 才有真分析。");
     }
-    await runReplayDay(deps, cli.replayDay);
+    if (cli.node) {
+      console.log(`单个闹钟场景重演：${cli.replayDay} 仅 ${cli.node} 节点`);
+    }
+    await runReplayDay(deps, cli.replayDay, { onlyNode: cli.node });
     return;
   }
 
@@ -930,6 +966,8 @@ interface CerebellumDaemonCliOptions {
   fire?: CerebellumAlarmType;
   fireAll: boolean;
   replayDay?: string;
+  /** Scope --replay-day to a single node (单个闹钟场景重演). */
+  node?: CerebellumAlarmType;
 }
 
 function parseArgs(args: string[]): CerebellumDaemonCliOptions {
@@ -960,6 +998,15 @@ function parseArgs(args: string[]): CerebellumDaemonCliOptions {
         );
       }
       options.fire = value;
+    } else if (arg === "--node") {
+      const value = args[index + 1];
+      index += 1;
+      if (!value || !isAlarmType(value)) {
+        throw new CerebellumDaemonCliError(
+          `--node 需要一个有效节点类型（配合 --replay-day），如 pre_market_plan。可用：${alarmTypes().join(", ")}`,
+        );
+      }
+      options.node = value;
     } else {
       throw new CerebellumDaemonCliError(`未知参数：${arg}`);
     }
@@ -979,6 +1026,8 @@ export interface ReplayDayOptions {
    * as-of faithfulness on purpose, and the run logs the caveat. Default false.
    */
   refreshWatchlistWhenEmpty?: boolean;
+  /** When set, replay ONLY this alarm node for the day (单个闹钟场景重演) instead of all. */
+  onlyNode?: CerebellumAlarmType;
 }
 
 /**
@@ -1018,28 +1067,63 @@ export async function runReplayDay(
   })
     .filter((entry) => isCerebellumAlarmDueAtBeijingTime(entry.rule, entry.beijing))
     .filter((entry) => !DEEP_RESEARCH_NODES.has(entry.rule.alarmType))
+    // 单个闹钟场景重演: scope to just the requested node when asked.
+    .filter((entry) => options.onlyNode === undefined || entry.rule.alarmType === options.onlyNode)
     .sort((left, right) => left.rule.priority - right.rule.priority);
 
   if (dueNodes.length === 0) {
-    console.log(`${date} 没有可忠实重演的节点（周末/节假日规则，或仅有 deep_review）。`);
+    const scope = options.onlyNode ? `节点 ${options.onlyNode} 当日不触发（或为 deep_review/周末规则）` : "周末/节假日规则，或仅有 deep_review";
+    console.log(`${date} 没有可忠实重演的节点（${scope}）。`);
     return { date, nodeCount: 0, nodes: [] };
   }
 
-  let watchlist = readWatchlist100(deps.memoryDir);
-  if (watchlist.length === 0 && options.refreshWatchlistWhenEmpty) {
-    console.log("(重演前 100池为空，执行一次当日换血补池；注意：使用当日 universe，非严格 as-of)");
+  // 选股的 as-of 还原：先找"模拟时间点之前"那条已记录的池快照（忠实重放当时模型看到的池）；
+  // 没有记录就跑一次选股并写进时间戳历史（老板的规格：找不到就模拟选股、落库）。
+  const referenceInstant = dueNodes[0]!.instant.toISOString();
+  const todayLabel = toBeijingDate(new Date().toISOString()).date;
+  let watchlist: PlanWatchlistEntry[] = [];
+  let poolSource = "";
+  let poolFaithful = false;
+  let poolCaveat = "";
+  // 观察池分类概览 (真实信号 涨停/封单/连板/资金/题材/趋势) — fed to the alarm node + funnel so 选股理由
+  // can cite concrete signals. as-of 快照自带当时渲染好的 overview (truly as-of); 兜底路径用当前池的概览。
+  let poolOverviewForReplay: string | undefined;
+  const asOfSnapshot = readPoolSnapshotAsOf(deps.memoryDir, referenceInstant);
+  if (asOfSnapshot) {
+    watchlist = asOfSnapshot.entries.map((entry) => ({
+      symbol: entry.symbol,
+      market: entry.market,
+      name: entry.name,
+      rank: entry.rank,
+    }));
+    poolSource = `as-of 池快照 @ ${asOfSnapshot.asOf}（${watchlist.length} 支，忠实还原该时点选股池）`;
+    poolFaithful = true;
+    poolOverviewForReplay = asOfSnapshot.overview?.trim() || undefined; // the overview the model saw at selection time
+  } else if (options.refreshWatchlistWhenEmpty) {
+    console.log("(该时间点前无池快照，执行一次选股并写入时间戳历史；注意：使用当日 universe，非严格 as-of)");
     try {
-      const refresh = await refreshWatchlist100({ config: deps.config, memoryDir: deps.memoryDir });
+      const refresh = await refreshWatchlist100({
+        config: deps.config,
+        memoryDir: deps.memoryDir,
+        now: referenceInstant,
+        alarmType: options.onlyNode,
+      });
       watchlist = refresh.watchlist100;
-      console.log(
-        `(重演补池：${watchlist.length} 支${refresh.degraded ? "（换血降级，仍为空或沿用上次）" : ""})`,
-      );
+      poolSource = `${date} 无历史池快照 → 用当日(${todayLabel})实时 universe 现选并落库（${watchlist.length} 支，非该日真实历史池）`;
+      poolCaveat = `本次观察池是用当日(${todayLabel})实时行情现选的，不是 ${date} 当天的历史选股池（该日开始记录前无快照）；因此重演不同的未记录历史日会得到同一套当日池，不能据此比较不同历史日的选股差异`;
+      poolOverviewForReplay = readWatchlistPoolOverview(deps.memoryDir); // just written by the refresh
     } catch (error) {
-      console.error(
-        `(重演补池失败：${error instanceof Error ? error.message : String(error)})`,
-      );
+      console.error(`(重演补池失败：${error instanceof Error ? error.message : String(error)})`);
     }
   }
+  if (watchlist.length === 0) {
+    watchlist = readWatchlist100(deps.memoryDir); // last resort: current stored pool
+    poolSource = poolSource || `当前存量池（${watchlist.length} 支，无 as-of 快照，非该日历史）`;
+    poolCaveat =
+      poolCaveat || `本次用的是当前存量观察池，不是 ${date} 当天的历史选股池，不能据此比较不同历史日`;
+    poolOverviewForReplay = poolOverviewForReplay ?? readWatchlistPoolOverview(deps.memoryDir);
+  }
+  console.log(`(选股池来源：${poolSource})`);
   const symbols = replaySymbolsFrom(initialState.positions, watchlist, REPLAY_WATCHLIST_SYMBOL_LIMIT);
   const historyProvider = await prefetchAsOfHistory(symbols, deps.config, date);
   const indexSource = await prefetchAsOfIndexSource(deps.config, date);
@@ -1071,6 +1155,7 @@ export async function runReplayDay(
       sameDayBarIncluded,
       historyProvider,
       indexSource,
+      poolOverview: poolOverviewForReplay,
     });
 
     if (!deps.budget.tryConsume("brain")) {
@@ -1090,8 +1175,10 @@ export async function runReplayDay(
         technicals: context.technicals,
         indices: context.indices,
         watchlist: context.watchlist,
+        poolOverview: context.poolOverview,
         dataHealth: context.dataHealth,
         webSearch: context.webSearch,
+        dataCaveat: poolCaveat || undefined,
         todayFills,
         now: instant.toISOString(),
       };
@@ -1142,7 +1229,7 @@ export async function runReplayDay(
   }
 
   console.log("✅ 忠实重演完成（已按配置推送到飞书/企业微信）。");
-  return { date, nodeCount: dueNodes.length, nodes };
+  return { date, nodeCount: dueNodes.length, nodes, poolSource, poolFaithful };
 }
 
 function replaySymbolsFrom(
@@ -1240,7 +1327,7 @@ function isAlarmType(value: string): value is CerebellumAlarmType {
 }
 
 function clipText(text: string, max: number): string {
-  const normalized = text.trim().replace(/\s+/g, " ");
+  const normalized = text.trim();
   return normalized.length <= max ? normalized : `${normalized.slice(0, max - 1)}…`;
 }
 

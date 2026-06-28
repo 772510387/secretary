@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-002185-SELL-20260626011515",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260626011515",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "002185",
+  "market": "SZSE",
+  "name": "华天科技",
+  "side": "SELL",
+  "quantity": 100,
+  "limitPrice": 22.6,
+  "currency": "CNY",
+  "rationale": "持仓标的，60日区间位置97.8%，短期涨幅较大，T+1可卖，均衡仓位",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-26T01:15:15.008Z",
+  "updatedAt": "2026-06-26T01:15:15.008Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 2260
+  }
+}

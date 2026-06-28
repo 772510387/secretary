@@ -1,0 +1,29 @@
+[
+  {
+    "time": "19:11",
+    "occurredAt": "2026-06-27T11:11:02.691Z",
+    "alarmType": "call_auction_watch",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": -0.0226
+      },
+      {
+        "name": "深证成指",
+        "changePct": -0.0344
+      },
+      {
+        "name": "创业板指",
+        "changePct": -0.0407
+      },
+      {
+        "name": "科创50",
+        "changePct": -0.0165
+      }
+    ],
+    "holdings": [],
+    "limitUpCount": 40,
+    "limitDownCount": 32,
+    "heatScore": 38
+  }
+]

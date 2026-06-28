@@ -53,6 +53,10 @@ const REPLAY: ReplayDayRunResult = {
         alarmType: "call_auction_watch",
         planId: "plan-1",
         shortlistCount: 10,
+        shortlist10: [
+          { symbol: "600522", name: "中天科技", rank: 1, rationale: "海缆订单+主力净流入3.2亿，日线多头。" },
+          { symbol: "600089", name: "特变电工", rank: 2, rationale: "特高压题材，封单0.8亿2连板。" },
+        ],
         autoPaper: true,
         degraded: false,
         proposals: [

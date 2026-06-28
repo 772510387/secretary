@@ -59,10 +59,10 @@ export const FIXED_CEREBELLUM_ALARM_RULES: readonly CerebellumAlarmRule[] = [
   fixedAlarm({
     alarmId: "morning-review",
     alarmType: "morning_review",
-    beijingTime: "10:00",
+    beijingTime: "10:30",
     priority: 15,
     brainTaskType: "midday_review",
-    description: "10:00 Beijing first morning review task.",
+    description: "10:30 Beijing required morning trend review task.",
   }),
   fixedAlarm({
     alarmId: "midday-review",
@@ -75,10 +75,10 @@ export const FIXED_CEREBELLUM_ALARM_RULES: readonly CerebellumAlarmRule[] = [
   fixedAlarm({
     alarmId: "afternoon-risk-scan",
     alarmType: "afternoon_risk_scan",
-    beijingTime: "14:00",
+    beijingTime: "13:30",
     priority: 17,
     brainTaskType: "midday_review",
-    description: "14:00 Beijing afternoon risk scan task.",
+    description: "13:30 Beijing required afternoon jump-risk scan task.",
   }),
   fixedAlarm({
     alarmId: "late-session-plan",

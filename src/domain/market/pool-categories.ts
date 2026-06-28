@@ -6,9 +6,9 @@ import { isMainBoardSymbol } from "./symbols.js";
 /**
  * The OpenClaw-style observation-pool buckets. Each pool stock is assigned ONE
  * primary bucket (the most informative one it qualifies for), so a 100-pool is a
- * categorized set — 持仓 / 涨停 / 跌停 / 涨幅榜 / 成交额榜 — instead of one flat
- * turnover ranking. `hot_sector_leader` (needs sector data) is intentionally NOT
- * produced here yet; see pool-categories docs for the deferred sector source.
+ * categorized set — 持仓 / 涨停 / 跌停 / 昨日涨停跌停 / 热门板块龙头 / 涨幅榜 / 成交额榜 —
+ * instead of one flat turnover ranking. `hot_sector_leader` IS produced (via
+ * findSectorLeaders, gated on f100 sector data; degrades to empty without it).
  */
 export type PoolBucket =
   | "position"
@@ -16,6 +16,7 @@ export type PoolBucket =
   | "limit_down"
   | "yesterday_limit_up"
   | "yesterday_limit_down"
+  | "hot_theme"
   | "hot_sector_leader"
   | "change_top"
   | "amount_top";
@@ -27,6 +28,7 @@ const BUCKET_PRIORITY: readonly PoolBucket[] = [
   "limit_down",
   "yesterday_limit_up",
   "yesterday_limit_down",
+  "hot_theme",
   "hot_sector_leader",
   "change_top",
   "amount_top",
@@ -38,6 +40,7 @@ export const POOL_BUCKET_LABEL: Record<PoolBucket, string> = {
   limit_down: "跌停",
   yesterday_limit_up: "昨日涨停",
   yesterday_limit_down: "昨日跌停",
+  hot_theme: "热门题材成分",
   hot_sector_leader: "热门板块龙头",
   change_top: "涨幅榜",
   amount_top: "成交额榜",
@@ -64,6 +67,9 @@ export interface CategorizeUniverseOptions {
   yesterdayLimitUpSymbols?: readonly string[];
   /** Symbols that were limit-down on the PRIOR trading day (rebound/补跌 watch). */
   yesterdayLimitDownSymbols?: readonly string[];
+  /** Members of today's HOT 概念/题材 (real membership) → guaranteed a pool slot (题材决定谁进池). */
+  hotThemeSymbols?: ReadonlySet<string>;
+  hotThemeTarget?: number;
   limitUpTarget?: number;
   limitDownTarget?: number;
   /** 热门板块龙头 count (needs sector data; 0 disables). */
@@ -79,6 +85,7 @@ export interface CategorizeUniverseOptions {
 const DEFAULTS = {
   limitUpTarget: 30,
   limitDownTarget: 20,
+  hotThemeTarget: 15,
   hotSectorLeaderTarget: 10,
   changeTopTarget: 20,
   minAmount: 0,
@@ -179,6 +186,18 @@ export function categorizeUniverse(
     yesterdayDown.size,
   );
 
+  // 2b2. 热门题材成分 — members of today's HOT 概念/题材 (real membership), strongest by 成交额.
+  //      This is "题材决定谁进池": a hot-theme stock gets a slot even if its turnover alone
+  //      wouldn't rank it into the pool. Empty without a hotThemeSymbols set (graceful).
+  const hotThemeSymbols = options.hotThemeSymbols;
+  if (hotThemeSymbols && hotThemeSymbols.size > 0) {
+    take(
+      "hot_theme",
+      tradable.filter((stock) => hotThemeSymbols.has(stock.symbol)).sort(byAmountDesc),
+      options.hotThemeTarget ?? DEFAULTS.hotThemeTarget,
+    );
+  }
+
   // 2c. 热门板块龙头 — the highest-成交额 name of each sector that is running hot today
   //     (≥2 strong names). Needs sector data (Eastmoney f100); silently empty without it.
   const hotSectorLeaderTarget = options.hotSectorLeaderTarget ?? DEFAULTS.hotSectorLeaderTarget;
@@ -239,6 +258,7 @@ const NAMED_BUCKETS: readonly PoolBucket[] = [
   "limit_down",
   "yesterday_limit_up",
   "yesterday_limit_down",
+  "hot_theme",
   "hot_sector_leader",
   "change_top",
 ];
@@ -251,7 +271,13 @@ const NAMED_BUCKETS: readonly PoolBucket[] = [
  */
 export function renderPoolOverview(
   entries: readonly CategorizedPoolEntry[],
-  options: { namesPerBucket?: number; sealBySymbol?: ReadonlyMap<string, SealBoard> } = {},
+  options: {
+    namesPerBucket?: number;
+    sealBySymbol?: ReadonlyMap<string, SealBoard>;
+    streakBySymbol?: ReadonlyMap<string, number>;
+    trendBySymbol?: ReadonlyMap<string, string>;
+    hotThemeBySymbol?: ReadonlyMap<string, string>;
+  } = {},
 ): string {
   if (entries.length === 0) {
     return "";
@@ -278,11 +304,16 @@ export function renderPoolOverview(
     }
     const names = bucketEntries
       .slice(0, namesPerBucket)
-      // Include the REAL code (anti-hallucination) + 封单 tag for limit boards.
+      // Include the REAL code (anti-hallucination) + 封单 + 连板 tags for limit boards.
       .map((entry) => {
         const seal = options.sealBySymbol?.get(entry.stock.symbol);
         const sealTag = seal ? ` ${renderSealTag(seal)}` : "";
-        return `${entry.stock.name}(${entry.stock.symbol}${formatChange(entry.stock.changePct)}${sealTag})`;
+        const streak = options.streakBySymbol?.get(entry.stock.symbol);
+        const streakTag = streak !== undefined && streak >= 2 ? ` ${streak}连板` : "";
+        const trendTag = renderTrendTag(options.trendBySymbol?.get(entry.stock.symbol));
+        const theme = options.hotThemeBySymbol?.get(entry.stock.symbol);
+        const themeTag = theme ? ` 【${theme}】` : "";
+        return `${entry.stock.name}(${entry.stock.symbol}${formatChange(entry.stock.changePct)}${sealTag}${streakTag}${trendTag}${themeTag})`;
       })
       .join("、");
     const more = bucketEntries.length > namesPerBucket ? ` 等${bucketEntries.length}只` : "";
@@ -298,6 +329,17 @@ function formatChange(changePct: number | undefined): string {
   }
   const sign = changePct > 0 ? "+" : "";
   return ` ${sign}${changePct.toFixed(2)}%`;
+}
+
+/** Compact 日线趋势 tag for the overview: ↑(uptrend) / ↓(downtrend); empty otherwise. */
+function renderTrendTag(trend: string | undefined): string {
+  if (trend === "uptrend") {
+    return " ↑日线多头";
+  }
+  if (trend === "downtrend") {
+    return " ↓日线空头";
+  }
+  return "";
 }
 
 /**
@@ -340,15 +382,25 @@ export function poolByBucket(
   return map;
 }
 
-/** Keep positions plus the first (maxTotal − positionCount) of the rest, preserving order. */
+/** Buckets that must never be dropped by the cap: 持仓 (必查) + 热门题材成分 (题材决定谁进池). */
+const CAP_PROTECTED_BUCKETS: ReadonlySet<PoolBucket> = new Set(["position", "hot_theme"]);
+
+/**
+ * Keep all protected-bucket entries (positions + hot-theme members) plus the first room of the
+ * rest, PRESERVING the original bucket-priority order. Without protecting hot_theme, a day with
+ * positions + 30 涨停 + 20 跌停 saturating maxTotal would truncate every 题材 slot — breaking the
+ * "题材决定谁进池" guarantee.
+ */
 function capPool(entries: CategorizedPoolEntry[], maxTotal: number): CategorizedPoolEntry[] {
   if (entries.length <= maxTotal) {
     return entries;
   }
-  const positions = entries.filter((entry) => entry.bucket === "position");
-  const rest = entries.filter((entry) => entry.bucket !== "position");
-  const room = Math.max(0, maxTotal - positions.length);
-  return [...positions, ...rest.slice(0, room)];
+  const protectedCount = entries.filter((entry) => CAP_PROTECTED_BUCKETS.has(entry.bucket)).length;
+  const room = Math.max(0, maxTotal - protectedCount);
+  const keptRest = new Set(
+    entries.filter((entry) => !CAP_PROTECTED_BUCKETS.has(entry.bucket)).slice(0, room),
+  );
+  return entries.filter((entry) => CAP_PROTECTED_BUCKETS.has(entry.bucket) || keptRest.has(entry));
 }
 
 function passesAmount(stock: UniverseStock, minAmount: number): boolean {

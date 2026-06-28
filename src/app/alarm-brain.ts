@@ -6,6 +6,7 @@ import {
   type CerebellumAlarmType,
 } from "../domain/cerebellum/index.js";
 import {
+  NOTIFICATION_SUMMARY_MAX_LENGTH,
   notificationEventSchema,
   type NotificationEvent,
 } from "../domain/notification/index.js";
@@ -17,6 +18,10 @@ import {
   type AskWebSearchContext,
   type MarketDataHealth,
 } from "./ask-portfolio.js";
+import {
+  buildPreMarketDisplayContract,
+  isPreMarketDisplayNode,
+} from "./pre-market-display-contract.js";
 import type { PlanWatchlistEntry } from "../domain/plan/index.js";
 import type { ThemeHeatSummary } from "../domain/market/index.js";
 
@@ -32,6 +37,10 @@ export interface RunAlarmNodeInput {
   poolOverview?: string;
   /** 日内检查点时间线 (上次→本次大盘/情绪变化) — injected for node-to-node continuity. */
   intradayTimeline?: string;
+  /** 行情相位 label — injected so the brain reads 9:15 价 as 竞价价, not 开盘/盘中价. */
+  marketPhase?: string;
+  /** Data-provenance caveat (e.g. replay used today's live pool, not that day's history) — must be stated honestly, not hidden. */
+  dataCaveat?: string;
   /** 龙虎榜 (主力净买卖) summary — injected at 盘后 nodes for capital-flow grounding. */
   dragonTiger?: string;
   /** 持仓资金面 (Sina 主力净流入 per held position) — injected for 盾/防守 grounding. */
@@ -137,6 +146,12 @@ export async function runAlarmNodeAnalysis(
     "安全边界：",
     ...sop.forbiddenActions.map((action) => `- ${action}`),
     "基于提供的账户、行情、技术指标、指数、100支高关注池和（若有）联网检索，用简体中文产出该 SOP 要求的结论。",
+    ...(input.marketPhase && input.marketPhase.trim()
+      ? [`【当前行情阶段】${input.marketPhase.trim()}（据此理解现价语义：集合竞价价≠开盘价≠盘中价≠收盘价）。`]
+      : []),
+    ...(input.dataCaveat && input.dataCaveat.trim()
+      ? [`【数据来源声明·必须如实告知】${input.dataCaveat.trim()}。请在结论里明确这一点，不要把它当作该日真实历史数据。`]
+      : []),
     ...(input.poolOverview && input.poolOverview.trim()
       ? [
           `【观察池分类概览（确定性筛选，按类别）】\n${input.poolOverview.trim()}`,
@@ -160,6 +175,7 @@ export async function runAlarmNodeAnalysis(
       : []),
     ...(input.todayFills && input.todayFills.trim() ? [input.todayFills.trim()] : []),
     ...(holdingImpact ? [holdingImpact] : []),
+    ...(isPreMarketDisplayNode(input.alarmType) ? [buildPreMarketDisplayContract()] : []),
     ...(swordShield ? [SWORD_SHIELD_FRAMEWORK] : ["控制在 6 句以内。"]),
     OPERATION_REPORT_FRAMEWORK,
     PUSH_DELIVERY_CONTRACT,
@@ -190,7 +206,7 @@ export async function runAlarmNodeAnalysis(
     severity: "info",
     source: { type: "cerebellum", id: "alarm-matrix" },
     target: { type: "system" },
-    summary: `【${title}】\n${ask.answer}`.slice(0, 1000),
+    summary: clipText(`【${title}】\n${ask.answer}`, NOTIFICATION_SUMMARY_MAX_LENGTH),
     recommendedAction: "如需据此在模拟盘操作，直接回复即可。",
     channels: ["console", "file", "wechat"],
     metadata: {
@@ -202,4 +218,9 @@ export async function runAlarmNodeAnalysis(
   });
 
   return { alarmType: input.alarmType, title, report: ask.answer, notification };
+}
+
+function clipText(text: string, max: number): string {
+  const trimmed = text.trim();
+  return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`;
 }

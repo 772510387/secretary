@@ -6,20 +6,30 @@ import {
   AsOfMarketReader,
   DEFAULT_ASOF_INDEX_DEFINITIONS,
   KlineAsOfIndexSource,
+  appendPoolSnapshot,
   buildPaperAgentToolDeps,
   buildPaperAgentTools,
   persistCategorizedPool,
+  readPoolSnapshotAsOf,
   inferMarket,
+  watchlistEntryToPotentialStockCandidate,
+  type PoolSnapshotEntry,
   type AsOfIndexSource,
   type AskIndex,
   type AskTechnical,
   type AskWebSearchContext,
+  type AuctionBoardToolQuery,
   type MarketDataHealth,
+  type MarketOverviewToolResult,
   type PaperAgentTools,
   type PaperOpsToolCommand,
   type PaperPortfolioView,
   type PaperQuoteView,
   type PaperTechnicalView,
+  type PotentialStockCandidate,
+  type WatchlistToolEntry,
+  type WatchlistToolQuery,
+  type WatchlistToolResult,
   type WeChatBridgeContext,
 } from "../../src/app/index.js";
 import {
@@ -30,14 +40,18 @@ import {
   type Position,
 } from "../../src/domain/portfolio/index.js";
 import {
+  MARKET_PHASE_LABEL,
   buildIntradayCheckpoint,
   buildWatchlistSnapshot,
   classifyLimitState,
   computeSealBoard,
+  computeSectorHeat,
   computeThemeHeat,
   isMainBoardSymbol,
   renderDragonTigerSummary,
   renderIntradayTimeline,
+  renderSectorHeat,
+  resolveMarketPhase,
   summarizeDragonTiger,
   type IntradayCheckpoint,
   type KlineBar,
@@ -45,6 +59,8 @@ import {
   type StockSymbolInfo,
   type ThemeHeatSummary,
   type UniverseStock,
+  type WatchlistEntry,
+  type WatchlistSnapshot,
 } from "../../src/domain/market/index.js";
 import { buildNodeSearchQuery, type CerebellumAlarmType } from "../../src/domain/cerebellum/index.js";
 import {
@@ -56,6 +72,7 @@ import { WatchlistMemoryStore } from "../../src/infrastructure/storage/index.js"
 import {
   CachingUniverseProvider,
   EastmoneyBillboardProvider,
+  EastmoneyConceptProvider,
   EastmoneyUniverseProvider,
   FallbackUniverseProvider,
   SinaMoneyFlowProvider,
@@ -105,6 +122,8 @@ export async function buildBridgeContext(input: {
   includeWatchlist?: boolean;
 }): Promise<WeChatBridgeContext> {
   const asOf = new Date().toISOString();
+  // 行情相位 (deterministic from Beijing time): lets the brain distinguish 竞价价/开盘价/盘中价.
+  const marketPhase = MARKET_PHASE_LABEL[resolveMarketPhase(toBeijingDateTime(new Date(asOf)))];
   const paths = createPortfolioMemoryPaths(input.memoryDir);
   const account = readAccount(paths.accountPath);
   const positions = readPositions(paths.positionsPath);
@@ -114,6 +133,9 @@ export async function buildBridgeContext(input: {
   // 层级1+层级2 categorized overview (persisted at 换血 time); fed to the brain so the
   // push can name 涨停/昨日涨停/涨幅榜… instead of a flat list.
   const poolOverview = input.includeWatchlist ? readWatchlistPoolOverview(input.memoryDir) : undefined;
+  const potentialStocks = input.includeWatchlist
+    ? readPotentialStockCandidates(input.memoryDir, positions)
+    : undefined;
 
   // Price the union of held + pool symbols so an EMPTY account still has real data
   // (this morning's "pricesAvailable:false" came from pricing positions only → []).
@@ -162,9 +184,11 @@ export async function buildBridgeContext(input: {
     technicals,
     indices,
     watchlist,
+    potentialStocks,
     poolOverview,
     dragonTiger,
     holdingsMoneyFlow,
+    marketPhase,
     dataHealth,
     webSearch,
   };
@@ -259,6 +283,35 @@ export function readWatchlist100(memoryDir: string): PlanWatchlistEntry[] {
   }
 }
 
+/** Reads the current rich 潜力股池, enriched with held-position flags when possible. */
+export function readPotentialStockCandidates(
+  memoryDir: string,
+  positions: readonly Position[] = [],
+): PotentialStockCandidate[] {
+  try {
+    const store = new WatchlistMemoryStore({ memoryDir });
+    const potential = store.readCategory("potential_stocks");
+    const reference = store.readCategory("watchlist_today");
+    const referenceBySymbol = new Map(reference.entries.map((entry) => [entry.symbol, entry]));
+    const positionBySymbol = new Map(positions.map((position) => [position.symbol, position]));
+
+    return potential.entries.map((entry) => {
+      const richer = referenceBySymbol.get(entry.symbol) ?? entry;
+      return watchlistEntryToPotentialStockCandidate(
+        {
+          ...richer,
+          reason: entry.reason || richer.reason,
+          priority: entry.priority,
+          metadata: { ...richer.metadata, ...entry.metadata },
+        },
+        { position: positionBySymbol.get(entry.symbol) },
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
 /** Reads the persisted 观察池分类概览 (层级1+层级2) string from the stored pool, if any. */
 export function readWatchlistPoolOverview(memoryDir: string): string | undefined {
   try {
@@ -268,6 +321,196 @@ export function readWatchlistPoolOverview(memoryDir: string): string | undefined
   } catch {
     return undefined;
   }
+}
+
+function readWatchlistSnapshot(memoryDir: string): WatchlistSnapshot {
+  return new WatchlistMemoryStore({ memoryDir }).readCategory("watchlist_today");
+}
+
+function buildStoredMarketOverview(memoryDir: string): MarketOverviewToolResult {
+  try {
+    const snapshot = readWatchlistSnapshot(memoryDir);
+    const overview = typeof snapshot.metadata.poolOverview === "string" ? snapshot.metadata.poolOverview : undefined;
+    const notes: string[] = [];
+    if (snapshot.entries.length === 0) {
+      notes.push("100高关注池为空，可能尚未刷新或最近刷新失败");
+    }
+    if (!overview) {
+      notes.push("观察池概览缺失，只能返回条目级数据");
+    }
+    return {
+      ok: true,
+      asOf: snapshot.updatedAt,
+      watchlistCount: snapshot.entries.length,
+      poolOverview: overview,
+      dataHealth: {
+        source: "memory/market/watchlists/watchlist_today.json",
+        updatedAt: snapshot.updatedAt,
+        entryCount: snapshot.entries.length,
+        categoryCounts: snapshot.metadata.categoryCounts ?? null,
+        degraded: snapshot.entries.length === 0 || !overview,
+      },
+      notes,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      notes: [`读取观察池失败：${error instanceof Error ? error.message : String(error)}`],
+    };
+  }
+}
+
+function queryStoredWatchlist(memoryDir: string, query: WatchlistToolQuery): WatchlistToolResult {
+  const snapshot = readWatchlistSnapshot(memoryDir);
+  const limit = query.limit ?? 20;
+  const overview = typeof snapshot.metadata.poolOverview === "string" ? snapshot.metadata.poolOverview : undefined;
+  const filtered = snapshot.entries.filter((entry) => matchesWatchlistQuery(entry, query));
+  const entries = filtered.sort(compareWatchlistToolEntries).slice(0, limit).map(toWatchlistToolEntry);
+  return {
+    ok: true,
+    updatedAt: snapshot.updatedAt,
+    overview,
+    total: filtered.length,
+    returned: entries.length,
+    entries,
+    notes: snapshot.entries.length === 0 ? ["100高关注池为空，可能尚未刷新或最近刷新失败"] : [],
+  };
+}
+
+function buildStoredAuctionBoard(
+  memoryDir: string,
+  query: AuctionBoardToolQuery,
+): WatchlistToolResult {
+  const snapshot = readWatchlistSnapshot(memoryDir);
+  const side = query.side ?? "both";
+  const minSealAmount = query.minSealAmount ?? 0;
+  const limit = query.limit ?? 20;
+  const overview = typeof snapshot.metadata.poolOverview === "string" ? snapshot.metadata.poolOverview : undefined;
+  const entries = snapshot.entries
+    .filter((entry) => {
+      const meta = entry.metadata ?? {};
+      const limitState = stringMeta(meta.limitState);
+      const sealAmount = numberMeta(meta.sealAmount) ?? 0;
+      const sideMatched =
+        side === "both" || (side === "limit_up" && limitState === "limit_up") || (side === "limit_down" && limitState === "limit_down");
+      const isSealed = sealAmount > 0 || booleanMeta(meta.isOneWordBoard) === true;
+      const oneWordMatched = query.oneWordOnly === true ? booleanMeta(meta.isOneWordBoard) === true : true;
+      return sideMatched && isSealed && oneWordMatched && sealAmount >= minSealAmount;
+    })
+    .sort((left, right) => {
+      const oneWordDiff = Number(booleanMeta(right.metadata.isOneWordBoard) === true) - Number(booleanMeta(left.metadata.isOneWordBoard) === true);
+      if (oneWordDiff !== 0) {
+        return oneWordDiff;
+      }
+      return (
+        (numberMeta(right.metadata.sealAmount) ?? 0) - (numberMeta(left.metadata.sealAmount) ?? 0) ||
+        (numberMeta(right.metadata.consecutiveLimitUpDays) ?? 0) - (numberMeta(left.metadata.consecutiveLimitUpDays) ?? 0) ||
+        compareWatchlistToolEntries(left, right)
+      );
+    })
+    .slice(0, limit)
+    .map(toWatchlistToolEntry);
+  return {
+    ok: true,
+    updatedAt: snapshot.updatedAt,
+    overview,
+    total: entries.length,
+    returned: entries.length,
+    entries,
+    notes: entries.length === 0 ? ["当前观察池没有匹配的封单/一字板记录；可能尚未在9:15/9:25刷新盘口"] : [],
+  };
+}
+
+function matchesWatchlistQuery(entry: WatchlistEntry, query: WatchlistToolQuery): boolean {
+  if (query.symbol && entry.symbol !== query.symbol) {
+    return false;
+  }
+  if (query.priority && entry.priority !== query.priority) {
+    return false;
+  }
+  const meta = entry.metadata ?? {};
+  if (query.bucket && !matchesText(stringMeta(meta.bucket) ?? stringMeta(meta.bucketLabel), query.bucket)) {
+    return false;
+  }
+  if (query.sector && !matchesText(stringMeta(meta.sector), query.sector)) {
+    return false;
+  }
+  if (query.theme && !matchesText(stringMeta(meta.hotTheme) ?? entry.reason, query.theme)) {
+    return false;
+  }
+  if (query.text) {
+    const haystack = [
+      entry.symbol,
+      entry.name,
+      entry.reason,
+      stringMeta(meta.bucket),
+      stringMeta(meta.bucketLabel),
+      stringMeta(meta.sector),
+      stringMeta(meta.hotTheme),
+      stringMeta(meta.dailyTrend),
+    ]
+      .filter((value): value is string => typeof value === "string" && value.length > 0)
+      .join(" ");
+    if (!matchesText(haystack, query.text)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function toWatchlistToolEntry(entry: WatchlistEntry): WatchlistToolEntry {
+  const meta = entry.metadata ?? {};
+  return {
+    symbol: entry.symbol,
+    market: entry.market,
+    name: entry.name,
+    priority: entry.priority,
+    rank: numberMeta(meta.rank),
+    reason: entry.reason,
+    bucket: stringMeta(meta.bucket),
+    bucketLabel: stringMeta(meta.bucketLabel),
+    sector: stringMeta(meta.sector),
+    hotTheme: stringMeta(meta.hotTheme),
+    latestPrice: numberMeta(meta.latestPrice),
+    changePct: numberMeta(meta.changePct),
+    turnoverRate: numberMeta(meta.turnoverRate),
+    amount: numberMeta(meta.amount),
+    mainNetInflow: numberMeta(meta.mainNetInflow),
+    sealAmount: numberMeta(meta.sealAmount),
+    sealVolumeLots: numberMeta(meta.sealVolumeLots),
+    isOneWordBoard: booleanMeta(meta.isOneWordBoard),
+    consecutiveLimitUpDays: numberMeta(meta.consecutiveLimitUpDays),
+    dailyTrend: stringMeta(meta.dailyTrend),
+    updatedAt: entry.updatedAt,
+  };
+}
+
+function compareWatchlistToolEntries(left: WatchlistEntry, right: WatchlistEntry): number {
+  return (
+    (numberMeta(left.metadata.rank) ?? Number.POSITIVE_INFINITY) -
+      (numberMeta(right.metadata.rank) ?? Number.POSITIVE_INFINITY) ||
+    right.priority.localeCompare(left.priority) ||
+    left.symbol.localeCompare(right.symbol)
+  );
+}
+
+function matchesText(value: string | null | undefined, query: string): boolean {
+  if (!value) {
+    return false;
+  }
+  return value.toLowerCase().includes(query.trim().toLowerCase());
+}
+
+function stringMeta(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function numberMeta(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function booleanMeta(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
 }
 
 /** Reads the CURRENT pool's per-symbol changePct (the prior cycle, before this 换血 overwrites it). */
@@ -287,12 +530,36 @@ function readPoolChangeMap(memoryDir: string): Record<string, number> {
   return map;
 }
 
+/** Maps a persisted watchlist entry to the lean shape stored in the timestamped pool history. */
+function toPoolSnapshotEntry(entry: WatchlistEntry): PoolSnapshotEntry {
+  const meta = entry.metadata ?? {};
+  const num = (value: unknown): number | null => (typeof value === "number" ? value : null);
+  return {
+    symbol: entry.symbol,
+    market: entry.market,
+    name: entry.name,
+    rank: num(meta.rank),
+    bucket: typeof meta.bucket === "string" ? meta.bucket : undefined,
+    changePct: num(meta.changePct),
+    mainNetInflow: num(meta.mainNetInflow),
+    sealAmount: num(meta.sealAmount),
+    consecutiveLimitUpDays: num(meta.consecutiveLimitUpDays),
+  };
+}
+
 const LIMIT_BOARD_DIR = ["market", "limit-board"] as const;
+
+interface LimitBoardEntry {
+  symbol: string;
+  name: string;
+  /** 连板天数 (consecutive limit-up days); 1 = first board. Only meaningful on limitUp. */
+  streak?: number;
+}
 
 interface LimitBoardSnapshot {
   date: string;
-  limitUp: Array<{ symbol: string; name: string }>;
-  limitDown: Array<{ symbol: string; name: string }>;
+  limitUp: LimitBoardEntry[];
+  limitDown: LimitBoardEntry[];
   updatedAt: string;
 }
 
@@ -310,8 +577,8 @@ function beijingDateOf(now: Date | string | undefined): string {
 function writeLimitBoardSnapshot(
   memoryDir: string,
   date: string,
-  limitUp: Array<{ symbol: string; name: string }>,
-  limitDown: Array<{ symbol: string; name: string }>,
+  limitUp: LimitBoardEntry[],
+  limitDown: LimitBoardEntry[],
 ): void {
   try {
     const dir = path.join(memoryDir, ...LIMIT_BOARD_DIR);
@@ -326,6 +593,49 @@ function writeLimitBoardSnapshot(
   } catch {
     // best-effort; 昨日涨停跌停 标注 simply won't be available tomorrow
   }
+}
+
+const TURNOVER_DIR = ["market", "turnover"] as const;
+
+/**
+ * 全市场成交额聚合 + 放量/缩量: sum the universe's 成交额, compare to the most-recent prior
+ * trading day's stored total, persist today's. "X.X万亿（较上日放量/缩量 Y%）". Best-effort.
+ */
+function renderMarketTurnover(memoryDir: string, today: string, universe: readonly UniverseStock[]): string {
+  const total = universe.reduce((sum, stock) => sum + (stock.amount ?? 0), 0);
+  if (total <= 0) {
+    return "";
+  }
+  let compare = "";
+  try {
+    const dir = path.join(memoryDir, ...TURNOVER_DIR);
+    let prior: number | undefined;
+    if (existsSync(dir)) {
+      const priorDate = readdirSync(dir)
+        .filter((file) => /^\d{4}-\d{2}-\d{2}\.json$/.test(file))
+        .map((file) => file.slice(0, 10))
+        .filter((date) => date < today)
+        .sort()
+        .pop();
+      if (priorDate !== undefined) {
+        const parsed = JSON.parse(readFileSync(path.join(dir, `${priorDate}.json`), "utf8")) as { total?: unknown };
+        if (typeof parsed.total === "number" && parsed.total > 0) {
+          prior = parsed.total;
+        }
+      }
+    }
+    if (prior !== undefined) {
+      const deltaPct = ((total - prior) / prior) * 100;
+      const tag = deltaPct >= 0 ? "放量" : "缩量";
+      compare = `（较上日${tag} ${Math.abs(deltaPct).toFixed(1)}%）`;
+    }
+    // Persist today's total (overwrites intraday; by close holds the final figure).
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, `${today}.json`), JSON.stringify({ date: today, total }, null, 2), "utf8");
+  } catch {
+    // best-effort; comparison simply absent
+  }
+  return `全市场成交额 ${(total / 1e12).toFixed(2)}万亿${compare}`;
 }
 
 const CHECKPOINT_DIR = ["market", "checkpoints"] as const;
@@ -393,15 +703,12 @@ function writeIntradayCheckpoints(memoryDir: string, date: string, checkpoints: 
   writeFileSync(path.join(dir, `${date}.json`), JSON.stringify(checkpoints, null, 2), "utf8");
 }
 
-/** Reads the most recent prior-day limit board (the latest snapshot dated before `today`). */
-function readYesterdayLimitBoard(
-  memoryDir: string,
-  today: string,
-): { limitUp: string[]; limitDown: string[] } {
+/** Reads the most recent limit-board snapshot dated strictly before `today`, if any. */
+function readLatestPriorLimitBoard(memoryDir: string, today: string): Partial<LimitBoardSnapshot> | undefined {
   try {
     const dir = path.join(memoryDir, ...LIMIT_BOARD_DIR);
     if (!existsSync(dir)) {
-      return { limitUp: [], limitDown: [] };
+      return undefined;
     }
     const priorDates = readdirSync(dir)
       .filter((file) => /^\d{4}-\d{2}-\d{2}\.json$/.test(file))
@@ -410,18 +717,36 @@ function readYesterdayLimitBoard(
       .sort();
     const latest = priorDates[priorDates.length - 1];
     if (latest === undefined) {
-      return { limitUp: [], limitDown: [] };
+      return undefined;
     }
-    const parsed = JSON.parse(
-      readFileSync(path.join(dir, `${latest}.json`), "utf8"),
-    ) as Partial<LimitBoardSnapshot>;
-    return {
-      limitUp: (parsed.limitUp ?? []).map((entry) => entry.symbol).filter(Boolean),
-      limitDown: (parsed.limitDown ?? []).map((entry) => entry.symbol).filter(Boolean),
-    };
+    return JSON.parse(readFileSync(path.join(dir, `${latest}.json`), "utf8")) as Partial<LimitBoardSnapshot>;
   } catch {
-    return { limitUp: [], limitDown: [] };
+    return undefined;
   }
+}
+
+/** Most recent prior-day limit board, as symbol lists (for the 昨日涨停/跌停 buckets). */
+function readYesterdayLimitBoard(
+  memoryDir: string,
+  today: string,
+): { limitUp: string[]; limitDown: string[] } {
+  const prior = readLatestPriorLimitBoard(memoryDir, today);
+  return {
+    limitUp: (prior?.limitUp ?? []).map((entry) => entry.symbol).filter(Boolean),
+    limitDown: (prior?.limitDown ?? []).map((entry) => entry.symbol).filter(Boolean),
+  };
+}
+
+/** Prior-day 连板 streak per symbol (0 if not limit-up yesterday) — for today's streak = prior+1. */
+function readPriorLimitBoardStreaks(memoryDir: string, today: string): Map<string, number> {
+  const map = new Map<string, number>();
+  const prior = readLatestPriorLimitBoard(memoryDir, today);
+  for (const entry of prior?.limitUp ?? []) {
+    if (entry.symbol) {
+      map.set(entry.symbol, typeof entry.streak === "number" && entry.streak > 0 ? entry.streak : 1);
+    }
+  }
+  return map;
 }
 
 /**
@@ -508,6 +833,8 @@ export async function refreshWatchlist100(input: {
   limit?: number;
   minAmount?: number;
   now?: Date | string;
+  /** The alarm node that triggered this 换血 (labels the timestamped pool snapshot). */
+  alarmType?: CerebellumAlarmType;
 }): Promise<RefreshWatchlistResult> {
   const provider = new CachingUniverseProvider({
     inner: new FallbackUniverseProvider([
@@ -549,9 +876,36 @@ export async function refreshWatchlist100(input: {
 
       // ②池级主力净流入 (Sina batch, reachable): enrich the universe's mainNetInflow with
       // verified r0_net, replacing the unverified Eastmoney f62 where Sina has the symbol.
-      const universe = await enrichWithSinaMoneyFlow(broad);
+      const enriched = await enrichWithSinaMoneyFlow(broad);
+      // ④题材自动筛池 (东财概念成分, 真实成分表): fetch today's hot 题材 + members, inject leaders
+      // into the universe so 题材决定谁进池 (real membership, not model guessing).
+      const hotThemes = await fetchHotThemes(input.config);
+      const universe = mergeHotThemeMembers(enriched, hotThemes.injectedMembers);
       // ①封单/一字板 (Tencent 盘口): for the limit-board names, fetch level-1 盘口 + compute seal.
       const sealBySymbol = await fetchSealBoards(universe);
+      // ③历史趋势 (Tencent 60日K): trend-score the most-traded candidates → deterministic priority nudge.
+      const trendBySymbol = await fetchPoolCandidateTrends(universe, input.config, POOL_TREND_CANDIDATES);
+
+      // 连板天数: today's main-board limit-ups, streak = (prior streak ?? 0) + 1 (今涨停∩昨连板续命).
+      const priorStreaks = readPriorLimitBoardStreaks(input.memoryDir, today);
+      const todayLimitUpStocks = universe.filter(
+        (stock) =>
+          isMainBoardSymbol(stock.symbol) && classifyLimitState(stock.symbol, stock.changePct) === "limit_up",
+      );
+      const todayLimitDownStocks = universe.filter(
+        (stock) =>
+          isMainBoardSymbol(stock.symbol) && classifyLimitState(stock.symbol, stock.changePct) === "limit_down",
+      );
+      const streakBySymbol = new Map<string, number>();
+      for (const stock of todayLimitUpStocks) {
+        streakBySymbol.set(stock.symbol, (priorStreaks.get(stock.symbol) ?? 0) + 1);
+      }
+
+      // 板块涨幅榜 (f100 聚合) + 全市场成交额聚合 — extra market-context lines for the overview.
+      const extraOverviewLines = [
+        renderSectorHeat(computeSectorHeat(universe)),
+        renderMarketTurnover(input.memoryDir, today, universe),
+      ];
 
       const persisted = persistCategorizedPool({
         universe,
@@ -561,24 +915,44 @@ export async function refreshWatchlist100(input: {
         heldNames,
         yesterdayLimitUpSymbols: yesterday.limitUp,
         yesterdayLimitDownSymbols: yesterday.limitDown,
+        hotThemeSymbols: hotThemes.hotThemeSymbols,
+        hotThemeBySymbol: hotThemes.hotThemeBySymbol,
         priorChangeBySymbol,
         sealBySymbol,
+        streakBySymbol,
+        trendBySymbol,
+        extraOverviewLines,
         minAmount: turnoverFloor,
         maxTotal: input.limit ?? 100,
         skipWriteWhenEmpty: true, // INFRA-02: never clobber a good pool with an empty screen
         now: input.now,
       });
 
-      // 收盘快照自维护：persist today's limit boards so tomorrow's 换血 can mark 昨日涨停/跌停.
-      // Guard on non-empty so a pre-open refresh (no moves yet) never overwrites the close state.
-      const todayLimitUp = limitNames(persisted.categorized, "limit_up");
-      const todayLimitDown = limitNames(persisted.categorized, "limit_down");
+      // 收盘快照自维护：persist ALL today's limit boards (with 连板 streak) so tomorrow's 换血
+      // can mark 昨日涨停/跌停 AND continue the streak. Guard on non-empty so a pre-open refresh
+      // (no moves yet) never overwrites the close state.
+      const todayLimitUp = todayLimitUpStocks.map((stock) => ({
+        symbol: stock.symbol,
+        name: stock.name,
+        streak: streakBySymbol.get(stock.symbol) ?? 1,
+      }));
+      const todayLimitDown = todayLimitDownStocks.map((stock) => ({ symbol: stock.symbol, name: stock.name }));
       if (todayLimitUp.length > 0 || todayLimitDown.length > 0) {
         writeLimitBoardSnapshot(input.memoryDir, today, todayLimitUp, todayLimitDown);
       }
 
       const watchlist100 = snapshotWatchlist(persisted.entries);
       if (watchlist100.length > 0) {
+        // Timestamped pool history: record THIS selection so a replay of this time-point can
+        // reconstruct the exact pool the model saw (and so 选股 is auditable/correctable).
+        appendPoolSnapshot(input.memoryDir, {
+          asOf: input.now ? new Date(input.now).toISOString() : new Date().toISOString(),
+          date: today,
+          alarmType: input.alarmType,
+          size: persisted.entries.length,
+          overview: persisted.overview,
+          entries: persisted.entries.map(toPoolSnapshotEntry),
+        });
         return {
           watchlist100,
           universeSize: broad.length,
@@ -605,6 +979,78 @@ export async function refreshWatchlist100(input: {
     themeHeat,
     poolOverview: readWatchlistPoolOverview(input.memoryDir),
   };
+}
+
+/** Top hot 概念/题材 to fetch, leaders to guarantee per theme, and the theme heat floor. */
+const HOT_THEME_COUNT = 6;
+const HOT_THEME_LEADERS_PER = 6;
+const HOT_THEME_MIN_CHANGE = 1;
+
+interface HotThemeResult {
+  /** Leader symbols guaranteed a pool slot (题材决定谁进池). */
+  hotThemeSymbols: Set<string>;
+  /** symbol → its hot 题材 name (ALL main-board members, for tagging anything that's in the pool). */
+  hotThemeBySymbol: Map<string, string>;
+  /** Leader rows to merge into the universe so they can be injected even if the broad screen missed them. */
+  injectedMembers: UniverseStock[];
+}
+
+/**
+ * 题材自动筛池 (确定性): fetch today's hottest 概念/题材 (Eastmoney concept boards) + their REAL
+ * member stocks, so a hot-theme leader gets a pool slot even if its turnover alone wouldn't rank it
+ * in — using genuine membership, never model guessing. Best-effort: source unreachable → empty
+ * (pool unaffected). Bounded: 1 list request + HOT_THEME_COUNT member requests.
+ */
+async function fetchHotThemes(config: AppConfig): Promise<HotThemeResult> {
+  const empty: HotThemeResult = { hotThemeSymbols: new Set(), hotThemeBySymbol: new Map(), injectedMembers: [] };
+  try {
+    const provider = new EastmoneyConceptProvider({ timeoutMs: config.market.quoteTimeoutMs });
+    const concepts = await provider.getHotConcepts({ topK: HOT_THEME_COUNT, minChangePct: HOT_THEME_MIN_CHANGE });
+    if (concepts.length === 0) {
+      return empty;
+    }
+    const result: HotThemeResult = { hotThemeSymbols: new Set(), hotThemeBySymbol: new Map(), injectedMembers: [] };
+    for (const concept of concepts) {
+      let members: UniverseStock[];
+      try {
+        members = await provider.getConceptMembers(concept.boardCode);
+      } catch {
+        continue; // one theme's members failing is non-fatal
+      }
+      const mainBoard = members.filter((member) => isMainBoardSymbol(member.symbol));
+      // Tag every main-board member with its theme (so any that enter the pool show the 题材).
+      for (const member of mainBoard) {
+        if (!result.hotThemeBySymbol.has(member.symbol)) {
+          result.hotThemeBySymbol.set(member.symbol, concept.name);
+        }
+      }
+      // Guarantee the theme's strongest leaders (by 成交额) a slot.
+      const leaders = [...mainBoard]
+        .sort((left, right) => (right.amount ?? 0) - (left.amount ?? 0))
+        .slice(0, HOT_THEME_LEADERS_PER);
+      for (const leader of leaders) {
+        result.hotThemeSymbols.add(leader.symbol);
+        result.injectedMembers.push(leader);
+      }
+    }
+    return result;
+  } catch {
+    return empty;
+  }
+}
+
+/** Merges hot-theme leader rows into the universe (existing universe data wins; add only missing). */
+function mergeHotThemeMembers(universe: UniverseStock[], members: UniverseStock[]): UniverseStock[] {
+  if (members.length === 0) {
+    return universe;
+  }
+  const bySymbol = new Map(universe.map((stock) => [stock.symbol, stock] as const));
+  for (const member of members) {
+    if (!bySymbol.has(member.symbol)) {
+      bySymbol.set(member.symbol, member);
+    }
+  }
+  return [...bySymbol.values()];
 }
 
 /** Enriches universe `mainNetInflow` with Sina's batch 主力净流入 ranking (verified-reachable). */
@@ -662,15 +1108,6 @@ async function fetchSealBoards(universe: UniverseStock[]): Promise<Map<string, S
   return map;
 }
 
-/** A {symbol,name} pick for one bucket of the categorized pool. */
-function limitNames(
-  categorized: ReturnType<typeof persistCategorizedPool>["categorized"],
-  bucket: "limit_up" | "limit_down",
-): Array<{ symbol: string; name: string }> {
-  return categorized
-    .filter((entry) => entry.bucket === bucket)
-    .map((entry) => ({ symbol: entry.stock.symbol, name: entry.stock.name }));
-}
 
 /** Builds the explicit eye-health signal: which fetches that SHOULD have data came back empty. */
 function buildDataHealth(input: {
@@ -764,6 +1201,39 @@ async function fetchTechnicals(
   return settled.filter((technical): technical is AskTechnical => technical !== undefined);
 }
 
+/** Top-N most-traded main-board pool candidates to trend-score (bounded network: 60-day k-line each). */
+const POOL_TREND_CANDIDATES = 40;
+
+/**
+ * 历史趋势纳入选股 (deterministic): for the most-traded main-board pool candidates, fetch the
+ * 60-day daily k-line trend (uptrend/downtrend/sideways) via the existing technicals path and
+ * return a symbol→trend map. Best-effort + bounded (top-N); per-symbol failure is skipped, total
+ * failure → empty map (pool unchanged). Pure of model — the trend only nudges deterministic priority.
+ */
+async function fetchPoolCandidateTrends(
+  universe: UniverseStock[],
+  config: AppConfig,
+  topN: number,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const candidates = universe
+    .filter((stock) => isMainBoardSymbol(stock.symbol) && stock.latestPrice !== undefined && stock.latestPrice > 0)
+    .sort((left, right) => (right.amount ?? 0) - (left.amount ?? 0))
+    .slice(0, topN)
+    .map((stock) => ({ symbol: stock.symbol, market: stock.market, name: stock.name }));
+  if (candidates.length === 0) {
+    return map;
+  }
+  try {
+    for (const technical of await fetchTechnicals(candidates, config)) {
+      map.set(technical.symbol, technical.trend);
+    }
+  } catch {
+    // best-effort; no trend → pool unaffected
+  }
+  return map;
+}
+
 async function fetchIndices(config: AppConfig): Promise<AskIndex[]> {
   try {
     const provider = new TencentIndexProvider({ timeoutMs: config.market.quoteTimeoutMs });
@@ -832,6 +1302,8 @@ export async function buildAsOfBridgeContext(input: {
   /** Optional no-look-ahead index source for faithful replay. */
   indexSource?: AsOfIndexSource;
   historyCount?: number;
+  /** 观察池分类概览 (real signals) — passed so the replay funnel/alarm node can cite concrete signals. */
+  poolOverview?: string;
 }): Promise<WeChatBridgeContext> {
   const rankedWatchlist = [...(input.watchlist ?? [])]
     .sort((left, right) => (left.rank ?? Number.POSITIVE_INFINITY) - (right.rank ?? Number.POSITIVE_INFINITY))
@@ -855,6 +1327,7 @@ export async function buildAsOfBridgeContext(input: {
     technicals: market.technicals,
     indices: market.indices,
     watchlist: input.watchlist,
+    poolOverview: input.poolOverview,
     dataHealth: buildDataHealth({
       asOf: input.asOfDate,
       prices: market.prices,
@@ -1050,6 +1523,9 @@ export function buildLivePaperAgentTools(input: {
     memoryDir,
     loadPortfolioView,
     getLatestPrice,
+    getMarketOverview: () => buildStoredMarketOverview(memoryDir),
+    queryWatchlist: (query) => queryStoredWatchlist(memoryDir, query),
+    getAuctionBoard: (query) => buildStoredAuctionBoard(memoryDir, query),
     getQuote,
     getTechnicals,
   });

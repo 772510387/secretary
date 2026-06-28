@@ -37,6 +37,7 @@ export {
   beijingDate,
   detectPaperOpsCommand,
   formatPaperOpsCommand,
+  resolveRelativePastDate,
   wantsImmediatePaperExecution,
   type PaperOpsCommand,
 } from "./paper-ops-intent.js";
@@ -116,6 +117,24 @@ export {
   type MaintainDailyFunnelResult,
 } from "./maintain-daily-funnel.js";
 export {
+  PotentialStockAnalysisError,
+  analyzePotentialStocks,
+  buildPotentialStockAnalysisBrainInput,
+  candidatesFromShortlist,
+  potentialStockAnalysisItemSchema,
+  potentialStockAnalysisReportSchema,
+  potentialStockCandidateSchema,
+  potentialStockPrioritySchema,
+  renderPotentialStockAnalysisReport,
+  watchlistEntryToPotentialStockCandidate,
+  type AnalyzePotentialStocksInput,
+  type AnalyzePotentialStocksResult,
+  type PotentialStockAnalysisItem,
+  type PotentialStockAnalysisReport,
+  type PotentialStockCandidate,
+  type PotentialStockPriority,
+} from "./potential-stock-analysis.js";
+export {
   buildFunnelExecutionConstraints,
   type BuildFunnelExecutionConstraintsInput,
 } from "./funnel-execution-constraints.js";
@@ -166,6 +185,48 @@ export {
   type DailyFillsLedger,
 } from "./daily-fills-ledger.js";
 export {
+  buildOperationReviewContext,
+  type BuildOperationReviewContextInput,
+  type OperationReviewAuditRef,
+  type OperationReviewContext,
+  type OperationReviewFacts,
+  type OperationReviewOrder,
+  type OperationReviewPerformance,
+  type OperationReviewPlanRef,
+  type OperationReviewProposalRef,
+  type OperationReviewReportRef,
+  type OperationReviewToolQuery,
+  type OperationReviewToolResult,
+  type OperationReviewTrade,
+} from "./operation-review-context.js";
+export {
+  TradingDayReviewFactPackError,
+  buildTradingDayReviewFactPack,
+  buildTradingDayReviewFactPackFromMemory,
+  type BuildTradingDayReviewFactPackInput,
+  type BuildTradingDayReviewFromMemoryInput,
+  type DailySnapshotSummaryLike,
+  type ReviewDecisionNode,
+  type ReviewOperationStats,
+  type ReviewPositionLot,
+  type ReviewTradeTimelineItem,
+  type TradingDayReviewFactPack,
+} from "./build-review-factpack.js";
+export {
+  createTradingDayReview,
+  createTradingDayReviewFromFactPack,
+  createTradingDayReviewFromMemory,
+  createTradingDayReviewPath,
+  renderTradingDayReviewMarkdown,
+  validateTradingDayReviewMarkdown,
+  writeTradingDayReview,
+  type BuildTradingDayReviewFromMemoryResult,
+  type TradingDayReview,
+  type TradingDayReviewValidation,
+  type WriteTradingDayReviewInput,
+  type WriteTradingDayReviewResult,
+} from "./trading-day-review.js";
+export {
   searchModelMemory,
   rememberModelNote,
   rememberModelNoteArgsSchema,
@@ -176,6 +237,12 @@ export {
   type RememberModelNoteResult,
   type RememberModelNoteArgs,
 } from "./model-memory.js";
+export {
+  buildProblemFeedbackFactPack,
+  type ProblemFeedbackDay,
+  type ProblemFeedbackFactPack,
+  type ProblemFeedbackInput,
+} from "./problem-feedback.js";
 export {
   PersistPeriodReviewError,
   createPeriodReviewPath,
@@ -206,6 +273,13 @@ export {
   type WatchlistWriteSummary,
 } from "./build-watchlist.js";
 export {
+  appendPoolSnapshot,
+  listPoolSnapshots,
+  readPoolSnapshotAsOf,
+  type PoolSnapshotEntry,
+  type PoolSnapshotRecord,
+} from "./pool-snapshot-store.js";
+export {
   AskPortfolioError,
   buildAskContext,
   runAskOnce,
@@ -223,6 +297,10 @@ export {
   inferMarket,
   type PaperAgentToolDeps,
   type PaperAgentTools,
+  type AuctionBoardToolQuery,
+  type FeedbackAuditToolQuery,
+  type FeedbackAuditToolResult,
+  type MarketOverviewToolResult,
   type PaperMarket,
   type PaperOpsToolCommand,
   type PaperOrderOutcome,
@@ -232,7 +310,20 @@ export {
   type PaperPositionView,
   type PaperQuoteView,
   type PaperTechnicalView,
+  type StrategyKnowledgeToolQuery,
+  type StrategyKnowledgeToolResult,
+  type WatchlistToolEntry,
+  type WatchlistToolQuery,
+  type WatchlistToolResult,
 } from "./brain-agent-tools.js";
+export {
+  buildStrategyKnowledgeDigest,
+  renderStrategyKnowledgeDigest,
+  type BuildStrategyKnowledgeDigestInput,
+  type StrategyCaseSummary,
+  type StrategyDecisionLogSummary,
+  type StrategyKnowledgeDigest,
+} from "./strategy-knowledge.js";
 export {
   BrainAgentError,
   buildBrainOperationNotification,

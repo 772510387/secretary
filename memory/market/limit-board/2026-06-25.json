@@ -3,123 +3,353 @@
   "limitUp": [
     {
       "symbol": "603986",
-      "name": "兆易创新"
+      "name": "兆易创新",
+      "streak": 1
     },
     {
       "symbol": "600522",
-      "name": "中天科技"
+      "name": "中天科技",
+      "streak": 1
     },
     {
       "symbol": "001309",
-      "name": "德明利"
+      "name": "德明利",
+      "streak": 1
     },
     {
       "symbol": "603019",
-      "name": "中科曙光"
+      "name": "中科曙光",
+      "streak": 1
     },
     {
       "symbol": "600584",
-      "name": "长电科技"
+      "name": "长电科技",
+      "streak": 1
     },
     {
       "symbol": "000100",
-      "name": "TCL科技"
+      "name": "TCL科技",
+      "streak": 1
     },
     {
       "symbol": "000636",
-      "name": "风华高科"
+      "name": "风华高科",
+      "streak": 1
     },
     {
       "symbol": "600330",
-      "name": "天通股份"
+      "name": "天通股份",
+      "streak": 1
     },
     {
       "symbol": "600141",
-      "name": "兴发集团"
+      "name": "兴发集团",
+      "streak": 1
     },
     {
       "symbol": "605589",
-      "name": "圣泉集团"
+      "name": "圣泉集团",
+      "streak": 1
     },
     {
       "symbol": "000783",
-      "name": "长江证券"
+      "name": "长江证券",
+      "streak": 1
     },
     {
       "symbol": "002025",
-      "name": "航天电器"
+      "name": "航天电器",
+      "streak": 1
     },
     {
       "symbol": "002080",
-      "name": "中材科技"
+      "name": "中材科技",
+      "streak": 1
     },
     {
       "symbol": "000811",
-      "name": "冰轮环境"
+      "name": "冰轮环境",
+      "streak": 1
     },
     {
       "symbol": "000962",
-      "name": "东方钽业"
+      "name": "东方钽业",
+      "streak": 1
     },
     {
       "symbol": "002842",
-      "name": "翔鹭钨业"
+      "name": "翔鹭钨业",
+      "streak": 1
     },
     {
       "symbol": "002579",
-      "name": "中京电子"
+      "name": "中京电子",
+      "streak": 1
     },
     {
       "symbol": "002335",
-      "name": "科华数据"
+      "name": "科华数据",
+      "streak": 1
     },
     {
       "symbol": "002558",
-      "name": "巨人网络"
+      "name": "巨人网络",
+      "streak": 1
     },
     {
       "symbol": "002056",
-      "name": "横店东磁"
+      "name": "横店东磁",
+      "streak": 1
     },
     {
       "symbol": "600186",
-      "name": "莲花控股"
+      "name": "莲花控股",
+      "streak": 1
     },
     {
       "symbol": "002484",
-      "name": "江海股份"
+      "name": "江海股份",
+      "streak": 1
     },
     {
       "symbol": "600500",
-      "name": "中化国际"
+      "name": "中化国际",
+      "streak": 1
     },
     {
       "symbol": "002254",
-      "name": "泰和新材"
+      "name": "泰和新材",
+      "streak": 1
     },
     {
       "symbol": "002654",
-      "name": "万润科技"
+      "name": "万润科技",
+      "streak": 1
     },
     {
       "symbol": "603690",
-      "name": "至纯科技"
+      "name": "至纯科技",
+      "streak": 1
     },
     {
       "symbol": "603067",
-      "name": "振华股份"
+      "name": "振华股份",
+      "streak": 1
     },
     {
       "symbol": "605376",
-      "name": "XD博迁新"
+      "name": "XD博迁新",
+      "streak": 1
     },
     {
       "symbol": "603063",
-      "name": "禾望电气"
+      "name": "禾望电气",
+      "streak": 1
     },
     {
       "symbol": "600516",
-      "name": "方大炭素"
+      "name": "方大炭素",
+      "streak": 1
+    },
+    {
+      "symbol": "000766",
+      "name": "通化金马",
+      "streak": 1
+    },
+    {
+      "symbol": "600184",
+      "name": "光电股份",
+      "streak": 1
+    },
+    {
+      "symbol": "600237",
+      "name": "铜峰电子",
+      "streak": 1
+    },
+    {
+      "symbol": "600458",
+      "name": "时代新材",
+      "streak": 1
+    },
+    {
+      "symbol": "000823",
+      "name": "超声电子",
+      "streak": 1
+    },
+    {
+      "symbol": "002965",
+      "name": "祥鑫科技",
+      "streak": 1
+    },
+    {
+      "symbol": "000034",
+      "name": "神州数码",
+      "streak": 1
+    },
+    {
+      "symbol": "603267",
+      "name": "鸿远电子",
+      "streak": 1
+    },
+    {
+      "symbol": "002068",
+      "name": "黑猫股份",
+      "streak": 1
+    },
+    {
+      "symbol": "603459",
+      "name": "红板科技",
+      "streak": 1
+    },
+    {
+      "symbol": "603678",
+      "name": "火炬电子",
+      "streak": 1
+    },
+    {
+      "symbol": "600888",
+      "name": "新疆众和",
+      "streak": 1
+    },
+    {
+      "symbol": "002141",
+      "name": "贤丰控股",
+      "streak": 1
+    },
+    {
+      "symbol": "605178",
+      "name": "时空科技",
+      "streak": 1
+    },
+    {
+      "symbol": "603713",
+      "name": "密尔克卫",
+      "streak": 1
+    },
+    {
+      "symbol": "603335",
+      "name": "迪生力",
+      "streak": 1
+    },
+    {
+      "symbol": "002980",
+      "name": "华盛昌",
+      "streak": 1
+    },
+    {
+      "symbol": "603065",
+      "name": "宿迁联盛",
+      "streak": 1
+    },
+    {
+      "symbol": "002787",
+      "name": "华源控股",
+      "streak": 1
+    },
+    {
+      "symbol": "001330",
+      "name": "博纳影业",
+      "streak": 1
+    },
+    {
+      "symbol": "603929",
+      "name": "亚翔集成",
+      "streak": 1
+    },
+    {
+      "symbol": "002518",
+      "name": "科士达",
+      "streak": 1
+    },
+    {
+      "symbol": "603800",
+      "name": "洪田股份",
+      "streak": 1
+    },
+    {
+      "symbol": "000048",
+      "name": "京基智农",
+      "streak": 1
+    },
+    {
+      "symbol": "603115",
+      "name": "海星股份",
+      "streak": 1
+    },
+    {
+      "symbol": "002303",
+      "name": "美盈森",
+      "streak": 1
+    },
+    {
+      "symbol": "002990",
+      "name": "盛视科技",
+      "streak": 1
+    },
+    {
+      "symbol": "002928",
+      "name": "华夏航空",
+      "streak": 1
+    },
+    {
+      "symbol": "603989",
+      "name": "艾华集团",
+      "streak": 1
+    },
+    {
+      "symbol": "603733",
+      "name": "仙鹤股份",
+      "streak": 1
+    },
+    {
+      "symbol": "600152",
+      "name": "维科技术",
+      "streak": 1
+    },
+    {
+      "symbol": "605318",
+      "name": "法狮龙",
+      "streak": 1
+    },
+    {
+      "symbol": "603010",
+      "name": "万盛股份",
+      "streak": 1
+    },
+    {
+      "symbol": "600667",
+      "name": "太极实业",
+      "streak": 1
+    },
+    {
+      "symbol": "002387",
+      "name": "维信诺",
+      "streak": 1
+    },
+    {
+      "symbol": "603527",
+      "name": "众源新材",
+      "streak": 1
+    },
+    {
+      "symbol": "600903",
+      "name": "贵州燃气",
+      "streak": 1
+    },
+    {
+      "symbol": "000818",
+      "name": "航锦科技",
+      "streak": 1
+    },
+    {
+      "symbol": "600058",
+      "name": "五矿发展",
+      "streak": 1
+    },
+    {
+      "symbol": "600962",
+      "name": "国投中鲁",
+      "streak": 1
     }
   ],
   "limitDown": [
@@ -156,5 +386,5 @@
       "name": "塞力医疗"
     }
   ],
-  "updatedAt": "2026-06-25T15:39:34.871Z"
+  "updatedAt": "2026-06-25T15:59:18.817Z"
 }

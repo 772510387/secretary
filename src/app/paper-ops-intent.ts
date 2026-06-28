@@ -1,9 +1,54 @@
 import { beijingDayOfWeek } from "../domain/shared/index.js";
+import type { CerebellumAlarmType } from "../domain/cerebellum/index.js";
 
 export interface PaperOpsCommand {
   replayDate?: string;
   simulateDate?: string;
   archiveDate?: string;
+  /** When set, scope the replay/simulate to this SINGLE alarm node instead of the whole day. */
+  node?: CerebellumAlarmType;
+}
+
+/**
+ * Phrase → single alarm node, for "只重演早盘/模拟九点一刻那个闹钟". Aliases are matched
+ * longest-first so "八点半"(pre_market_plan) beats "八点"(data_warmup). Deterministic; the
+ * model never resolves these. Returns undefined when no node phrase is present.
+ */
+const NODE_ALIASES: ReadonlyArray<readonly [CerebellumAlarmType, readonly string[]]> = [
+  ["data_warmup", ["08:00", "8:00", "八点整", "八点钟", "八点", "8点", "体检", "冒烟", "自检"]],
+  ["overnight_digest", ["08:15", "8:15", "八点一刻", "八点十五", "隔夜", "外盘", "隔夜消息"]],
+  ["pre_market_plan", ["08:30", "8:30", "八点半", "晨报", "盘前计划", "盘前规划", "早盘计划", "盘前"]],
+  ["call_auction_watch", ["09:15", "9:15", "九点一刻", "九点十五", "集合竞价", "竞价"]],
+  ["pre_open_confirmation", ["09:25", "9:25", "九点二十五", "开盘确认", "开盘"]],
+  ["morning_review", ["10:30", "10点半", "十点半", "早盘回顾", "早盘总结", "早盘一小时"]],
+  ["midday_review", ["11:30", "11点半", "十一点半", "上午收盘", "午盘", "午间", "上午总结"]],
+  ["afternoon_risk_scan", ["13:30", "13点半", "一点半", "下午一点半", "午后", "跳水"]],
+  ["late_session_plan", ["14:30", "14点半", "两点半", "尾盘", "炸板", "抢筹"]],
+  ["closing_snapshot", ["15:00", "15点", "三点", "收盘"]],
+  ["post_close_review", ["15:30", "15点半", "三点半", "盘后", "龙虎榜"]],
+  ["deep_review", ["20:30", "八点半晚", "深度复盘", "盘后复盘"]],
+  ["daily_reflection", ["21:00", "21点", "晚间内省", "内省", "晚间复盘"]],
+];
+
+export function resolveReplayNode(message: string): CerebellumAlarmType | undefined {
+  const text = message.trim();
+  if (!text) {
+    return undefined;
+  }
+  const candidates: Array<{ alias: string; node: CerebellumAlarmType }> = [];
+  for (const [node, aliases] of NODE_ALIASES) {
+    for (const alias of aliases) {
+      candidates.push({ alias, node });
+    }
+  }
+  // Longest alias first so the most specific time/name wins (八点半 > 八点).
+  candidates.sort((left, right) => right.alias.length - left.alias.length);
+  for (const candidate of candidates) {
+    if (text.includes(candidate.alias)) {
+      return candidate.node;
+    }
+  }
+  return undefined;
 }
 
 const DATE_PATTERN = /\b(20\d{2}-\d{2}-\d{2})\b/g;
@@ -66,7 +111,13 @@ export function detectPaperOpsCommand(message: string, now?: string | Date): Pap
 
   const requestedCount = [replayRequested, archiveRequested, simulateRequested].filter(Boolean).length;
 
-  if (requestedCount < 2 && !standaloneReplayRequested) {
+  // Single-node scope: only meaningful when a replay/simulate is the op (not pure archive).
+  const node = replayRequested || simulateRequested ? resolveReplayNode(text) : undefined;
+  // A lone simulate normally needs a second op, BUT "模拟今天<某节点>" names one specific node
+  // → high-intent, safe to honor on its own (单个闹钟场景模拟).
+  const standaloneSimulateWithNode = simulateRequested && node !== undefined;
+
+  if (requestedCount < 2 && !standaloneReplayRequested && !standaloneSimulateWithNode) {
     return undefined;
   }
 
@@ -80,6 +131,7 @@ export function detectPaperOpsCommand(message: string, now?: string | Date): Pap
     replayDate,
     archiveDate: archiveRequested ? today : undefined,
     simulateDate: simulateRequested ? today : undefined,
+    node,
   };
 }
 
@@ -100,14 +152,31 @@ export function wantsImmediatePaperExecution(message: string): boolean {
   return skipConfirm || (immediacy && actiony);
 }
 
+const NODE_LABEL: Partial<Record<CerebellumAlarmType, string>> = {
+  data_warmup: "08:00 体检",
+  overnight_digest: "08:15 隔夜消息",
+  pre_market_plan: "08:30 盘前计划",
+  call_auction_watch: "09:15 集合竞价",
+  pre_open_confirmation: "09:25 开盘确认",
+  morning_review: "10:30 早盘回顾",
+  midday_review: "11:30 上午收盘",
+  afternoon_risk_scan: "13:30 午后排查",
+  late_session_plan: "14:30 尾盘",
+  closing_snapshot: "15:00 收盘",
+  post_close_review: "15:30 盘后",
+  deep_review: "20:30 深度复盘",
+  daily_reflection: "21:00 内省",
+};
+
 export function formatPaperOpsCommand(command: PaperOpsCommand): string {
   const parts: string[] = [];
+  const nodeScope = command.node ? `（仅 ${NODE_LABEL[command.node] ?? command.node} 节点）` : "";
 
   if (command.replayDate) {
-    parts.push(`重演 ${command.replayDate}`);
+    parts.push(`重演 ${command.replayDate}${nodeScope}`);
   }
   if (command.simulateDate) {
-    parts.push(`补跑 ${command.simulateDate} 今日模拟节点`);
+    parts.push(`补跑 ${command.simulateDate} 今日模拟节点${nodeScope}`);
   }
   if (command.archiveDate) {
     parts.push(`归档 ${command.archiveDate} 盘后账户快照`);

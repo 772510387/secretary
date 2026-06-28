@@ -1,4 +1,6 @@
 export {
+  NOTIFICATION_RECOMMENDED_ACTION_MAX_LENGTH,
+  NOTIFICATION_SUMMARY_MAX_LENGTH,
   notificationChannelSchema,
   notificationDecisionSchema,
   notificationDecisionStatusSchema,

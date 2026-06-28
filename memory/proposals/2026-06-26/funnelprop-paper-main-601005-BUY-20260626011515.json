@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-601005-BUY-20260626011515",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260626011515",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "601005",
+  "market": "SSE",
+  "name": "重庆钢铁",
+  "side": "BUY",
+  "quantity": 200,
+  "limitPrice": 1.16,
+  "currency": "CNY",
+  "rationale": "高关注池第97名，钢铁板块低位估值修复潜力，200股满额执行",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-26T01:15:15.008Z",
+  "updatedAt": "2026-06-26T01:15:15.008Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 232
+  }
+}

@@ -88,6 +88,42 @@ describe("MarketSentinel single check", () => {
     });
   });
 
+  it("emits a previous-high breakout redline only when opted in", () => {
+    const quote = makeQuote({ latestPrice: 10.25, highPrice: 10.25, receivedAt: now });
+    const previous = makeQuote({
+      latestPrice: 10.15,
+      highPrice: 10.2,
+      receivedAt: previousTime,
+    });
+
+    expect(
+      checkMarketSentinel({
+        now,
+        quotes: [quote],
+        previousQuotes: [previous],
+        positions: [],
+      }).events,
+    ).toEqual([]);
+
+    const result = checkMarketSentinel({
+      now,
+      quotes: [quote],
+      previousQuotes: [previous],
+      positions: [],
+      options: { previousHighBreakoutThreshold: 0 },
+    });
+
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]).toMatchObject({
+      eventType: "previous_high_breakout",
+      severity: "warning",
+      currentPrice: 10.25,
+      previousPrice: 10.2,
+      cooldownKey: "previous_high_breakout:SZSE:000636",
+      wakeBrain: true,
+    });
+  });
+
   it("emits a critical stop-loss event for positions down 8% from cost", () => {
     const result = checkMarketSentinel({
       now,

@@ -1,0 +1,275 @@
+[
+  {
+    "time": "08:30",
+    "occurredAt": "2026-06-26T00:30:14.373Z",
+    "alarmType": "pre_market_plan",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": 0.0023
+      },
+      {
+        "name": "深证成指",
+        "changePct": 0.0182
+      },
+      {
+        "name": "创业板指",
+        "changePct": 0.0284
+      },
+      {
+        "name": "科创50",
+        "changePct": 0.0387
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "002475",
+        "name": "立讯精密",
+        "price": 74.42
+      },
+      {
+        "symbol": "000725",
+        "name": "京东方Ａ",
+        "price": 7.52
+      },
+      {
+        "symbol": "002185",
+        "name": "华天科技",
+        "price": 22.4
+      },
+      {
+        "symbol": "603993",
+        "name": "洛阳钼业",
+        "price": 18.07
+      }
+    ],
+    "limitUpCount": 78,
+    "limitDownCount": 8,
+    "heatScore": 63
+  },
+  {
+    "time": "09:15",
+    "occurredAt": "2026-06-26T01:15:15.008Z",
+    "alarmType": "call_auction_watch",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": -0.0018
+      },
+      {
+        "name": "深证成指",
+        "changePct": 0
+      },
+      {
+        "name": "创业板指",
+        "changePct": 0
+      },
+      {
+        "name": "科创50",
+        "changePct": 0
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "002475",
+        "name": "立讯精密",
+        "price": 73.5
+      },
+      {
+        "symbol": "000725",
+        "name": "京东方Ａ",
+        "price": 7.66
+      },
+      {
+        "symbol": "002185",
+        "name": "华天科技",
+        "price": 22.6
+      },
+      {
+        "symbol": "603993",
+        "name": "洛阳钼业",
+        "price": 18.07
+      }
+    ],
+    "limitUpCount": null,
+    "limitDownCount": null,
+    "heatScore": null
+  },
+  {
+    "time": "10:00",
+    "occurredAt": "2026-06-26T02:00:15.709Z",
+    "alarmType": "morning_review",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": -0.0111
+      },
+      {
+        "name": "深证成指",
+        "changePct": -0.0155
+      },
+      {
+        "name": "创业板指",
+        "changePct": -0.0174
+      },
+      {
+        "name": "科创50",
+        "changePct": -0.007
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "000725",
+        "name": "京东方Ａ",
+        "price": 7.91
+      },
+      {
+        "symbol": "002185",
+        "name": "华天科技",
+        "price": 22.86
+      },
+      {
+        "symbol": "603993",
+        "name": "洛阳钼业",
+        "price": 17.91
+      }
+    ],
+    "limitUpCount": 33,
+    "limitDownCount": 5,
+    "heatScore": 38
+  },
+  {
+    "time": "11:30",
+    "occurredAt": "2026-06-26T03:30:18.735Z",
+    "alarmType": "midday_review",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": -0.0214
+      },
+      {
+        "name": "深证成指",
+        "changePct": -0.0304
+      },
+      {
+        "name": "创业板指",
+        "changePct": -0.0372
+      },
+      {
+        "name": "科创50",
+        "changePct": -0.026
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "603993",
+        "name": "洛阳钼业",
+        "price": 17.33
+      },
+      {
+        "symbol": "600667",
+        "name": "太极实业",
+        "price": 27.46
+      },
+      {
+        "symbol": "600552",
+        "name": "凯盛科技",
+        "price": 29.57
+      }
+    ],
+    "limitUpCount": 32,
+    "limitDownCount": 21,
+    "heatScore": 34
+  },
+  {
+    "time": "14:00",
+    "occurredAt": "2026-06-26T06:00:20.969Z",
+    "alarmType": "afternoon_risk_scan",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": -0.015
+      },
+      {
+        "name": "深证成指",
+        "changePct": -0.0245
+      },
+      {
+        "name": "创业板指",
+        "changePct": -0.0289
+      },
+      {
+        "name": "科创50",
+        "changePct": -0.0057
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "603993",
+        "name": "洛阳钼业",
+        "price": 17.33
+      },
+      {
+        "symbol": "600667",
+        "name": "太极实业",
+        "price": 27.52
+      },
+      {
+        "symbol": "600552",
+        "name": "凯盛科技",
+        "price": 29.6
+      }
+    ],
+    "limitUpCount": 42,
+    "limitDownCount": 19,
+    "heatScore": 41
+  },
+  {
+    "time": "14:30",
+    "occurredAt": "2026-06-26T06:30:21.448Z",
+    "alarmType": "late_session_plan",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": -0.02
+      },
+      {
+        "name": "深证成指",
+        "changePct": -0.0316
+      },
+      {
+        "name": "创业板指",
+        "changePct": -0.0373
+      },
+      {
+        "name": "科创50",
+        "changePct": -0.0142
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "600667",
+        "name": "太极实业",
+        "price": 27.26
+      },
+      {
+        "symbol": "600552",
+        "name": "凯盛科技",
+        "price": 29.6
+      },
+      {
+        "symbol": "001399",
+        "name": "N惠科",
+        "price": 43.95
+      },
+      {
+        "symbol": "002129",
+        "name": "TCL中环",
+        "price": 11.19
+      }
+    ],
+    "limitUpCount": 43,
+    "limitDownCount": 26,
+    "heatScore": 40
+  }
+]

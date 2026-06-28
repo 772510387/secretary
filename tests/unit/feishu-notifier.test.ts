@@ -109,4 +109,25 @@ describe("FeishuNotifier", () => {
     await notifier.notify(makeEvent({ summary: "token=sk-abcdefgh1234 泄漏测试" }));
     expect(pushed).not.toContain("sk-abcdefgh1234");
   });
+
+  it("splits long reports into ordered chunks without dropping the tail", async () => {
+    const sends: FeishuPushMessage[] = [];
+    const notifier = new FeishuNotifier({
+      sender: async (message) => {
+        sends.push(message);
+      },
+      recipients: ["ou_a"],
+      now: () => new Date(now),
+    });
+    const longSummary = `开头：9:15 盘面判断。\n${"观察判断：大盘、板块、持仓、watchlist 和下一次复查节点。\n".repeat(120)}尾部结论：14:45 再确认。`;
+
+    const result = await notifier.notify(makeEvent({ summary: longSummary }));
+
+    expect(result.status).toBe("sent");
+    expect(result.output).toContain("chunks=");
+    expect(sends.length).toBeGreaterThan(1);
+    expect(sends[0]!.text).toContain("（1/");
+    expect(sends[sends.length - 1]!.text).toContain("尾部结论：14:45 再确认。");
+    expect(sends.every((send) => send.text.length <= 1800)).toBe(true);
+  });
 });

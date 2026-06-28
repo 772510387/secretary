@@ -20,6 +20,8 @@ export interface MarketSentinelOptions {
   rapidMoveWindowMs?: number;
   /** 绝对涨跌幅红线: fire when |today's move from prev close| crosses this (default 0.05 = ±5%). */
   absoluteMoveThreshold?: number;
+  /** 突破前高红线: fire when latestPrice breaks the previous tick's intraday high by this ratio. Undefined disables it. */
+  previousHighBreakoutThreshold?: number;
   positionStopLossRatio?: number;
   watchlistMoveThreshold?: number;
   watchlistObservePriceNearRatio?: number;
@@ -48,6 +50,7 @@ interface NormalizedMarketSentinelOptions {
   rapidMoveThreshold: number;
   rapidMoveWindowMs: number;
   absoluteMoveThreshold: number;
+  previousHighBreakoutThreshold?: number;
   positionStopLossRatio: number;
   watchlistMoveThreshold: number;
   watchlistObservePriceNearRatio: number;
@@ -73,6 +76,7 @@ export function checkMarketSentinel(input: MarketSentinelCheckInput): MarketSent
   const candidates: CerebellumEvent[] = [
     ...detectRapidMoveEvents(quotes, previousQuoteMap, checkedAt, options),
     ...detectAbsoluteMoveEvents(quotes, checkedAt, options),
+    ...detectPreviousHighBreakoutEvents(quotes, previousQuoteMap, checkedAt, options),
     ...detectStopLossEvents(positions, currentQuoteMap, checkedAt, options),
     ...detectWatchlistEvents(watchlistEntries, currentQuoteMap, checkedAt, options),
   ];
@@ -185,6 +189,57 @@ function detectAbsoluteMoveEvents(
         changePct: dailyMove,
         threshold: options.absoluteMoveThreshold,
         message: `${quote.name} ${direction} ${formatPct(dailyMove)} 突破 ±${formatPct(options.absoluteMoveThreshold)} 绝对红线`,
+      }),
+    ];
+  });
+}
+
+/**
+ * 拉升突破前高: compare the current tick against the previous tick's intraday high.
+ * The live daemon opts in with threshold 0, so the first fresh break is alertable
+ * and the normal cooldown prevents repeated high-print spam.
+ */
+function detectPreviousHighBreakoutEvents(
+  quotes: QuoteSnapshot[],
+  previousQuoteMap: Map<string, QuoteSnapshot>,
+  checkedAt: string,
+  options: NormalizedMarketSentinelOptions,
+): CerebellumEvent[] {
+  const threshold = options.previousHighBreakoutThreshold;
+
+  if (threshold === undefined) {
+    return [];
+  }
+
+  return quotes.flatMap((quote) => {
+    const previous = previousQuoteMap.get(quoteKey(quote));
+    const previousHigh = previous?.highPrice;
+
+    if (!previous || previousHigh === undefined || previousHigh <= 0) {
+      return [];
+    }
+
+    if (quote.latestPrice <= previousHigh) {
+      return [];
+    }
+
+    const breakoutRatio = roundRatio((quote.latestPrice - previousHigh) / previousHigh);
+
+    if (breakoutRatio < threshold) {
+      return [];
+    }
+
+    return [
+      createEvent({
+        eventType: "previous_high_breakout",
+        severity: "warning",
+        quote,
+        checkedAt,
+        currentPrice: quote.latestPrice,
+        previousPrice: previousHigh,
+        changePct: breakoutRatio,
+        threshold,
+        message: `${quote.name} 拉升突破前高 ${previousHigh}，当前 ${quote.latestPrice}，突破幅度 ${formatPct(breakoutRatio)}`,
       }),
     ];
   });
@@ -357,6 +412,7 @@ function normalizeOptions(options: MarketSentinelOptions = {}): NormalizedMarket
     // 0 = disabled by default (keeps the pure function's behavior stable); the live
     // sentinel daemon opts in with 0.05 to enforce the spec's ±5% 绝对涨跌幅 redline.
     absoluteMoveThreshold: options.absoluteMoveThreshold ?? 0,
+    previousHighBreakoutThreshold: options.previousHighBreakoutThreshold,
     positionStopLossRatio: options.positionStopLossRatio ?? 0.08,
     watchlistMoveThreshold: options.watchlistMoveThreshold ?? 0.03,
     watchlistObservePriceNearRatio: options.watchlistObservePriceNearRatio ?? 0.01,
@@ -366,6 +422,9 @@ function normalizeOptions(options: MarketSentinelOptions = {}): NormalizedMarket
 
   assertRatio(normalized.rapidMoveThreshold, "rapidMoveThreshold");
   assertRatio(normalized.absoluteMoveThreshold, "absoluteMoveThreshold");
+  if (normalized.previousHighBreakoutThreshold !== undefined) {
+    assertRatio(normalized.previousHighBreakoutThreshold, "previousHighBreakoutThreshold");
+  }
   assertRatio(normalized.positionStopLossRatio, "positionStopLossRatio");
   assertRatio(normalized.watchlistMoveThreshold, "watchlistMoveThreshold");
   assertRatio(normalized.watchlistObservePriceNearRatio, "watchlistObservePriceNearRatio");

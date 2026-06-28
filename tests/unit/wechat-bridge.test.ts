@@ -84,6 +84,31 @@ describe("runWeChatBridgeTurn", () => {
     expect(reply.reply).toBe("模型回答。");
   });
 
+  it("fast-paths complete grounded trading-day reviews without model routing", async () => {
+    const brain = new CapturingBrain();
+    const buildReview = vi.fn(() => "# 2026-06-09 完整交易日复盘\n\n总盈亏：+¥1,055.00");
+    const progress = vi.fn();
+
+    const reply = await runWeChatBridgeTurn(
+      { peerId: "owner", text: "来一个2026-06-09完整交易日复盘" },
+      makeDeps({
+        brainProvider: brain,
+        buildTradingDayReview: buildReview,
+        onProgress: progress,
+      }),
+      createWeChatBridgeState(),
+    );
+
+    expect(reply.reply).toContain("完整交易日复盘");
+    expect(reply.reply).toContain("+¥1,055.00");
+    expect(buildReview).toHaveBeenCalledWith({
+      message: "来一个2026-06-09完整交易日复盘",
+      now: expect.any(String),
+    });
+    expect(progress).toHaveBeenCalledWith(expect.stringContaining("接地交易日复盘"));
+    expect(brain.prompts).toHaveLength(0);
+  });
+
   it("runs a two-step confirm flow for destructive ops and only executes on 确认", async () => {
     const execute = vi.fn(() => "已写入 4 个文件。");
     const deps = makeDeps({ executeAction: execute });

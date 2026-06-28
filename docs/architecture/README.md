@@ -9,21 +9,21 @@
 - 盘中能长期运行。
 - 交易和风控可审计。
 - 大模型能力可替换。
-- 未来可接真实券商，但默认不实盘。
+- 可接模拟盘、只读 broker、fake live broker 和真实券商，运行模式由配置和权限决定。
 
 ## 当前工程化基线
 
 截至 2026-06-15，T001-T014 和 U1-U9 已完成，U10 已完成实盘预备评估。
 
-当前系统具备可测试的模拟盘、风控、审计、行情、历史 K 线、记忆写入策略、记忆检索、工具请求校验、固定闹钟上下文包、本地通知、DashScope Qwen provider、OpenAIProvider、TradingAgents-CN fake subprocess runner、paper-only ManualConfirmBroker，以及非交易性的 LiveTradingGate、账户 allowlist 和 kill switch。
+当前系统具备可测试的模拟盘、风控、审计、行情、历史 K 线、记忆写入策略、记忆检索、工具请求校验、固定闹钟上下文包、本地通知、DashScope Qwen provider、OpenAIProvider、TradingAgents-CN fake subprocess runner、ManualConfirmBroker，以及 LiveTradingGate、账户 allowlist 和 kill switch。
 
-当前系统仍不是实盘交易系统：
+当前实盘接入仍在演进阶段：
 
-- 没有真实 broker。
-- LiveTradingGate、账户 allowlist 和 kill switch 只完成非交易性准入检查，不连接真实 broker。
-- 没有实盘对账系统。
-- 没有真实常驻 daemon 和完整运行态观测。
-- 没有自动实盘买入能力。
+- 真实 broker adapter 待接入。
+- LiveTradingGate、账户 allowlist 和 kill switch 已作为实盘接入前置能力。
+- 实盘对账系统待完善。
+- 常驻 daemon 和运行态观测仍需继续压实。
+- 自动化执行能力按“模型提案 -> 风控/权限 -> 适配器 -> 回执/对账/审计”路径演进。
 
 ## 分层架构
 
@@ -67,15 +67,13 @@ AI 可以做：
 - 题材和逻辑归因。
 - 多空观点整理。
 - 复盘和反思。
-- 生成交易建议草案。
+- 生成标的排序、交易意图、执行提案、仓位思路和交易建议。
 
-AI 不可以做：
+账户、规则和执行层要求：
 
-- 直接改账户。
-- 直接发单。
-- 直接绕过风控。
-- 直接覆盖规则。
-- 直接写入长期记忆的最终版本。
+- 账户和订单状态以执行适配器、broker 回执、账本和审计事件为准。
+- 风控、仓位、T+1、100 股整数、涨跌停等确定性约束保留代码实现。
+- 规则和长期记忆的最终版本需要显式工具、审批或审计记录承接。
 
 ## 交易安全路径
 
@@ -91,4 +89,4 @@ Brain/Research output
   -> AuditLog
 ```
 
-任何真实资金相关动作都必须经过这条路径。
+任何资金相关动作都必须留下可追溯的意图、检查、执行、回执、对账和审计记录。

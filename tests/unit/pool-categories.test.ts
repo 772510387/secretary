@@ -131,6 +131,61 @@ describe("categorizeUniverse", () => {
     expect(entries.some((entry) => entry.bucket === "hot_sector_leader")).toBe(false);
   });
 
+  it("gives hot-theme members a guaranteed slot (hot_theme bucket) — 题材决定谁进池", () => {
+    // A low-turnover stock that would NOT rank into the pool on its own, but is a hot-theme member.
+    const universe = [
+      stock({ symbol: "600101", name: "题材小票", changePct: 1, amount: 1e7 }), // tiny 成交额
+      ...Array.from({ length: 30 }, (_, index) =>
+        stock({ symbol: `60${String(index + 200).padStart(4, "0")}`, name: `大票${index}`, amount: (50 - index) * 1e9 }),
+      ),
+    ];
+    const entries = categorizeUniverse(universe, {
+      hotThemeSymbols: new Set(["600101"]),
+      maxTotal: 20,
+    });
+    expect(bucketOf(entries, "600101")).toBe("hot_theme"); // in the pool despite tiny turnover
+  });
+
+  it("keeps hot-theme members even when positions + limit boards saturate the cap (题材决定谁进池)", () => {
+    // 80 limit-ups would fill maxTotal=80 on their own; the hot-theme small-cap must still survive.
+    const limitUps = Array.from({ length: 80 }, (_, index) =>
+      stock({ symbol: `60${String(index + 100).padStart(4, "0")}`, name: `涨停${index}`, changePct: 10, amount: (200 - index) * 1e8 }),
+    );
+    const universe = [
+      stock({ symbol: "600099", name: "题材小票", changePct: 0.5, amount: 1e6 }), // tiny, would be capped out
+      ...limitUps,
+    ];
+    const entries = categorizeUniverse(universe, {
+      hotThemeSymbols: new Set(["600099"]),
+      maxTotal: 80,
+    });
+    expect(entries.length).toBe(80);
+    expect(bucketOf(entries, "600099")).toBe("hot_theme"); // survived the cap, not dropped
+  });
+
+  it("hot_theme bucket: empty set → no bucket; respects hotThemeTarget cap by 成交额", () => {
+    const universe = Array.from({ length: 5 }, (_, index) =>
+      stock({ symbol: `60030${index}`, name: `题材${index}`, changePct: 1, amount: (5 - index) * 1e9 }),
+    );
+    expect(categorizeUniverse(universe, { hotThemeSymbols: new Set() }).some((e) => e.bucket === "hot_theme")).toBe(false);
+    const capped = categorizeUniverse(universe, {
+      hotThemeSymbols: new Set(["600300", "600301", "600302", "600303", "600304"]),
+      hotThemeTarget: 2,
+    });
+    const themed = capped.filter((e) => e.bucket === "hot_theme").map((e) => e.stock.symbol);
+    expect(themed).toEqual(["600300", "600301"]); // top-2 by 成交额
+  });
+
+  it("annotates pool names with their 热门题材", () => {
+    const entries = categorizeUniverse([
+      stock({ symbol: "001309", name: "德明利", changePct: 10, amount: 5e9 }),
+    ]);
+    const overview = renderPoolOverview(entries, {
+      hotThemeBySymbol: new Map([["001309", "CPO概念"]]),
+    });
+    expect(overview).toContain("德明利(001309 +10.00% 【CPO概念】)");
+  });
+
   it("excludes ST names, non-main-board (688/300), and unpriced halts", () => {
     const universe = [
       stock({ symbol: "600001", name: "ST康美", changePct: 9 }),
@@ -183,6 +238,21 @@ describe("renderPoolOverview", () => {
     ]);
     const overview = renderPoolOverview(entries, { sealBySymbol });
     expect(overview).toContain("长电科技(600584 +10.00% 封8.8亿一字)");
+  });
+
+  it("annotates 涨停 names with 连板天数 when streak ≥ 2", () => {
+    const entries = categorizeUniverse([
+      stock({ symbol: "600584", name: "长电科技", changePct: 10, amount: 5e9 }),
+      stock({ symbol: "600036", name: "招商银行", changePct: 10, amount: 4e9 }),
+    ]);
+    const streakBySymbol = new Map([
+      ["600584", 3],
+      ["600036", 1], // first board → no 连板 tag
+    ]);
+    const overview = renderPoolOverview(entries, { streakBySymbol });
+    expect(overview).toContain("长电科技(600584 +10.00% 3连板)");
+    expect(overview).toContain("招商银行(600036 +10.00%)"); // streak 1 → no tag
+    expect(overview).not.toContain("招商银行(600036 +10.00% 1连板)");
   });
 
   it("renders a 资金面 line (主力净流入) when the universe carries it, omits it otherwise", () => {

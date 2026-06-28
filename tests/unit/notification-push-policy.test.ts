@@ -43,10 +43,22 @@ describe("operator push gate", () => {
     expect(classifyExternalPush(ntf)).toBe("executed_operation");
   });
 
-  it("pushes a critical systemic index red-line", () => {
+  it("pushes a systemic index red-line", () => {
     const ntf = event({
       severity: "critical",
       source: { type: "cerebellum", id: "index-risk-radar" },
+    });
+
+    expect(classifyExternalPush(ntf)).toBe("redline");
+    expect(shouldPushToExternalChannels(ntf)).toBe(true);
+  });
+
+  it("pushes cooldown-bounded sentinel warning red-lines", () => {
+    const ntf = event({
+      severity: "warning",
+      source: { type: "cerebellum", id: "market-sentinel" },
+      target: { type: "symbol", symbol: "000636", market: "SZSE", name: "风华高科" },
+      metadata: { eventType: "previous_high_breakout" },
     });
 
     expect(classifyExternalPush(ntf)).toBe("redline");
@@ -71,7 +83,7 @@ describe("operator push gate", () => {
     expect(shouldPushToExternalChannels(ntf)).toBe(false);
   });
 
-  it("suppresses the 3s sentinel's per-tick price moves (warning, no operation)", () => {
+  it("pushes the 3s sentinel's price red-lines", () => {
     const ntf = event({
       severity: "warning",
       source: { type: "cerebellum", id: "market-sentinel" },
@@ -79,13 +91,18 @@ describe("operator push gate", () => {
       metadata: { eventType: "price_drop" },
     });
 
-    expect(shouldPushToExternalChannels(ntf)).toBe(false);
+    expect(shouldPushToExternalChannels(ntf)).toBe(true);
   });
 
-  it("suppresses non-critical index radar (warning/watch)", () => {
+  it("pushes warning index radar red-lines but suppresses watch-level observations", () => {
     expect(
       shouldPushToExternalChannels(
         event({ severity: "warning", source: { type: "cerebellum", id: "index-risk-radar" } }),
+      ),
+    ).toBe(true);
+    expect(
+      shouldPushToExternalChannels(
+        event({ severity: "watch", source: { type: "cerebellum", id: "market-sentinel" } }),
       ),
     ).toBe(false);
   });

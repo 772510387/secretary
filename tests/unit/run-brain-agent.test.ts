@@ -78,6 +78,13 @@ describe("buildDefaultSystemPrompt", () => {
     expect(prompt).toContain("2026-06-24");
     expect(prompt).toContain("模拟盘");
   });
+
+  it("instructs operation-review follow-ups to use the evidence tool", () => {
+    const prompt = buildDefaultSystemPrompt(now);
+    expect(prompt).toContain("get_operation_review");
+    expect(prompt).toContain("为什么买卖");
+    expect(prompt).toContain("用户纠正操作事实");
+  });
 });
 
 describe("buildBrainOperationNotification", () => {

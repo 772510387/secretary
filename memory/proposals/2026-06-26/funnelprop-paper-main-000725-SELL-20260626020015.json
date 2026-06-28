@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-000725-SELL-20260626020015",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260626020015",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "000725",
+  "market": "SZSE",
+  "name": "京东方Ａ",
+  "side": "SELL",
+  "quantity": 1100,
+  "limitPrice": 7.91,
+  "currency": "CNY",
+  "rationale": "持仓标的，池内第1名，但60日价格位置达0.96，处于强势末端，T+1可卖且金额最大，符合风控逻辑",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-26T02:00:15.709Z",
+  "updatedAt": "2026-06-26T02:00:15.709Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 8701
+  }
+}
