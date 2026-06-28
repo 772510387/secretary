@@ -37,6 +37,12 @@ describe("fixed cerebellum alarm matrix", () => {
       ["weekly-review", "weekly_review", "10:00", "Asia/Shanghai", "daily_reflection"],
       ["monthly-review", "monthly_review", "20:00", "Asia/Shanghai", "daily_reflection"],
       ["yearly-review", "yearly_review", "20:00", "Asia/Shanghai", "daily_reflection"],
+      ["weekend-morning-brief-sat", "weekend_morning_brief", "08:30", "Asia/Shanghai", "daily_reflection"],
+      ["weekend-morning-brief-sun", "weekend_morning_brief", "08:30", "Asia/Shanghai", "daily_reflection"],
+      ["weekly-knowledge-absorb-sat", "weekly_knowledge_absorb", "14:00", "Asia/Shanghai", "daily_reflection"],
+      ["weekly-knowledge-absorb-sun", "weekly_knowledge_absorb", "14:00", "Asia/Shanghai", "daily_reflection"],
+      ["weekly-live-report", "weekly_live_report", "15:30", "Asia/Shanghai", "daily_reflection"],
+      ["weekly-winrate-review", "weekly_winrate_review", "16:00", "Asia/Shanghai", "daily_reflection"],
     ]);
   });
 
@@ -60,7 +66,7 @@ describe("fixed cerebellum alarm matrix", () => {
 
     expect(alarmIds.size).toBe(FIXED_CEREBELLUM_ALARM_RULES.length);
     expect(jobIds.size).toBe(FIXED_CEREBELLUM_ALARM_RULES.length);
-    expect(tasks).toHaveLength(17);
+    expect(tasks).toHaveLength(23);
     expect(tasks.every((task) => task.taskType === "cerebellum_alarm")).toBe(true);
     expect(tasks.every((task) => task.status === "planned")).toBe(true);
     expect(tasks.every((task) => task.wakeBrain === true)).toBe(true);
@@ -169,6 +175,29 @@ describe("fixed cerebellum alarm matrix", () => {
     expect(getDueCerebellumAlarms({ now: "2026-12-31T12:00:00.000Z" }).map(type)).toEqual([
       "monthly_review",
       "yearly_review",
+    ]);
+  });
+
+  it("evaluates the weekend brief/absorb/report/win-rate nodes in Beijing time", () => {
+    // 2026-06-13 is Saturday, 2026-06-14 is Sunday (Beijing).
+    expect(getDueCerebellumAlarms({ now: "2026-06-13T00:30:00.000Z" }).map(type)).toEqual([
+      "weekend_morning_brief",
+    ]);
+    expect(getDueCerebellumAlarms({ now: "2026-06-14T00:30:00.000Z" }).map(type)).toEqual([
+      "weekend_morning_brief",
+    ]);
+    expect(getDueCerebellumAlarms({ now: "2026-06-13T06:00:00.000Z" }).map(type)).toEqual([
+      "weekly_knowledge_absorb",
+    ]);
+    expect(getDueCerebellumAlarms({ now: "2026-06-13T07:30:00.000Z" }).map(type)).toEqual([
+      "weekly_live_report",
+    ]);
+    expect(getDueCerebellumAlarms({ now: "2026-06-13T08:00:00.000Z" }).map(type)).toEqual([
+      "weekly_winrate_review",
+    ]);
+    // Weekend nodes stay silent on a weekday.
+    expect(getDueCerebellumAlarms({ now: "2026-06-12T00:30:00.000Z" }).map(type)).toEqual([
+      "pre_market_plan",
     ]);
   });
 });

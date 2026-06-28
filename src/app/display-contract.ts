@@ -83,6 +83,10 @@ const PERIOD_REVIEW_NODES: ReadonlySet<CerebellumAlarmType> = new Set([
   "weekly_review",
   "monthly_review",
   "yearly_review",
+  "weekend_morning_brief",
+  "weekly_knowledge_absorb",
+  "weekly_live_report",
+  "weekly_winrate_review",
 ]);
 
 /**

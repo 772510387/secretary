@@ -308,6 +308,50 @@ export const CEREBELLUM_ALARM_SOP_TEMPLATES: Record<CerebellumAlarmType, SopTemp
       "Do not claim annual returns, trades, or holdings unless provided by audited inputs.",
     ],
   }),
+  weekend_morning_brief: template({
+    objective: "Prepare a weekend A-share morning brief from settled weekly facts and overnight/外盘 metadata.",
+    requiredInputs: [rulesInput, reportInput, researchInput, marketInput, logInput],
+    allowedActions: [
+      "Summarize the past week's recorded moves and weekend/external-market headlines from supplied metadata.",
+      "Draft a next-week focus list as manual-review notes only.",
+    ],
+    forbiddenActions: [
+      "Do not invent index levels, sector moves, or news that are not in the supplied metadata.",
+    ],
+  }),
+  weekly_knowledge_absorb: template({
+    objective: "Prepare a weekend knowledge-absorption package from existing research, reports, and lessons.",
+    requiredInputs: [rulesInput, researchInput, reportInput, proposalInput, logInput],
+    allowedActions: [
+      "Summarize existing research and lesson metadata into reusable study notes.",
+      "Draft memory-write proposals for lessons that need persistence.",
+    ],
+    forbiddenActions: [
+      "Do not fabricate study sources, citations, or performance claims.",
+    ],
+  }),
+  weekly_live_report: template({
+    objective: "Prepare a weekly paper-trading report from the week's account snapshots, fills, and summaries.",
+    requiredInputs: [rulesInput, portfolioInput, reportInput, logInput],
+    allowedActions: [
+      "Aggregate the week's recorded fills and snapshot summaries into a paper-trading report.",
+      "Flag missing days or unverifiable figures as data gaps.",
+    ],
+    forbiddenActions: [
+      "Do not produce unaudited returns, cash, or position totals; do not place orders.",
+    ],
+  }),
+  weekly_winrate_review: template({
+    objective: "Prepare a trading-system win-rate review from scored decisions and recorded fills only.",
+    requiredInputs: [rulesInput, reportInput, researchInput, logInput],
+    allowedActions: [
+      "Aggregate win-rate, profit-factor, and max-drawdown figures only from already-scored decision metadata.",
+      "Mark insufficient-sample strategies as 待验证 instead of asserting a rate.",
+    ],
+    forbiddenActions: [
+      "Do not compute a win-rate or drawdown from data that has not been scored and recorded.",
+    ],
+  }),
 };
 
 export function buildCerebellumAlarmSop(alarmInput: CerebellumAlarmRule): CerebellumAlarmSop {

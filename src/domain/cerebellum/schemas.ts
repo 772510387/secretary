@@ -59,6 +59,10 @@ export const cerebellumAlarmTypeSchema = z.enum([
   "weekly_review",
   "monthly_review",
   "yearly_review",
+  "weekend_morning_brief",
+  "weekly_knowledge_absorb",
+  "weekly_live_report",
+  "weekly_winrate_review",
 ]);
 
 export const cerebellumAlarmFrequencySchema = z.enum([

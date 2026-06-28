@@ -36,10 +36,11 @@
 
 | 优先级 | 缺口 | 触碰范围 |
 |---|---|---|
-| P0 | 周末 7 个任务只实现了周六 10:00 周复盘基础节点 | `alarm-matrix.ts`、`alarm-sop.ts`、周期复盘落盘 |
-| P1 | 月度/年度清单要“月初 1 号 9:00 展望、1 月 1 号 10:00 年度战略展望”，当前是月末/年末复盘 | `alarm-matrix.ts`、`alarm-sop.ts` |
+| P1 | 月度/年度清单要“月初 1 号 9:00 展望、1 月 1 号 10:00 年度战略展望”，当前是月末/年末复盘（语义改动，暂缓） | `alarm-matrix.ts`、`alarm-sop.ts` |
 | P1 | 21:00 内省缺算力/token 统计、胜率、盈亏比、最大回撤 | `daily-budget.ts`、绩效计算、`distill-daily-knowledge.ts` |
 | P2 | 静默巡航的事件链信封还没有完整落库 `activationReason/nextCheckpoint` | `wake-event.ts`、`market-sentinel-daemon.ts` |
+
+> 2026-06-28 更新：周末 7 个任务已补齐——周六 `08:30 周末晨报`/`10:00 周度深度复盘`/`14:00 知识吸收`/`15:30 实盘周报`/`16:00 胜率复盘`，周日 `08:30 周末晨报`/`14:00 知识吸收`。新增 alarm 类型 `weekend_morning_brief`、`weekly_knowledge_absorb`、`weekly_live_report`、`weekly_winrate_review`（见 `alarm-matrix.ts`、`alarm-sop.ts`、`display-contract.ts`）。
 
 ## 当前运行方式
 
