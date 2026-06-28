@@ -86,3 +86,31 @@ npm run feishu:bot # 仅启动飞书聊天入口
   国内服务。若不需要联网检索，`SEARCH_PROVIDER=none` 即可。
 - `@larksuiteoapi/node-sdk` 已在依赖中，无需另装。
 - 想接收主动推送：用 `npm start`，并设置 `FEISHU_NOTIFY=1`。固定报告、哨兵/指数红线和已执行的模拟盘操作会进入飞书；普通静默巡航脉冲只进本地日志。
+
+## 呈现深度与可追问能力
+
+飞书输出由 `src/app/display-contract.ts` 统一约束，确保主动推送和手动问答都对齐 `docs/display/*` 样张：
+
+- 统一人格/格式：小蜜敬语、emoji 分节、🟢🔴🟡 状态、`数据缺失/未记录/未确认` 诚实标记、结尾 `🍯 Boss 摘要`。
+- 逐节点骨架：盘前 `市场背景`，竞价 `一字板/题材/封单` 三列表，盘中 `观察→判断→策略→下次复查`，盘后/周/月/年复盘骨架。
+
+只读证据工具（问答前模型先取证据再回答，事实由代码算）：
+
+- `get_operation_review`：操作复盘（成交时间/数量/价格/理由/盈亏/缺口，北京时间）。
+- `get_feedback_audit`：问责反馈（某日期范围 100 池覆盖、计划/提案/成交区分、缺口）。
+- `get_strategy_knowledge`：策略库（命名策略、样本数、胜率、案例）。需先有已评分决策（见下）。
+- `get_market_overview` / `query_watchlist` / `get_auction_board`：盘面、观察池、竞价封板。
+
+## 闹钟矩阵
+
+工作日盘中链路 + 周末 7 个任务（周六 `08:30/10:00/14:00/15:30/16:00`，周日 `08:30/14:00`）均已落库到 `src/domain/cerebellum/alarm-matrix.ts`，按北京时间触发。
+
+## 决策评分落库（喂策略库）
+
+`get_strategy_knowledge` 读取 `memory/decisions/`，由评分决策喂养。该目录只在评分时写入：
+
+```powershell
+npm run score:decisions   # 只读、确定性决策器、不下单：对已结算的近若干交易日重放+评分+落库
+```
+
+适合收盘后或 cron 定时跑。账户在该窗口内持有过仓位时才会产生可评分决策。
