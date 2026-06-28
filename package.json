@@ -22,6 +22,7 @@
     "watchlist": "tsx scripts/dev/watchlist.ts",
     "screen": "tsx scripts/dev/screen.ts",
     "replay": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/replay-backtest.ts",
+    "score:decisions": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/score-decisions.ts",
     "funnel:dev": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/funnel-loop.ts",
     "wechat:bot": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/wechat-bot.ts",
     "feishu:bot": "cross-env NODE_USE_ENV_PROXY=1 tsx scripts/dev/feishu-bot.ts",

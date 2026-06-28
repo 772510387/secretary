@@ -163,6 +163,11 @@ export {
   type WakeKnowledgeDigest,
 } from "./load-knowledge-for-wake.js";
 export {
+  resolveTrailingDecisionWindow,
+  type TrailingDecisionWindow,
+  type ResolveTrailingDecisionWindowInput,
+} from "./trailing-decision-window.js";
+export {
   ArchiveDailySnapshotError,
   archiveDailySnapshot,
   type ArchiveDailySnapshotInput,
