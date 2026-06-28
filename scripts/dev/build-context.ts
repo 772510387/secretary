@@ -307,7 +307,12 @@ export function readPotentialStockCandidates(
         { position: positionBySymbol.get(entry.symbol) },
       );
     });
-  } catch {
+  } catch (error) {
+    // Don't fail the whole turn, but don't fail SILENTLY either (the pool feeds
+    // potential-stock analysis; an unnoticed read error looked like an empty pool).
+    console.warn(
+      `(读取 potential_stocks 失败，本轮潜力股池按空处理：${error instanceof Error ? error.message : String(error)})`,
+    );
     return [];
   }
 }
