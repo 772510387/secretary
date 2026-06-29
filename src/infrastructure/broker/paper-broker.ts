@@ -201,7 +201,11 @@ export class PaperBroker {
         ...account.cash,
         available: roundMoney(account.cash.available - execution.netAmount),
       },
-      updatedAt: now.toISOString(),
+      // Honest trade time can predate the account's createdAt (e.g. a reset-then-replay of
+      // today's morning, or replaying a day before the account existed). The account record
+      // is genuinely written now, so clamp its updatedAt to >= createdAt; the TRADE keeps the
+      // simulated time. Without this, accountSchema rejects the write and the fill is lost.
+      updatedAt: maxIso(now.toISOString(), account.createdAt),
     });
     const updatedPositions = upsertBuyPosition(positions, order, fees + tax, now);
     const trade = tradeRecordFromExecution(execution, now);
@@ -279,7 +283,9 @@ export class PaperBroker {
         ...account.cash,
         available: roundMoney(account.cash.available + execution.netAmount),
       },
-      updatedAt: now.toISOString(),
+      // See executeBuy: clamp account.updatedAt to >= createdAt so a simulated (past) fill
+      // time can't violate the account invariant; the TRADE keeps the simulated time.
+      updatedAt: maxIso(now.toISOString(), account.createdAt),
     });
     const updatedPositions = applySellPosition(positions, positionIndex, order, now);
     const trade = tradeRecordFromExecution(execution, now);
@@ -454,6 +460,11 @@ function applySellPosition(
   return positions.map((position, candidateIndex) =>
     candidateIndex === positionIndex ? updated : position,
   );
+}
+
+/** Later of two ISO timestamps — used to keep account.updatedAt >= createdAt under simulated fills. */
+function maxIso(a: string, b: string): string {
+  return Date.parse(a) >= Date.parse(b) ? a : b;
 }
 
 function tradeRecordFromExecution(execution: ExecutionReport, now: Date): TradeRecord {

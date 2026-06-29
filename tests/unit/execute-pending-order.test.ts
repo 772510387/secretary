@@ -142,12 +142,13 @@ describe("executePendingOrder — paper fill", () => {
     expect(filled?.costPrice).toBe(13);
   });
 
-  it("stamps the fill at the provided `now` (simulated node time), not the wall clock", () => {
+  it("stamps the fill at the provided `now` even when it predates account.createdAt (reset-then-replay-today)", () => {
     const memoryDir = seededPaperDir(20000);
-    // A simulated session instant after the account was created (a replay of a settled
-    // session would otherwise show the evening run-time, an impossible trading time).
+    // Reset-then-replay: the account was created NOW (the reset) but we replay an EARLIER
+    // session today, so the fill time is BEFORE createdAt. The fill must still succeed and
+    // keep the honest (earlier) trade time — the account.updatedAt is clamped to >= createdAt.
     const created = broker(memoryDir).getAccount().createdAt;
-    const simulated = new Date(new Date(created).getTime() + 3 * 60 * 60 * 1000);
+    const simulated = new Date(new Date(created).getTime() - 3 * 60 * 60 * 1000);
     const result = executePendingOrder(
       {
         proposal: proposal("BUY", "000001", { quantity: 100, limitPrice: 13 }),
@@ -157,10 +158,13 @@ describe("executePendingOrder — paper fill", () => {
       },
       { config: PAPER_CONFIG, memoryDir },
     );
-    expect(result.status).toBe("filled");
-    const trades = broker(memoryDir).getTrades().filter((t) => t.symbol === "000001");
+    expect(result.status).toBe("filled"); // regression guard: was rejected by updatedAt>=createdAt
+    const b = broker(memoryDir);
+    const trades = b.getTrades().filter((t) => t.symbol === "000001");
     expect(trades).toHaveLength(1);
-    expect(trades[0]!.tradedAt).toBe(simulated.toISOString());
+    expect(trades[0]!.tradedAt).toBe(simulated.toISOString()); // honest (earlier) trade time
+    // account.updatedAt clamped to >= createdAt so the write is valid.
+    expect(Date.parse(b.getAccount().updatedAt)).toBeGreaterThanOrEqual(Date.parse(created));
   });
 
   it("is idempotent — re-executing the same proposal does not double-fill", () => {
