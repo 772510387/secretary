@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-002141-BUY-20260629063012",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260629063012",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "002141",
+  "market": "SZSE",
+  "name": "贤丰控股",
+  "side": "BUY",
+  "quantity": 100,
+  "limitPrice": 5.18,
+  "currency": "CNY",
+  "rationale": "贤丰控股(002141)为高关注池第48名，属锂电材料+固态电池概念，观察池中唯一明确标注‘固态电池’潜力方向标的，且价格低（5.18元）、100股仅518元，现金利用率最优",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-29T06:30:12.164Z",
+  "updatedAt": "2026-06-29T06:30:12.164Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 518
+  }
+}

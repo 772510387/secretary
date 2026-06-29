@@ -1,43 +1,56 @@
 {
   "category": "potential_stocks",
-  "updatedAt": "2026-06-22T00:30:00.000Z",
+  "updatedAt": "2026-06-29T06:30:00.000Z",
   "entries": [
     {
-      "symbol": "600118",
+      "symbol": "600378",
       "market": "SSE",
-      "name": "中国卫星",
+      "name": "昊华科技",
       "priority": "high",
-      "reason": "中国卫星涨停+10.00%封单1.2亿，位列高关注池第2名，属航天装备Ⅱ板块龙头（领涨+6.85%），主力净流入+19.73亿",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
-      "metadata": {
-        "rank": 2,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "600367",
-      "market": "SSE",
-      "name": "红星发展",
-      "priority": "high",
-      "reason": "红星发展涨停+10.00%封单0.9亿，高关注池第7名，明确标注【玻璃基板】题材，日线uptrend（rangePosition60=0.8685）",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
-      "metadata": {
-        "rank": 7,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "600552",
-      "market": "SSE",
-      "name": "凯盛科技",
-      "priority": "high",
-      "reason": "凯盛科技涨停+10.00%封单1.0亿，高关注池第4名，明确标注【玻璃基板】题材，日线呈uptrend（rangePosition60=0.9027）",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
       "metadata": {
         "rank": 4,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "600707",
+      "market": "SSE",
+      "name": "彩虹股份",
+      "priority": "high",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
+      "metadata": {
+        "rank": 5,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "603283",
+      "market": "SSE",
+      "name": "赛腾股份",
+      "priority": "high",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
+      "metadata": {
+        "rank": 9,
+        "fromFunnel": true
+      }
+    },
+    {
+      "symbol": "603459",
+      "market": "SSE",
+      "name": "红板科技",
+      "priority": "high",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
+      "source": "funnel-shortlist",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
+      "metadata": {
+        "rank": 10,
         "fromFunnel": true
       }
     },
@@ -46,89 +59,76 @@
       "market": "SSE",
       "name": "彤程新材",
       "priority": "high",
-      "reason": "彤程新材高关注池第9名，日线uptrend（rangePosition60=0.8862），属光刻胶核心标的，光学光电子板块领涨+6.97%（57只含5涨停）",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
       "metadata": {
-        "rank": 9,
+        "rank": 6,
         "fromFunnel": true
       }
     },
     {
-      "symbol": "000823",
+      "symbol": "000021",
       "market": "SZSE",
-      "name": "超声电子",
+      "name": "深科技",
       "priority": "high",
-      "reason": "超声电子高关注池第10名，日线uptrend（rangePosition60=0.9118），属光学光电子板块，该板块领涨+6.97%且含5只涨停",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
       "metadata": {
-        "rank": 10,
+        "rank": 2,
         "fromFunnel": true
       }
     },
     {
-      "symbol": "001389",
+      "symbol": "000988",
       "market": "SZSE",
-      "name": "广合科技",
+      "name": "华工科技",
       "priority": "high",
-      "reason": "广合科技涨停+10.00%封单0.5亿，高关注池第5名，主力净流入+33.98亿（N惠科同批次新股），日线uptrend（rangePosition60=0.9517）",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
-      "metadata": {
-        "rank": 5,
-        "fromFunnel": true
-      }
-    },
-    {
-      "symbol": "001399",
-      "market": "SZSE",
-      "name": "N惠科",
-      "priority": "high",
-      "reason": "N惠科首日上市+315.02%，高关注池第1名，主力净流入+33.98亿，属玻璃基板与AI算力双题材，资金面最强标的",
-      "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
       "metadata": {
         "rank": 1,
         "fromFunnel": true
       }
     },
     {
-      "symbol": "002119",
+      "symbol": "001270",
       "market": "SZSE",
-      "name": "康强电子",
+      "name": "铖昌科技",
       "priority": "high",
-      "reason": "康强电子涨停+10.01%封单0.7亿，高关注池第8名，主力净流入+34.63亿（京东方Ａ同题材联动），日线uptrend（rangePosition60=0.9444）",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
       "metadata": {
         "rank": 8,
         "fromFunnel": true
       }
     },
     {
-      "symbol": "002129",
+      "symbol": "002409",
       "market": "SZSE",
-      "name": "TCL中环",
+      "name": "雅克科技",
       "priority": "high",
-      "reason": "TCL中环涨停+10.03%封单1.9亿，高关注池第3名，主力净流入+21.88亿，属玻璃基板题材核心标的",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
       "metadata": {
         "rank": 3,
         "fromFunnel": true
       }
     },
     {
-      "symbol": "002354",
+      "symbol": "002859",
       "market": "SZSE",
-      "name": "天娱数科",
+      "name": "洁美科技",
       "priority": "high",
-      "reason": "天娱数科涨停+9.96%封单0.5亿，高关注池第6名，属热门题材成分（昨日连板_含一字），日线sideways但封单强度支撑短期动能",
+      "reason": "降级：模型未给出可用候选，按成交额排名取 top-N。",
       "source": "funnel-shortlist",
-      "updatedAt": "2026-06-22T00:30:00.000Z",
+      "updatedAt": "2026-06-29T06:30:00.000Z",
       "metadata": {
-        "rank": 6,
+        "rank": 7,
         "fromFunnel": true
       }
     }

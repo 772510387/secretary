@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-600707-SELL-20260629033000",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260629033000",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "600707",
+  "market": "SSE",
+  "name": "彩虹股份",
+  "side": "SELL",
+  "quantity": 200,
+  "limitPrice": 13.96,
+  "currency": "CNY",
+  "rationale": "彩虹股份当前持仓，涨停+9.96%位列观察池涨停榜第6名，日线多头（rangePosition60=0.90021）达60日高位，且可执行卖出量200股为最大额度，符合sellable=200及T+1可卖规则",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-29T03:30:00.000Z",
+  "updatedAt": "2026-06-29T03:30:00.000Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 2792
+  }
+}

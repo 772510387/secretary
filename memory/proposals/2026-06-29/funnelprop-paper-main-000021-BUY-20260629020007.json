@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-000021-BUY-20260629020007",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260629020007",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "000021",
+  "market": "SZSE",
+  "name": "深科技",
+  "side": "BUY",
+  "quantity": 100,
+  "limitPrice": 58.86,
+  "currency": "CNY",
+  "rationale": "深科技涨停+10.00%封15.3亿且日线多头，主力净流入+13.00亿居池内第三，半导体板块5涨停之一，观察池排名第3",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-29T02:00:07.938Z",
+  "updatedAt": "2026-06-29T02:00:07.938Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 5886
+  }
+}

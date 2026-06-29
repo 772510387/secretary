@@ -1,0 +1,238 @@
+[
+  {
+    "time": "08:30",
+    "occurredAt": "2026-06-29T00:30:00.000Z",
+    "alarmType": "pre_market_plan",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": 0.0116
+      },
+      {
+        "name": "深证成指",
+        "changePct": 0.0019
+      },
+      {
+        "name": "创业板指",
+        "changePct": 0.0054
+      },
+      {
+        "name": "科创50",
+        "changePct": 0.0461
+      }
+    ],
+    "holdings": [],
+    "limitUpCount": 72,
+    "limitDownCount": 30,
+    "heatScore": 61
+  },
+  {
+    "time": "09:15",
+    "occurredAt": "2026-06-29T01:15:00.000Z",
+    "alarmType": "call_auction_watch",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": 0.0116
+      },
+      {
+        "name": "深证成指",
+        "changePct": 0.0019
+      },
+      {
+        "name": "创业板指",
+        "changePct": 0.0054
+      },
+      {
+        "name": "科创50",
+        "changePct": 0.0461
+      }
+    ],
+    "holdings": [],
+    "limitUpCount": 72,
+    "limitDownCount": 30,
+    "heatScore": 61
+  },
+  {
+    "time": "11:30",
+    "occurredAt": "2026-06-29T03:30:09.345Z",
+    "alarmType": "midday_review",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": 0.0017
+      },
+      {
+        "name": "深证成指",
+        "changePct": -0.0121
+      },
+      {
+        "name": "创业板指",
+        "changePct": -0.0128
+      },
+      {
+        "name": "科创50",
+        "changePct": 0.0156
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "600460",
+        "name": "士兰微",
+        "price": 52.08
+      },
+      {
+        "symbol": "000021",
+        "name": "深科技",
+        "price": 57.34
+      }
+    ],
+    "limitUpCount": 50,
+    "limitDownCount": 41,
+    "heatScore": 48
+  },
+  {
+    "time": "14:00",
+    "occurredAt": "2026-06-29T06:00:11.702Z",
+    "alarmType": "afternoon_risk_scan",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": 0.0088
+      },
+      {
+        "name": "深证成指",
+        "changePct": -0.0009
+      },
+      {
+        "name": "创业板指",
+        "changePct": 0.0015
+      },
+      {
+        "name": "科创50",
+        "changePct": 0.0358
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "600460",
+        "name": "士兰微",
+        "price": 52.74
+      },
+      {
+        "symbol": "000021",
+        "name": "深科技",
+        "price": 58.86
+      }
+    ],
+    "limitUpCount": 70,
+    "limitDownCount": 26,
+    "heatScore": 60
+  },
+  {
+    "time": "14:30",
+    "occurredAt": "2026-06-29T06:30:12.164Z",
+    "alarmType": "late_session_plan",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": 0.007
+      },
+      {
+        "name": "深证成指",
+        "changePct": -0.0037
+      },
+      {
+        "name": "创业板指",
+        "changePct": -0.0015
+      },
+      {
+        "name": "科创50",
+        "changePct": 0.0324
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "600460",
+        "name": "士兰微",
+        "price": 52.23
+      },
+      {
+        "symbol": "000021",
+        "name": "深科技",
+        "price": 58.86
+      },
+      {
+        "symbol": "002208",
+        "name": "合肥城建",
+        "price": 18.38
+      },
+      {
+        "symbol": "002674",
+        "name": "兴业科技",
+        "price": 31.47
+      }
+    ],
+    "limitUpCount": 66,
+    "limitDownCount": 30,
+    "heatScore": 58
+  },
+  {
+    "time": "17:36",
+    "occurredAt": "2026-06-29T09:36:34.383Z",
+    "alarmType": "morning_review",
+    "indices": [
+      {
+        "name": "上证指数",
+        "changePct": 0.0116
+      },
+      {
+        "name": "深证成指",
+        "changePct": 0.0019
+      },
+      {
+        "name": "创业板指",
+        "changePct": 0.0054
+      },
+      {
+        "name": "科创50",
+        "changePct": 0.0461
+      }
+    ],
+    "holdings": [
+      {
+        "symbol": "600460",
+        "name": "士兰微",
+        "price": 52.59
+      },
+      {
+        "symbol": "000021",
+        "name": "深科技",
+        "price": 58.86
+      },
+      {
+        "symbol": "002208",
+        "name": "合肥城建",
+        "price": 18.38
+      },
+      {
+        "symbol": "002674",
+        "name": "兴业科技",
+        "price": 31.7
+      },
+      {
+        "symbol": "000751",
+        "name": "锌业股份",
+        "price": 6.22
+      },
+      {
+        "symbol": "002141",
+        "name": "贤丰控股",
+        "price": 5.18
+      }
+    ],
+    "limitUpCount": 71,
+    "limitDownCount": 30,
+    "heatScore": 61
+  }
+]

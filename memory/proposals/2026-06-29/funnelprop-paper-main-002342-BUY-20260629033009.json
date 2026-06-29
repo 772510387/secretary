@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-002342-BUY-20260629033009",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260629033009",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "002342",
+  "market": "SZSE",
+  "name": "巨力索具",
+  "side": "BUY",
+  "quantity": 300,
+  "limitPrice": 10.62,
+  "currency": "CNY",
+  "rationale": "涨停+10.05%封单2.1亿，观察池排名第7，属涨停30成分，且在可执行买入候选中",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-29T03:30:09.345Z",
+  "updatedAt": "2026-06-29T03:30:09.345Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 3186
+  }
+}

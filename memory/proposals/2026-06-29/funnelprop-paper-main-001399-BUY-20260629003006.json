@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-001399-BUY-20260629003006",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260629003006",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "001399",
+  "market": "SZSE",
+  "name": "N惠科",
+  "side": "BUY",
+  "quantity": 100,
+  "limitPrice": 42,
+  "currency": "CNY",
+  "rationale": "N惠科涨停315.02%且2连板，主力净流入+33.98亿居池内第二，为高关注池排名第1的极端强度标的，符合确定性筛选中‘涨停+连板+资金面’三重信号",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-29T00:30:06.483Z",
+  "updatedAt": "2026-06-29T00:30:06.483Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 4200
+  }
+}

@@ -1,0 +1,689 @@
+{
+  "schemaVersion": 1,
+  "planId": "plan-2026-06-29-paper-main",
+  "tradingDate": "2026-06-29",
+  "accountId": "paper-main",
+  "nodeSequence": 0,
+  "alarmType": "late_session_plan",
+  "generatedAt": "2026-06-29T06:30:00.000Z",
+  "watchlist100": [
+    {
+      "symbol": "600118",
+      "market": "SSE",
+      "name": "中国卫星",
+      "rank": 52
+    },
+    {
+      "symbol": "600343",
+      "market": "SSE",
+      "name": "航天动力",
+      "rank": 60
+    },
+    {
+      "symbol": "600367",
+      "market": "SSE",
+      "name": "红星发展",
+      "rank": 56
+    },
+    {
+      "symbol": "600378",
+      "market": "SSE",
+      "name": "昊华科技",
+      "rank": 4
+    },
+    {
+      "symbol": "600481",
+      "market": "SSE",
+      "name": "双良节能",
+      "rank": 72
+    },
+    {
+      "symbol": "600545",
+      "market": "SSE",
+      "name": "卓郎智能",
+      "rank": 59
+    },
+    {
+      "symbol": "600552",
+      "market": "SSE",
+      "name": "凯盛科技",
+      "rank": 51
+    },
+    {
+      "symbol": "600707",
+      "market": "SSE",
+      "name": "彩虹股份",
+      "rank": 5
+    },
+    {
+      "symbol": "600962",
+      "market": "SSE",
+      "name": "国投中鲁",
+      "rank": 70
+    },
+    {
+      "symbol": "601016",
+      "market": "SSE",
+      "name": "节能风电",
+      "rank": 67
+    },
+    {
+      "symbol": "601133",
+      "market": "SSE",
+      "name": "柏诚股份",
+      "rank": 28
+    },
+    {
+      "symbol": "601611",
+      "market": "SSE",
+      "name": "中国核建",
+      "rank": 30
+    },
+    {
+      "symbol": "603061",
+      "market": "SSE",
+      "name": "金海通",
+      "rank": 13
+    },
+    {
+      "symbol": "603155",
+      "market": "SSE",
+      "name": "新亚强",
+      "rank": 29
+    },
+    {
+      "symbol": "603163",
+      "market": "SSE",
+      "name": "圣晖集成",
+      "rank": 21
+    },
+    {
+      "symbol": "603283",
+      "market": "SSE",
+      "name": "赛腾股份",
+      "rank": 9
+    },
+    {
+      "symbol": "603296",
+      "market": "SSE",
+      "name": "华勤技术",
+      "rank": 85
+    },
+    {
+      "symbol": "603399",
+      "market": "SSE",
+      "name": "永杉锂业",
+      "rank": 82
+    },
+    {
+      "symbol": "603459",
+      "market": "SSE",
+      "name": "红板科技",
+      "rank": 10
+    },
+    {
+      "symbol": "603606",
+      "market": "SSE",
+      "name": "东方电缆",
+      "rank": 24
+    },
+    {
+      "symbol": "603629",
+      "market": "SSE",
+      "name": "利通电子",
+      "rank": 79
+    },
+    {
+      "symbol": "603650",
+      "market": "SSE",
+      "name": "彤程新材",
+      "rank": 6
+    },
+    {
+      "symbol": "603687",
+      "market": "SSE",
+      "name": "大胜达",
+      "rank": 61
+    },
+    {
+      "symbol": "603698",
+      "market": "SSE",
+      "name": "航天工程",
+      "rank": 65
+    },
+    {
+      "symbol": "603950",
+      "market": "SSE",
+      "name": "长源东谷",
+      "rank": 26
+    },
+    {
+      "symbol": "603977",
+      "market": "SSE",
+      "name": "国泰集团",
+      "rank": 71
+    },
+    {
+      "symbol": "605366",
+      "market": "SSE",
+      "name": "宏柏新材",
+      "rank": 68
+    },
+    {
+      "symbol": "605499",
+      "market": "SSE",
+      "name": "东鹏饮料",
+      "rank": 18
+    },
+    {
+      "symbol": "000021",
+      "market": "SZSE",
+      "name": "深科技",
+      "rank": 2
+    },
+    {
+      "symbol": "000551",
+      "market": "SZSE",
+      "name": "创元科技",
+      "rank": 22
+    },
+    {
+      "symbol": "000751",
+      "market": "SZSE",
+      "name": "锌业股份",
+      "rank": 27
+    },
+    {
+      "symbol": "000823",
+      "market": "SZSE",
+      "name": "超声电子",
+      "rank": 57
+    },
+    {
+      "symbol": "000988",
+      "market": "SZSE",
+      "name": "华工科技",
+      "rank": 1
+    },
+    {
+      "symbol": "001270",
+      "market": "SZSE",
+      "name": "铖昌科技",
+      "rank": 8
+    },
+    {
+      "symbol": "001400",
+      "market": "SZSE",
+      "name": "江顺科技",
+      "rank": 73
+    },
+    {
+      "symbol": "002106",
+      "market": "SZSE",
+      "name": "莱宝高科",
+      "rank": 66
+    },
+    {
+      "symbol": "002119",
+      "market": "SZSE",
+      "name": "康强电子",
+      "rank": 55
+    },
+    {
+      "symbol": "002129",
+      "market": "SZSE",
+      "name": "TCL中环",
+      "rank": 53
+    },
+    {
+      "symbol": "002141",
+      "market": "SZSE",
+      "name": "贤丰控股",
+      "rank": 44
+    },
+    {
+      "symbol": "002180",
+      "market": "SZSE",
+      "name": "奔图科技",
+      "rank": 25
+    },
+    {
+      "symbol": "002208",
+      "market": "SZSE",
+      "name": "合肥城建",
+      "rank": 11
+    },
+    {
+      "symbol": "002317",
+      "market": "SZSE",
+      "name": "众生药业",
+      "rank": 16
+    },
+    {
+      "symbol": "002342",
+      "market": "SZSE",
+      "name": "巨力索具",
+      "rank": 17
+    },
+    {
+      "symbol": "002354",
+      "market": "SZSE",
+      "name": "天娱数科",
+      "rank": 54
+    },
+    {
+      "symbol": "002407",
+      "market": "SZSE",
+      "name": "多氟多",
+      "rank": 14
+    },
+    {
+      "symbol": "002409",
+      "market": "SZSE",
+      "name": "雅克科技",
+      "rank": 3
+    },
+    {
+      "symbol": "002422",
+      "market": "SZSE",
+      "name": "科伦药业",
+      "rank": 23
+    },
+    {
+      "symbol": "002549",
+      "market": "SZSE",
+      "name": "凯美特气",
+      "rank": 20
+    },
+    {
+      "symbol": "002559",
+      "market": "SZSE",
+      "name": "亚威股份",
+      "rank": 63
+    },
+    {
+      "symbol": "002580",
+      "market": "SZSE",
+      "name": "圣阳股份",
+      "rank": 84
+    },
+    {
+      "symbol": "002624",
+      "market": "SZSE",
+      "name": "完美世界",
+      "rank": 19
+    },
+    {
+      "symbol": "002674",
+      "market": "SZSE",
+      "name": "兴业科技",
+      "rank": 12
+    },
+    {
+      "symbol": "002821",
+      "market": "SZSE",
+      "name": "凯莱英",
+      "rank": 15
+    },
+    {
+      "symbol": "002859",
+      "market": "SZSE",
+      "name": "洁美科技",
+      "rank": 7
+    },
+    {
+      "symbol": "002910",
+      "market": "SZSE",
+      "name": "庄园牧场",
+      "rank": 74
+    },
+    {
+      "symbol": "002962",
+      "market": "SZSE",
+      "name": "五方光电",
+      "rank": 69
+    },
+    {
+      "symbol": "002965",
+      "market": "SZSE",
+      "name": "祥鑫科技",
+      "rank": 64
+    },
+    {
+      "symbol": "600152",
+      "market": "SSE",
+      "name": "维科技术",
+      "rank": 98
+    },
+    {
+      "symbol": "600345",
+      "market": "SSE",
+      "name": "长江通信",
+      "rank": 92
+    },
+    {
+      "symbol": "600366",
+      "market": "SSE",
+      "name": "XD宁波韵",
+      "rank": 91
+    },
+    {
+      "symbol": "600498",
+      "market": "SSE",
+      "name": "烽火通信",
+      "rank": 77
+    },
+    {
+      "symbol": "600851",
+      "market": "SSE",
+      "name": "海欣股份",
+      "rank": 93
+    },
+    {
+      "symbol": "601799",
+      "market": "SSE",
+      "name": "星宇股份",
+      "rank": 88
+    },
+    {
+      "symbol": "603031",
+      "market": "SSE",
+      "name": "安孚科技",
+      "rank": 86
+    },
+    {
+      "symbol": "603065",
+      "market": "SSE",
+      "name": "宿迁联盛",
+      "rank": 45
+    },
+    {
+      "symbol": "603115",
+      "market": "SSE",
+      "name": "海星股份",
+      "rank": 90
+    },
+    {
+      "symbol": "603316",
+      "market": "SSE",
+      "name": "诚邦股份",
+      "rank": 97
+    },
+    {
+      "symbol": "603823",
+      "market": "SSE",
+      "name": "百合花",
+      "rank": 48
+    },
+    {
+      "symbol": "000062",
+      "market": "SZSE",
+      "name": "深圳华强",
+      "rank": 87
+    },
+    {
+      "symbol": "000070",
+      "market": "SZSE",
+      "name": "特发信息",
+      "rank": 81
+    },
+    {
+      "symbol": "000620",
+      "market": "SZSE",
+      "name": "盈新发展",
+      "rank": 62
+    },
+    {
+      "symbol": "000703",
+      "market": "SZSE",
+      "name": "恒逸石化",
+      "rank": 43
+    },
+    {
+      "symbol": "000766",
+      "market": "SZSE",
+      "name": "通化金马",
+      "rank": 47
+    },
+    {
+      "symbol": "000859",
+      "market": "SZSE",
+      "name": "国风新材",
+      "rank": 50
+    },
+    {
+      "symbol": "001267",
+      "market": "SZSE",
+      "name": "汇绿生态",
+      "rank": 83
+    },
+    {
+      "symbol": "001330",
+      "market": "SZSE",
+      "name": "博纳影业",
+      "rank": 96
+    },
+    {
+      "symbol": "001389",
+      "market": "SZSE",
+      "name": "广合科技",
+      "rank": 58
+    },
+    {
+      "symbol": "001399",
+      "market": "SZSE",
+      "name": "C惠科",
+      "rank": 31
+    },
+    {
+      "symbol": "002083",
+      "market": "SZSE",
+      "name": "孚日股份",
+      "rank": 94
+    },
+    {
+      "symbol": "002192",
+      "market": "SZSE",
+      "name": "融捷股份",
+      "rank": 80
+    },
+    {
+      "symbol": "002194",
+      "market": "SZSE",
+      "name": "武汉凡谷",
+      "rank": 100
+    },
+    {
+      "symbol": "002263",
+      "market": "SZSE",
+      "name": "大东南",
+      "rank": 99
+    },
+    {
+      "symbol": "002497",
+      "market": "SZSE",
+      "name": "雅化集团",
+      "rank": 89
+    },
+    {
+      "symbol": "002552",
+      "market": "SZSE",
+      "name": "宝鼎科技",
+      "rank": 46
+    },
+    {
+      "symbol": "002579",
+      "market": "SZSE",
+      "name": "中京电子",
+      "rank": 34
+    },
+    {
+      "symbol": "002815",
+      "market": "SZSE",
+      "name": "崇达技术",
+      "rank": 42
+    },
+    {
+      "symbol": "002902",
+      "market": "SZSE",
+      "name": "铭普光磁",
+      "rank": 49
+    },
+    {
+      "symbol": "002903",
+      "market": "SZSE",
+      "name": "宇环数控",
+      "rank": 95
+    },
+    {
+      "symbol": "600105",
+      "market": "SSE",
+      "name": "永鼎股份",
+      "rank": 78
+    },
+    {
+      "symbol": "600353",
+      "market": "SSE",
+      "name": "旭光电子",
+      "rank": 38
+    },
+    {
+      "symbol": "600487",
+      "market": "SSE",
+      "name": "XD亨通光",
+      "rank": 76
+    },
+    {
+      "symbol": "600500",
+      "market": "SSE",
+      "name": "中化国际",
+      "rank": 39
+    },
+    {
+      "symbol": "600516",
+      "market": "SSE",
+      "name": "方大炭素",
+      "rank": 40
+    },
+    {
+      "symbol": "600522",
+      "market": "SSE",
+      "name": "中天科技",
+      "rank": 75
+    },
+    {
+      "symbol": "600596",
+      "market": "SSE",
+      "name": "新安股份",
+      "rank": 36
+    },
+    {
+      "symbol": "603256",
+      "market": "SSE",
+      "name": "宏和科技",
+      "rank": 32
+    },
+    {
+      "symbol": "000967",
+      "market": "SZSE",
+      "name": "盈峰环境",
+      "rank": 35
+    },
+    {
+      "symbol": "002273",
+      "market": "SZSE",
+      "name": "水晶光电",
+      "rank": 33
+    },
+    {
+      "symbol": "002655",
+      "market": "SZSE",
+      "name": "共达电声",
+      "rank": 41
+    },
+    {
+      "symbol": "002741",
+      "market": "SZSE",
+      "name": "光华科技",
+      "rank": 37
+    }
+  ],
+  "shortlist10": [
+    {
+      "symbol": "000988",
+      "market": "SZSE",
+      "name": "华工科技",
+      "rank": 1,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "000021",
+      "market": "SZSE",
+      "name": "深科技",
+      "rank": 2,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "002409",
+      "market": "SZSE",
+      "name": "雅克科技",
+      "rank": 3,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "600378",
+      "market": "SSE",
+      "name": "昊华科技",
+      "rank": 4,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "600707",
+      "market": "SSE",
+      "name": "彩虹股份",
+      "rank": 5,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "603650",
+      "market": "SSE",
+      "name": "彤程新材",
+      "rank": 6,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "002859",
+      "market": "SZSE",
+      "name": "洁美科技",
+      "rank": 7,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "001270",
+      "market": "SZSE",
+      "name": "铖昌科技",
+      "rank": 8,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "603283",
+      "market": "SSE",
+      "name": "赛腾股份",
+      "rank": 9,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    },
+    {
+      "symbol": "603459",
+      "market": "SSE",
+      "name": "红板科技",
+      "rank": 10,
+      "rationale": "降级：模型未给出可用候选，按成交额排名取 top-N。"
+    }
+  ],
+  "pendingOrders": [],
+  "safety": {
+    "liveTrading": false,
+    "autoPaper": true
+  },
+  "metadata": {}
+}

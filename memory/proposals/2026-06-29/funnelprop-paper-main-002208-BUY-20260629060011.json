@@ -1,0 +1,37 @@
+{
+  "proposalId": "funnelprop-paper-main-002208-BUY-20260629060011",
+  "proposalType": "trade_intent_review",
+  "status": "pending_review",
+  "source": {
+    "sourceType": "brain_tool_request",
+    "requestId": "funnel-select-20260629060011",
+    "toolType": "propose_trade_intent"
+  },
+  "symbol": "002208",
+  "market": "SZSE",
+  "name": "合肥城建",
+  "side": "BUY",
+  "quantity": 200,
+  "limitPrice": 18.38,
+  "currency": "CNY",
+  "rationale": "合肥城建+9.99%封2.9亿，属观察池涨停30只之一，高关注池第9名，且在可执行买入候选中",
+  "reviewReason": "选股漏斗候选：模型只选择方向和标的；数量与价格由后端可执行候选预计算，模型不下单。",
+  "executionGuard": {
+    "requiresManualReview": true,
+    "executable": false,
+    "brokerSubmissionAllowed": false,
+    "accountWriteAllowed": false,
+    "liveTradingAllowed": false
+  },
+  "createdAt": "2026-06-29T06:00:11.702Z",
+  "updatedAt": "2026-06-29T06:00:11.702Z",
+  "createdBy": {
+    "type": "system",
+    "id": "funnel-selector"
+  },
+  "metadata": {
+    "funnel": true,
+    "executionCandidate": true,
+    "estimatedAmount": 3676
+  }
+}
