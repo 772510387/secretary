@@ -142,6 +142,27 @@ describe("executePendingOrder — paper fill", () => {
     expect(filled?.costPrice).toBe(13);
   });
 
+  it("stamps the fill at the provided `now` (simulated node time), not the wall clock", () => {
+    const memoryDir = seededPaperDir(20000);
+    // A simulated session instant after the account was created (a replay of a settled
+    // session would otherwise show the evening run-time, an impossible trading time).
+    const created = broker(memoryDir).getAccount().createdAt;
+    const simulated = new Date(new Date(created).getTime() + 3 * 60 * 60 * 1000);
+    const result = executePendingOrder(
+      {
+        proposal: proposal("BUY", "000001", { quantity: 100, limitPrice: 13 }),
+        latestPrice: 13,
+        reviewer: "auto-paper",
+        now: simulated,
+      },
+      { config: PAPER_CONFIG, memoryDir },
+    );
+    expect(result.status).toBe("filled");
+    const trades = broker(memoryDir).getTrades().filter((t) => t.symbol === "000001");
+    expect(trades).toHaveLength(1);
+    expect(trades[0]!.tradedAt).toBe(simulated.toISOString());
+  });
+
   it("is idempotent — re-executing the same proposal does not double-fill", () => {
     const memoryDir = seededPaperDir(20000);
     const p = proposal("BUY");

@@ -69,7 +69,11 @@ export function executePendingOrder(
     return { status: "skipped", reason: `unsupported_proposal_side:${side}`, intentId };
   }
 
-  const broker = deps.broker ?? new PaperBroker({ memoryDir: deps.memoryDir, t1Enabled: deps.config.trading.t1Enabled });
+  // The fill is stamped with `now` (the simulated node instant during a replay/simulate),
+  // not the wall clock — otherwise a replay of 10:30 fills shows the evening run-time
+  // (e.g. 17:47), an impossible A-share trading time.
+  const broker =
+    deps.broker ?? new PaperBroker({ memoryDir: deps.memoryDir, t1Enabled: deps.config.trading.t1Enabled, now: () => now });
   const account = broker.getAccount();
   const positions = broker.getPositions();
 

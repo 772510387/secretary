@@ -601,7 +601,7 @@ async function runFunnelNode(
     }
     try {
       const result = executePendingOrder(
-        { proposal, latestPrice: price, reviewer: "auto-paper" },
+        { proposal, latestPrice: price, reviewer: "auto-paper", now: new Date(now) },
         { config: deps.config, memoryDir: deps.memoryDir },
       );
       executions.push({
