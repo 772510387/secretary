@@ -89,4 +89,64 @@ describe("DashScopeQwenProvider resilience", () => {
 
     await expect(provider.generate(input)).rejects.toThrow(/截断|finish_reason=length/);
   });
+
+  it("retries a transient in-stream error chunk (5xx batching) then succeeds", async () => {
+    let calls = 0;
+    const provider = new DashScopeQwenProvider({
+      apiKey: "k",
+      retryBaseDelayMs: 0,
+      streaming: true,
+      fetchImpl: async () => {
+        calls += 1;
+        return calls === 1
+          ? sseStreamResponse([TRANSIENT_STREAM_ERROR])
+          : sseStreamResponse([GOOD_DELTA, "data: [DONE]"]);
+      },
+    });
+
+    const output = await provider.generateStream(input);
+    expect(calls).toBe(2);
+    expect(output.summary).toBe("ok");
+  });
+
+  it("does NOT retry a non-transient in-stream error chunk", async () => {
+    let calls = 0;
+    const provider = new DashScopeQwenProvider({
+      apiKey: "k",
+      retryBaseDelayMs: 0,
+      streaming: true,
+      fetchImpl: async () => {
+        calls += 1;
+        return sseStreamResponse([
+          'data: {"error":{"code":"invalid_request_error","message":"bad params"}}',
+        ]);
+      },
+    });
+
+    await expect(provider.generateStream(input)).rejects.toThrow(/invalid_request/);
+    expect(calls).toBe(1);
+  });
 });
+
+const GOOD_DELTA = `data: {"choices":[{"delta":{"content":${JSON.stringify(
+  '{"summary":"ok","structured":{},"confidence":0.5}',
+)}},"finish_reason":"stop"}]}`;
+const TRANSIENT_STREAM_ERROR =
+  'data: {"error":{"code":"internal_server_error","message":"<500> InternalError.Algo: Receive batching backend response failed!"}}';
+
+function sseStreamResponse(lines: string[]): DashScopeFetchResponse {
+  const encoder = new TextEncoder();
+  return {
+    ok: true,
+    status: 200,
+    text: async () => lines.join("\n"),
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const line of lines) {
+          controller.enqueue(encoder.encode(`${line}\n`));
+        }
+        controller.close();
+      },
+    }),
+  };
+}

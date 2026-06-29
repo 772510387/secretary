@@ -764,6 +764,20 @@ function extractProviderErrorMessage(text: string): string {
   }
 }
 
+/**
+ * Whether an in-stream error chunk is a TRANSIENT server-side blip worth retrying
+ * (5xx / internal_server_error / service unavailable / "batching backend" / timeout /
+ * overload / throttling) vs a permanent one (invalid_request, auth, content policy).
+ * The model serving 500 we saw ("InternalError.Algo: Receive batching backend response
+ * failed") is transient — a fresh request usually succeeds.
+ */
+function isTransientStreamError(code: string | undefined, message: string | undefined): boolean {
+  const haystack = `${code ?? ""} ${message ?? ""}`.toLowerCase();
+  return /(internal_server_error|internalerror|service.?unavailable|request.?timeout|batching backend|try again|timed? ?out|timeout|temporar|overload|throttl|rate.?limit|\b5\d\d\b|<5\d\d>)/.test(
+    haystack,
+  );
+}
+
 function isAbortError(error: unknown): boolean {
   return (
     error instanceof Error &&
@@ -827,6 +841,10 @@ function parseSseDataLine(line: string): SseContentEvent | undefined {
       `DashScopeQwenProvider stream error ${chunk.error.code ?? "unknown"}: ${
         chunk.error.message ?? chunk.error.type ?? "no message"
       }`,
+      // A mid-stream 5xx / internal_server_error / "batching backend" blip is transient —
+      // mark it retryable so fetchStreamWithRetry re-runs the request instead of dropping
+      // the node (the "重演失败，跳过" case).
+      { retryable: isTransientStreamError(chunk.error.code, chunk.error.message) },
     );
   }
 
@@ -1012,6 +1030,7 @@ function parseSseToolDeltaLine(line: string): SseToolDeltaEvent | undefined {
       `DashScopeQwenProvider tool stream error ${chunk.error.code ?? "unknown"}: ${
         chunk.error.message ?? chunk.error.type ?? "no message"
       }`,
+      { retryable: isTransientStreamError(chunk.error.code, chunk.error.message) },
     );
   }
 
