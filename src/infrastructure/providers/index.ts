@@ -86,6 +86,12 @@ export {
   type TencentQuoteProviderOptions,
 } from "./tencent-quote-provider.js";
 export {
+  TencentMinuteProvider,
+  parseTencentMinuteResponse,
+  type TencentMinuteProviderOptions,
+  type IntradayMinuteSeries,
+} from "./tencent-minute-provider.js";
+export {
   TencentHistoryProvider,
   parseTencentHistoryResponse,
   parseTencentKlineRow,

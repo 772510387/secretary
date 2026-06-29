@@ -41,6 +41,8 @@ export interface WeChatBridgeContext {
   potentialStocks?: PotentialStockCandidate[];
   /** 观察池分类概览 (层级1 counts + 层级2 named picks) rendered at 换血 time. */
   poolOverview?: string;
+  /** Per-candidate intraday (分时) summaries — the "精确到分" grounding for pick_stocks. */
+  intradayContext?: string;
   /** 龙虎榜 (主力净买卖) summary — fetched only for 盘后 review nodes. */
   dragonTiger?: string;
   /** 持仓资金面 (Sina 主力净流入 per held position) — the 北向 replacement signal. */
@@ -74,6 +76,8 @@ export interface WeChatBridgeDependencies {
   loadWatchlist?: () => PlanWatchlistEntry[] | Promise<PlanWatchlistEntry[]>;
   /** Reads the current rich 潜力股池 (cheap, disk-only) for deep basket analysis. */
   loadPotentialStocks?: () => PotentialStockCandidate[] | Promise<PotentialStockCandidate[]>;
+  /** Fetches today's intraday (分时) summary text for the given symbols (网络). Used to ground pick_stocks. */
+  loadIntraday?: (symbols: string[]) => string | Promise<string>;
   /**
    * Optional deterministic fast-path source: reads stored account/positions from disk
    * (no network, no model). When present, plain status queries ("当前模拟盘信息") are
@@ -252,6 +256,19 @@ export async function runWeChatBridgeTurn(
       // optional enrichment only
     }
   }
+
+  // 精确到分: ground the basket analysis with today's intraday (分时) — VWAP / day range /
+  // tail momentum per candidate — instead of inferring buy points from the snapshot close.
+  if (plan.intent === "pick_stocks" && deps.loadIntraday && !context.intradayContext) {
+    const symbols = intradaySymbolsFromContext(context);
+    if (symbols.length > 0) {
+      try {
+        context.intradayContext = await deps.loadIntraday(symbols);
+      } catch {
+        // optional enrichment only — pick_stocks still works without 分时
+      }
+    }
+  }
   const result = await fulfilTurnPlan(
     plan,
     { message: text, confirmed: false, history, now: turnNow, ...context },
@@ -329,6 +346,16 @@ function actionFromPlan(plan: TurnPlan, message: string, now: string): AgentActi
     };
   }
   return undefined;
+}
+
+/** Up to 10 symbols to fetch 分时 for: the candidates being analysed first, then holdings, then pool. */
+function intradaySymbolsFromContext(context: WeChatBridgeContext): string[] {
+  const ordered = [
+    ...(context.potentialStocks ?? []).map((candidate) => candidate.symbol),
+    ...(context.positions ?? []).map((position) => position.symbol),
+    ...(context.watchlist ?? []).map((entry) => entry.symbol),
+  ].filter((symbol): symbol is string => typeof symbol === "string" && symbol.length > 0);
+  return [...new Set(ordered)].slice(0, 10);
 }
 
 function recordTurn(state: WeChatBridgeState, peerId: string, turn: ConversationTurn): void {

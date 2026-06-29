@@ -124,6 +124,8 @@ export interface AnalyzePotentialStocksInput {
   question?: string;
   now?: string;
   poolOverview?: string;
+  /** Per-candidate intraday (分时) summaries, one line each — the "精确到分" grounding. */
+  intradayContext?: string;
   proposals?: readonly TradeIntentReviewProposal[];
   positions?: readonly Position[];
   dataHealth?: MarketDataHealth;
@@ -168,6 +170,7 @@ export async function analyzePotentialStocks(
         generatedAt,
         question: input.question,
         poolOverview: input.poolOverview,
+        intradayContext: input.intradayContext,
         proposals: input.proposals,
         positions: input.positions,
         dataHealth: input.dataHealth,
@@ -214,6 +217,7 @@ export function buildPotentialStockAnalysisBrainInput(input: {
   generatedAt: string;
   question?: string;
   poolOverview?: string;
+  intradayContext?: string;
   proposals?: readonly TradeIntentReviewProposal[];
   positions?: readonly Position[];
   dataHealth?: MarketDataHealth;
@@ -255,6 +259,9 @@ export function buildPotentialStockAnalysisBrainInput(input: {
       "候选清单（后端确定性来源）：",
       ...candidateLines,
       input.poolOverview?.trim() ? `\n观察池概览（确定性数据）：\n${clip(input.poolOverview.trim(), 5000)}` : "",
+      input.intradayContext?.trim()
+        ? `\n当日分时（精确到分，确定性数据；买点/支撑请优先参考 VWAP 与全天高低，而非简单回调比例）：\n${clip(input.intradayContext.trim(), 4000)}`
+        : "",
       input.proposals && input.proposals.length > 0
         ? `\n后端待复核买卖候选：${input.proposals
             .slice(0, 8)

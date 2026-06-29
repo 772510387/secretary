@@ -49,6 +49,7 @@ import {
   computeThemeHeat,
   isMainBoardSymbol,
   renderDragonTigerSummary,
+  renderIntradayMinuteSummary,
   renderIntradayTimeline,
   renderSectorHeat,
   resolveMarketPhase,
@@ -82,6 +83,7 @@ import {
   TavilySearchProvider,
   TencentHistoryProvider,
   TencentIndexProvider,
+  TencentMinuteProvider,
   TencentQuoteProvider,
   type HistoryProvider,
 } from "../../src/infrastructure/providers/index.js";
@@ -314,6 +316,30 @@ export function readPotentialStockCandidates(
       `(读取 potential_stocks 失败，本轮潜力股池按空处理：${error instanceof Error ? error.message : String(error)})`,
     );
     return [];
+  }
+}
+
+/**
+ * Today's intraday (分时) summary text for the given symbols — the "精确到分" grounding.
+ * One Tencent minute/query request per symbol (bounded to 10), degraded honestly per
+ * symbol. Returns a newline-joined block of one citeable line each, or "" when nothing
+ * usable came back. Network; callers should treat it as optional enrichment.
+ */
+export async function readIntradayContext(
+  symbols: readonly string[],
+  config: AppConfig,
+): Promise<string> {
+  const unique = [...new Set(symbols.filter((symbol) => symbol && symbol.length > 0))].slice(0, 10);
+  if (unique.length === 0) {
+    return "";
+  }
+  try {
+    const provider = new TencentMinuteProvider({ timeoutMs: config.market.quoteTimeoutMs });
+    const summaries = await provider.getIntradaySummaries([...unique]);
+    return summaries.map(renderIntradayMinuteSummary).join("\n");
+  } catch (error) {
+    console.warn(`(读取分时上下文失败：${error instanceof Error ? error.message : String(error)})`);
+    return "";
   }
 }
 

@@ -23,6 +23,7 @@ import {
   buildBridgeContext,
   readWatchlist100,
   readPotentialStockCandidates,
+  readIntradayContext,
   buildLivePaperAgentTools,
   readBridgeAccountAndPositions,
 } from "./build-context.js";
@@ -81,6 +82,7 @@ export async function main(): Promise<void> {
   const loadWatchlist = () => readWatchlist100(memoryDir); // cheap disk read for 选股 (pick_stocks)
   const loadPotentialStocks = () =>
     readPotentialStockCandidates(memoryDir, readBridgeAccountAndPositions(memoryDir).positions);
+  const loadIntraday = (symbols: string[]) => readIntradayContext(symbols, config);
   const executeAction = (action: AgentAction): Promise<string> =>
     executeAgentAction(action, { config, memoryDir });
 
@@ -131,6 +133,7 @@ export async function main(): Promise<void> {
         loadPortfolio,
         loadWatchlist,
         loadPotentialStocks,
+        loadIntraday,
         executeAction,
         buildTradingDayReview: ({ message, now }) => {
           const tradingDate = resolveTradingDayReviewDate(message, now);

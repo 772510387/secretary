@@ -117,6 +117,8 @@ export interface FulfilTurnPlanInput {
   potentialStocks?: PotentialStockCandidate[];
   /** Layer-1/2 categorized pool overview rendered during the last pool refresh. */
   poolOverview?: string;
+  /** Per-candidate intraday (分时) summaries — the "精确到分" grounding for pick_stocks. */
+  intradayContext?: string;
   /** Current market phase label, e.g. 集合竞价 / 上午盘中. */
   marketPhase?: string;
   /** Explicit data health so manual SOP runs degrade honestly. */
@@ -281,6 +283,7 @@ async function fulfilPickStocks(
         candidates: storedPotential,
         positions: input.positions,
         poolOverview: input.poolOverview,
+        intradayContext: input.intradayContext,
         dataHealth: input.dataHealth,
         webSearch: input.webSearch,
         now: input.now,
@@ -322,6 +325,7 @@ async function fulfilPickStocks(
       proposals: selection.proposals,
       positions: input.positions,
       poolOverview: input.poolOverview,
+      intradayContext: input.intradayContext,
       dataHealth: input.dataHealth,
       webSearch: input.webSearch,
       now: input.now,
