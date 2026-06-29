@@ -79,8 +79,13 @@ async function executePaperOps(
   const completed: string[] = [];
   const replayResults: ReplayDayRunResult[] = [];
 
-  // 单个闹钟场景重演: when the command names one node, scope replay/simulate to just it.
-  const nodeScope = action.node ? `（仅 ${action.node} 节点）` : "";
+  // Scope replay/simulate to a single node, a node GROUP (e.g. all pre-open nodes), or the
+  // whole day. A group request ("开盘前/9:30前的所有操作") carries action.nodes.
+  const nodeScope = action.node
+    ? `（仅 ${action.node} 节点）`
+    : action.nodes && action.nodes.length > 0
+      ? `（仅 ${action.nodes.length} 个节点）`
+      : "";
 
   if (action.replayDate) {
     // INFRA-01: an operator "走一遍某日" should produce real funnel output even if the
@@ -89,6 +94,7 @@ async function executePaperOps(
       await runReplayDay(deps, action.replayDate, {
         refreshWatchlistWhenEmpty: true,
         onlyNode: action.node,
+        onlyNodes: action.nodes,
       }),
     );
     completed.push(`已忠实重演 ${action.replayDate}${nodeScope}`);
@@ -96,7 +102,12 @@ async function executePaperOps(
 
   if (action.simulateDate) {
     await runDueNodesForDate(deps, action.simulateDate, {
-      includeAlarmTypes: action.node ? new Set([action.node]) : PAPER_SIM_NODE_TYPES,
+      includeAlarmTypes:
+        action.nodes && action.nodes.length > 0
+          ? new Set(action.nodes)
+          : action.node
+            ? new Set([action.node])
+            : PAPER_SIM_NODE_TYPES,
     });
     completed.push(`已补跑 ${action.simulateDate} 今日模拟节点${nodeScope}`);
   }

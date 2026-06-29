@@ -105,3 +105,31 @@ describe("detectPaperOpsCommand single-node scope", () => {
     expect(detectPaperOpsCommand("重演昨天的操作", now)).toEqual({ replayDate: "2026-06-23" });
   });
 });
+
+describe("detectPaperOpsCommand pre-open group", () => {
+  const preOpen = [
+    "data_warmup",
+    "overnight_digest",
+    "pre_market_plan",
+    "call_auction_watch",
+    "pre_open_confirmation",
+  ];
+
+  it("routes '开盘前/9:30前的所有操作' to a TODAY simulate over the 5 pre-open nodes", () => {
+    const command = detectPaperOpsCommand("模拟早上开盘前的操作，也就是9:30前的所有操作", now);
+    expect(command?.simulateDate).toBe("2026-06-24");
+    expect(command?.replayDate).toBeUndefined();
+    expect(command?.nodes).toEqual(preOpen);
+  });
+
+  it("routes a past-dated pre-open-group ask to a replay over the same nodes", () => {
+    const command = detectPaperOpsCommand("重演昨天开盘前的所有节点", now);
+    expect(command?.replayDate).toBe("2026-06-23");
+    expect(command?.simulateDate).toBeUndefined();
+    expect(command?.nodes).toEqual(preOpen);
+  });
+
+  it("does not treat a bare '盘前计划' as a group op (stays a read-only SOP)", () => {
+    expect(detectPaperOpsCommand("做个盘前计划", now)).toBeUndefined();
+  });
+});

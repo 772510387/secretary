@@ -1028,6 +1028,8 @@ export interface ReplayDayOptions {
   refreshWatchlistWhenEmpty?: boolean;
   /** When set, replay ONLY this alarm node for the day (单个闹钟场景重演) instead of all. */
   onlyNode?: CerebellumAlarmType;
+  /** When set, replay ONLY this GROUP of alarm nodes (e.g. all pre-open nodes) instead of all. */
+  onlyNodes?: readonly CerebellumAlarmType[];
 }
 
 /**
@@ -1067,12 +1069,18 @@ export async function runReplayDay(
   })
     .filter((entry) => isCerebellumAlarmDueAtBeijingTime(entry.rule, entry.beijing))
     .filter((entry) => !DEEP_RESEARCH_NODES.has(entry.rule.alarmType))
-    // 单个闹钟场景重演: scope to just the requested node when asked.
-    .filter((entry) => options.onlyNode === undefined || entry.rule.alarmType === options.onlyNode)
+    // 单个闹钟/一组闹钟场景重演: scope to the requested node(s) when asked.
+    .filter((entry) =>
+      options.onlyNodes && options.onlyNodes.length > 0
+        ? options.onlyNodes.includes(entry.rule.alarmType)
+        : options.onlyNode === undefined || entry.rule.alarmType === options.onlyNode,
+    )
     .sort((left, right) => left.rule.priority - right.rule.priority);
 
   if (dueNodes.length === 0) {
-    const scope = options.onlyNode ? `节点 ${options.onlyNode} 当日不触发（或为 deep_review/周末规则）` : "周末/节假日规则，或仅有 deep_review";
+    const scope = options.onlyNodes && options.onlyNodes.length > 0
+      ? `指定的 ${options.onlyNodes.length} 个节点当日均不触发（或为 deep_review/周末规则）`
+      : options.onlyNode ? `节点 ${options.onlyNode} 当日不触发（或为 deep_review/周末规则）` : "周末/节假日规则，或仅有 deep_review";
     console.log(`${date} 没有可忠实重演的节点（${scope}）。`);
     return { date, nodeCount: 0, nodes: [] };
   }

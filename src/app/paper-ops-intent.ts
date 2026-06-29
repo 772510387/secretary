@@ -7,6 +7,43 @@ export interface PaperOpsCommand {
   archiveDate?: string;
   /** When set, scope the replay/simulate to this SINGLE alarm node instead of the whole day. */
   node?: CerebellumAlarmType;
+  /**
+   * When set, scope the replay/simulate to this GROUP of alarm nodes (e.g. all pre-open
+   * nodes before 09:30) instead of the whole day or a single node. Takes precedence over
+   * `node` is not assumed — they are mutually exclusive in practice (a group request never
+   * also names one node).
+   */
+  nodes?: CerebellumAlarmType[];
+}
+
+/** Alarm nodes scheduled before 09:30 Beijing — the "开盘前 / 9:30 前" group. */
+export const PRE_OPEN_NODES: readonly CerebellumAlarmType[] = [
+  "data_warmup", // 08:00
+  "overnight_digest", // 08:15
+  "pre_market_plan", // 08:30
+  "call_auction_watch", // 09:15
+  "pre_open_confirmation", // 09:25
+];
+
+// "开盘前 / 开盘之前 / 9:30前 / 九点半前 / 早盘前" — unambiguous pre-open-window markers.
+// Bare "盘前" is intentionally excluded so "做个盘前计划" stays a single read-only SOP.
+const PRE_OPEN_WINDOW_RE = /(开盘前|开盘之前|9[:：]?30\s*前|9[:：]?30\s*之前|九点半前|九点三十前|早盘前)/u;
+// A collective / operation marker that turns the window into a "run the whole group" ask.
+const GROUP_OR_OP_RE = /(所有|全部|都|各个?|逐个|整套|流程|节点|操作|模拟|复盘|跑|执行|重演|重跑|补跑|走一遍|过一遍)/u;
+
+/**
+ * Detects "开盘前 / 9:30前的所有操作/节点" → the pre-open node group. Deterministic; the
+ * model never resolves this. Returns undefined when the message is not a pre-open-group ask.
+ */
+export function resolvePreOpenNodeGroup(message: string): CerebellumAlarmType[] | undefined {
+  const text = message.trim();
+  if (!text) {
+    return undefined;
+  }
+  if (!PRE_OPEN_WINDOW_RE.test(text) || !GROUP_OR_OP_RE.test(text)) {
+    return undefined;
+  }
+  return [...PRE_OPEN_NODES];
 }
 
 /**
@@ -85,6 +122,19 @@ export function detectPaperOpsCommand(message: string, now?: string | Date): Pap
 
   if (!text) {
     return undefined;
+  }
+
+  // Pre-open-group ("开盘前 / 9:30前的所有操作") routes deterministically to the 5 pre-open
+  // nodes — a TODAY simulation by default, or a replay when a past date is named. This runs
+  // before the generic detectors because "今天开盘前的所有操作" carries no date-target and
+  // would otherwise fall through to the model, which mis-staged it as a whole-day replay.
+  const preOpenGroup = resolvePreOpenNodeGroup(text);
+  if (preOpenGroup) {
+    const today = beijingDate(now);
+    const pastDate = extractExplicitDates(text)[0] ?? resolveRelativePastDate(text, today);
+    return pastDate
+      ? { replayDate: pastDate, nodes: preOpenGroup }
+      : { simulateDate: today, nodes: preOpenGroup };
   }
 
   const replayRequested = new RegExp(
@@ -170,7 +220,13 @@ const NODE_LABEL: Partial<Record<CerebellumAlarmType, string>> = {
 
 export function formatPaperOpsCommand(command: PaperOpsCommand): string {
   const parts: string[] = [];
-  const nodeScope = command.node ? `（仅 ${NODE_LABEL[command.node] ?? command.node} 节点）` : "";
+  const nodeScope = command.node
+    ? `（仅 ${NODE_LABEL[command.node] ?? command.node} 节点）`
+    : command.nodes && command.nodes.length > 0
+      ? `（仅开盘前 ${command.nodes.length} 个节点：${command.nodes
+          .map((node) => NODE_LABEL[node] ?? node)
+          .join("、")}）`
+      : "";
 
   if (command.replayDate) {
     parts.push(`重演 ${command.replayDate}${nodeScope}`);
