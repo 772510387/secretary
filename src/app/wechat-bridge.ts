@@ -78,6 +78,8 @@ export interface WeChatBridgeDependencies {
   loadPotentialStocks?: () => PotentialStockCandidate[] | Promise<PotentialStockCandidate[]>;
   /** Fetches today's intraday (分时) summary text for the given symbols (网络). Used to ground pick_stocks. */
   loadIntraday?: (symbols: string[]) => string | Promise<string>;
+  /** Fetches current/closing prices per symbol (网络). Used to mark holdings to market in the status query. */
+  loadQuotes?: (symbols: string[]) => Record<string, number> | Promise<Record<string, number>>;
   /**
    * Optional deterministic fast-path source: reads stored account/positions from disk
    * (no network, no model). When present, plain status queries ("当前模拟盘信息") are
@@ -196,10 +198,19 @@ export async function runWeChatBridgeTurn(
     try {
       const snapshot = await deps.loadPortfolio();
       if (snapshot.account) {
-        const reply = formatPortfolioStatus({
-          account: snapshot.account,
-          positions: snapshot.positions ?? [],
-        });
+        const positions = snapshot.positions ?? [];
+        // Mark holdings to market so 盈亏 reflects the real (close) price, not the book
+        // cost. A simulated fill leaves position.latestPrice == cost; without a fresh quote
+        // every holding would read 盈亏 +0.00%. Best-effort: fall back to book price on failure.
+        let prices: Record<string, number> | undefined;
+        if (deps.loadQuotes && positions.length > 0) {
+          try {
+            prices = await deps.loadQuotes(positions.map((position) => position.symbol));
+          } catch {
+            // keep prices undefined → formatPortfolioStatus uses the stored book price
+          }
+        }
+        const reply = formatPortfolioStatus({ account: snapshot.account, positions, prices });
         recordTurn(state, message.peerId, { user: text, assistant: reply });
         return { reply: `${abandonedNote}${reply}` };
       }

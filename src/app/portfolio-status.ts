@@ -70,7 +70,11 @@ export function formatPortfolioStatus(input: FormatPortfolioStatusInput): string
     });
   }
 
-  lines.push("（现价取最近一次盯盘快照；模拟盘账本）");
+  lines.push(
+    input.prices && Object.keys(input.prices).length > 0
+      ? "（现价为最新实时/收盘报价；缺报价的标的按账本价计；模拟盘账本）"
+      : "（现价取账本最近一次盯盘价，可能仍是买入价；模拟盘账本）",
+  );
   return lines.join("\n");
 }
 

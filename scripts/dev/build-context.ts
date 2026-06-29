@@ -343,6 +343,37 @@ export async function readIntradayContext(
   }
 }
 
+/**
+ * Current (or, post-close, today's closing) price per symbol from the Tencent realtime
+ * snapshot — used to mark held positions to market for an honest P&L in the status query
+ * (a simulated fill otherwise leaves position.latestPrice == cost → 盈亏 always 0). Bounded,
+ * best-effort: returns {} on failure so the caller falls back to the book price.
+ */
+export async function readCurrentQuotes(
+  symbols: readonly string[],
+  config: AppConfig,
+): Promise<Record<string, number>> {
+  const unique = [...new Set(symbols.filter((symbol) => symbol && symbol.length > 0))];
+  if (unique.length === 0) {
+    return {};
+  }
+  try {
+    const quotes = await new TencentQuoteProvider({ timeoutMs: config.market.quoteTimeoutMs }).getQuotes([
+      ...unique,
+    ]);
+    const prices: Record<string, number> = {};
+    for (const quote of quotes) {
+      if (Number.isFinite(quote.latestPrice) && quote.latestPrice > 0) {
+        prices[quote.symbol] = quote.latestPrice;
+      }
+    }
+    return prices;
+  } catch (error) {
+    console.warn(`(读取实时报价失败，盈亏将按账本价：${error instanceof Error ? error.message : String(error)})`);
+    return {};
+  }
+}
+
 /** Reads the persisted 观察池分类概览 (层级1+层级2) string from the stored pool, if any. */
 export function readWatchlistPoolOverview(memoryDir: string): string | undefined {
   try {

@@ -83,4 +83,29 @@ describe("formatPortfolioStatus", () => {
     expect(reply).toContain("当前空仓（无持仓）。");
     expect(reply).toContain("总资产 ¥10,000.00");
   });
+
+  it("marks holdings to market with fresh prices (fixes the 现价==成本 zero-pnl)", () => {
+    // A simulated fill leaves latestPrice == cost; without a fresh quote the holding reads 0.
+    const position = makePosition({
+      symbol: "000021",
+      name: "深科技",
+      costPrice: 53.51,
+      latestPrice: 53.51,
+      quantity: 100,
+      availableQuantity: 0,
+    });
+
+    const stale = formatPortfolioStatus({ account: makeAccount(625), positions: [position] });
+    expect(stale).toContain("盈亏¥+0.00(+0.00%)"); // the reported bug
+    expect(stale).toContain("可能仍是买入价");
+
+    const fresh = formatPortfolioStatus({
+      account: makeAccount(625),
+      positions: [position],
+      prices: { "000021": 58.86 }, // today's close (+10% vs 53.51 cost)
+    });
+    expect(fresh).toContain("现价58.86");
+    expect(fresh).toContain("盈亏¥+535.00(+10.00%)");
+    expect(fresh).toContain("最新实时/收盘报价");
+  });
 });

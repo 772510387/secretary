@@ -24,6 +24,7 @@ import {
   readWatchlist100,
   readPotentialStockCandidates,
   readIntradayContext,
+  readCurrentQuotes,
   buildLivePaperAgentTools,
   readBridgeAccountAndPositions,
 } from "./build-context.js";
@@ -83,6 +84,7 @@ export async function main(): Promise<void> {
   const loadPotentialStocks = () =>
     readPotentialStockCandidates(memoryDir, readBridgeAccountAndPositions(memoryDir).positions);
   const loadIntraday = (symbols: string[]) => readIntradayContext(symbols, config);
+  const loadQuotes = (symbols: string[]) => readCurrentQuotes(symbols, config);
   const executeAction = (action: AgentAction): Promise<string> =>
     executeAgentAction(action, { config, memoryDir });
 
@@ -134,6 +136,7 @@ export async function main(): Promise<void> {
         loadWatchlist,
         loadPotentialStocks,
         loadIntraday,
+        loadQuotes,
         executeAction,
         buildTradingDayReview: ({ message, now }) => {
           const tradingDate = resolveTradingDayReviewDate(message, now);
