@@ -217,9 +217,9 @@ export async function buildPaperOpsMarkdownReport(
           "你是 Secretary 的 A 股模拟盘运维复盘助手。",
           "请只基于 context 中的已发生事实整理最终报告，不得编造行情、持仓、成交或原因。",
           "输出必须是 Markdown，写入 BrainOutput.summary 字段；structured 可返回 {\"format\":\"markdown\"}。",
-          "报告必须包含：# 模拟运维结果、## 执行范围、## 操作回放、## 成交与未成交、## 风险观察。",
-          "每条交易相关内容必须写清节点、方向、代码、名称、股数、价格、执行状态、跳过/失败原因。",
-          "如果没有成交，要明确写无成交及原因；如果信息缺失，要写未提供。",
+          "保持简洁：各节点的观察/判断/策略已在运行时逐条推送过，本报告只做结果汇总，不要逐节点复述选股理由。",
+          "报告结构固定为三段：# 模拟运维结果、## 执行范围（跑了哪些节点/范围）、## 本次成交（每笔写清节点、方向、代码、名称、股数、价格、状态；无成交则写无成交及原因）。",
+          "总长度控制在 ~30 行以内；不要罗列每个节点的潜力股名单。",
           "禁止下单、禁止要求用户再次确认、禁止修改账户、禁止覆盖规则文件。",
         ].join("\n"),
         context: buildPaperOpsReportContext(input),
@@ -246,37 +246,49 @@ function buildPaperOpsFallbackMarkdown(input: {
   notifications: string[];
   replayResults: ReplayDayRunResult[];
 }): string {
-  const replayLines = input.replayResults.flatMap((result) => summarizeReplayResult(result));
-  const notificationLines = summarizeOperationNotifications(input.notifications);
-  const operationLines = dedupeLines([...replayLines, ...notificationLines]);
   const completedLines =
     input.completed.length > 0
       ? input.completed
       : [`未找到可执行步骤（${formatPaperOpsCommand(input.action)}）`];
-  const latestNotification =
-    input.notifications.length > 0 ? clip(input.notifications[input.notifications.length - 1]!, 360) : "未提供";
+  const decisionLines = summarizeNodeDecisions(input.replayResults);
 
+  // Concise on purpose: each node already pushed its own 观察/判断/策略/下一步 during the
+  // run (input.notifications). This end report only summarises WHAT RAN + WHAT FILLED, then
+  // the grounded 交易日复盘 is appended after it. (Was a multi-screen dump of every node's
+  // 潜力股 rationale — unreadable, and redundant with the per-node pushes.)
   return [
     "# 模拟运维结果",
     "",
     "## 执行范围",
     ...completedLines.map((item) => `- ${item}`),
+    `- 各节点的观察/判断/策略/下一步已在运行时逐条推送（共 ${input.notifications.length} 条）。`,
     "",
-    "## 节点统计",
-    `- 节点报告：${input.notifications.length} 条`,
-    "- 完整节点内容：已按节点逐条推送",
+    "## 各节点决策",
+    ...(decisionLines.length > 0 ? decisionLines : ["- 本次无建仓/减仓决策。"]),
     "",
-    "## 操作回放",
-    ...(operationLines.length > 0
-      ? operationLines.slice(0, 24)
-      : ["- 本次未形成可执行建仓/减仓节点；后端无模拟成交。"]),
-    "",
-    "## 成交与未成交",
+    "## 本次成交",
     ...summarizeExecutionOutcomes(input.replayResults),
     "",
-    "## 风险观察",
-    `- 最近节点摘要：${latestNotification}`,
+    "> 完整账本接地复盘（最终战绩/操作统计/逐笔逻辑）见下方。",
   ].join("\n");
+}
+
+/** One compact line per node: its decision (BUY/SELL count) — not the full 潜力股 rationale dump. */
+function summarizeNodeDecisions(replayResults: ReplayDayRunResult[]): string[] {
+  return replayResults.flatMap((result) =>
+    result.nodes.flatMap((node) => {
+      const proposals = node.funnel?.proposals ?? [];
+      const buys = proposals.filter((proposal) => proposal.side === "BUY");
+      const sells = proposals.filter((proposal) => proposal.side === "SELL");
+      if (buys.length === 0 && sells.length === 0) {
+        return [];
+      }
+      const picks = [...buys, ...sells]
+        .map((proposal) => `${proposal.side} ${proposal.symbol}${proposal.name ? ` ${proposal.name}` : ""}`)
+        .join("、");
+      return [`- ${node.beijingTime} ${node.alarmType}：拟买 ${buys.length} / 拟卖 ${sells.length}（${picks}）`];
+    }),
+  );
 }
 
 function buildPaperOpsReportContext(input: {
@@ -368,19 +380,6 @@ function normalizeMarkdownReport(text: string): string {
 
 function looksLikeMarkdownReport(text: string): boolean {
   return text.startsWith("# ") || text.includes("\n## ");
-}
-
-function dedupeLines(lines: string[]): string[] {
-  const seen = new Set<string>();
-  const deduped: string[] = [];
-  for (const line of lines) {
-    if (seen.has(line)) {
-      continue;
-    }
-    seen.add(line);
-    deduped.push(line);
-  }
-  return deduped;
 }
 
 function summarizeReplayResult(result: ReplayDayRunResult): string[] {

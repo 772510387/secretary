@@ -128,7 +128,9 @@ describe("paper ops markdown report", () => {
 
     expect(report).toContain("# 模拟运维结果");
     expect(report).toContain("## 执行范围");
-    expect(report).toContain("## 成交与未成交");
+    expect(report).toContain("## 本次成交");
     expect(report).toContain("BUY 600522 中天科技，filled 100股@56.55");
+    // Concise: the end report must NOT re-dump every node's 潜力股 rationale.
+    expect(report).not.toContain("## 操作回放");
   });
 });
