@@ -79,6 +79,14 @@ async function executePaperOps(
   const completed: string[] = [];
   const replayResults: ReplayDayRunResult[] = [];
 
+  // "清除数据库回归原始基金 N，然后模拟…": reset the paper account FIRST so the ops below run
+  // on the fresh account. Destructive + paper-only, but already confirm-gated by the bridge.
+  if (action.resetInitialCash !== undefined) {
+    const seed = buildInitialPaperAccountSeed({ initialCash: action.resetInitialCash });
+    initializePaperAccountMemory({ memoryDir: options.memoryDir, seed, reset: true, dryRun: false });
+    completed.push(`已清空模拟盘并重置初始资金 ${action.resetInitialCash} 元`);
+  }
+
   // Scope replay/simulate to a single node, a node GROUP (e.g. all pre-open nodes), or the
   // whole day. A group request ("开盘前/9:30前的所有操作") carries action.nodes.
   const nodeScope = action.node

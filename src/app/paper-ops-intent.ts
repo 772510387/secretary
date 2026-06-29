@@ -14,6 +14,40 @@ export interface PaperOpsCommand {
    * also names one node).
    */
   nodes?: CerebellumAlarmType[];
+  /**
+   * When set, reset the paper account to this initial cash BEFORE running the ops
+   * (the "清除数据库回归原始基金 20000，然后模拟…" compound). Destructive, paper-only,
+   * still confirm-gated.
+   */
+  resetInitialCash?: number;
+}
+
+/** Default paper initial cash when a reset is asked for without a parseable amount. */
+const DEFAULT_RESET_CASH = 20000;
+
+// "清空/重置/回归/还原…(数据库/账户/资金/基金/本金)" — a reset-the-paper-account ask.
+const RESET_INTENT_RE =
+  /(清除|清空|重置|重设|回归|还原|初始化|重来|重新开始).{0,6}(数据库|账户|账本|仓位|持仓|资金|基金|本金|余额|盘|账)|(数据库|账户|账本|资金|基金|本金).{0,6}(清除|清空|重置|重设|回归|还原|初始化)/u;
+
+/**
+ * Detects a "reset the paper account" ask and the target initial cash. Returns undefined
+ * when no reset is requested. Amount parsing: "2万"→20000, "20000"/"20000元"→20000; a reset
+ * ask without a parseable amount falls back to {@link DEFAULT_RESET_CASH}. Deterministic.
+ */
+export function detectResetInitialCash(message: string): number | undefined {
+  const text = message.trim();
+  if (!text || !RESET_INTENT_RE.test(text)) {
+    return undefined;
+  }
+  const wan = /(\d+(?:\.\d+)?)\s*万/u.exec(text);
+  if (wan) {
+    return Math.round(Number(wan[1]) * 10000);
+  }
+  const yuan = /(\d{4,})\s*元?/u.exec(text);
+  if (yuan) {
+    return Number(yuan[1]);
+  }
+  return DEFAULT_RESET_CASH;
 }
 
 /** Alarm nodes scheduled before 09:30 Beijing — the "开盘前 / 9:30 前" group. */
@@ -124,6 +158,12 @@ export function detectPaperOpsCommand(message: string, now?: string | Date): Pap
     return undefined;
   }
 
+  // "清除数据库回归原始基金 N，然后模拟…" — a reset folded into the ops command (run reset
+  // first, then the ops). Only attached when an ops command is also detected; a lone reset
+  // stays the reset_paper / seed_paper intent.
+  const resetInitialCash = detectResetInitialCash(text);
+  const reset = resetInitialCash !== undefined ? { resetInitialCash } : {};
+
   // Pre-open-group ("开盘前 / 9:30前的所有操作") routes deterministically to the 5 pre-open
   // nodes — a TODAY simulation by default, or a replay when a past date is named. This runs
   // before the generic detectors because "今天开盘前的所有操作" carries no date-target and
@@ -133,8 +173,8 @@ export function detectPaperOpsCommand(message: string, now?: string | Date): Pap
     const today = beijingDate(now);
     const pastDate = extractExplicitDates(text)[0] ?? resolveRelativePastDate(text, today);
     return pastDate
-      ? { replayDate: pastDate, nodes: preOpenGroup }
-      : { simulateDate: today, nodes: preOpenGroup };
+      ? { replayDate: pastDate, nodes: preOpenGroup, ...reset }
+      : { simulateDate: today, nodes: preOpenGroup, ...reset };
   }
 
   const replayRequested = new RegExp(
@@ -182,6 +222,7 @@ export function detectPaperOpsCommand(message: string, now?: string | Date): Pap
     archiveDate: archiveRequested ? today : undefined,
     simulateDate: simulateRequested ? today : undefined,
     node,
+    ...reset,
   };
 }
 
@@ -228,6 +269,9 @@ export function formatPaperOpsCommand(command: PaperOpsCommand): string {
           .join("、")}）`
       : "";
 
+  if (command.resetInitialCash !== undefined) {
+    parts.push(`先清空模拟盘并重置初始资金 ${command.resetInitialCash} 元`);
+  }
   if (command.replayDate) {
     parts.push(`重演 ${command.replayDate}${nodeScope}`);
   }

@@ -133,3 +133,33 @@ describe("detectPaperOpsCommand pre-open group", () => {
     expect(detectPaperOpsCommand("做个盘前计划", now)).toBeUndefined();
   });
 });
+
+describe("detectPaperOpsCommand reset compound", () => {
+  const preOpen = [
+    "data_warmup",
+    "overnight_digest",
+    "pre_market_plan",
+    "call_auction_watch",
+    "pre_open_confirmation",
+  ];
+
+  it("folds '清除数据库回归原始基金20000' into the pre-open simulate", () => {
+    const command = detectPaperOpsCommand(
+      "清除数据库回归原始基金20000,然后模拟早上开盘前的操作，也就是9:30前的所有操作",
+      now,
+    );
+    expect(command?.resetInitialCash).toBe(20000);
+    expect(command?.simulateDate).toBe("2026-06-24");
+    expect(command?.nodes).toEqual(preOpen);
+  });
+
+  it("parses 万 amounts and attaches the reset to a replay", () => {
+    const command = detectPaperOpsCommand("清空账户重置到2万，再重演昨天的操作", now);
+    expect(command?.resetInitialCash).toBe(20000);
+    expect(command?.replayDate).toBe("2026-06-23");
+  });
+
+  it("does not attach a reset when none is requested", () => {
+    expect(detectPaperOpsCommand("模拟早上开盘前的所有操作", now)?.resetInitialCash).toBeUndefined();
+  });
+});
